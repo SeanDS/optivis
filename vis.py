@@ -48,9 +48,7 @@ class Optivis(object):
       width = component.width * scale
       height = component.height * scale
       
-      image = component.toImage(self.svgDir, width, height)
-      
-      self.canvasObjects.append(CanvasComponent(component=component, image=image, xPos=250, yPos=250))
+      self.canvasObjects.append(CanvasComponent(component=component, azimuth=45, xPos=250, yPos=250))
     
     for link in self.links:
       canvasComponent1 = self.getCanvasObject(link.outputNode.component)
@@ -58,6 +56,15 @@ class Optivis(object):
       
       xPos1 = canvasComponent1.xPos + link.outputNode.xPos
       yPos1 = canvasComponent1.yPos + link.outputNode.yPos
+      
+      print xPos1
+      print yPos1
+      
+      # rotate xPos1 and yPos1
+      (xPos1, yPos1) = Optivis.rotateCoordinates(xPos1, yPos1, canvasComponent1.visObject.width, canvasComponent1.visObject.height, canvasComponent1.azimuth)
+      
+      print xPos1
+      print yPos1
       
       # link lengths in cartesian coordinates
       xLength = link.length * math.cos(math.radians(link.outputNode.azimuth))
@@ -74,7 +81,7 @@ class Optivis(object):
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
-      canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.image, anchor=Tk.NW)
+      canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.getImage(svgDir=self.svgDir), anchor=Tk.CENTER)
     
     canvas.pack()
   
@@ -96,6 +103,14 @@ class Optivis(object):
 	canvasComponents.append(thisObject)
     
     return canvasComponents
+  
+  @staticmethod
+  def rotateCoordinates(xPos, yPos, xWidth, yWidth, azimuth):
+    # apply rotation matrix to xPos and yPos
+    xPosRotated = xPos + xWidth * math.cos(math.radians(azimuth)) - yWidth * math.sin(math.radians(azimuth))
+    yPosRotated = yPos + xWidth * math.sin(math.radians(azimuth)) + yWidth * math.cos(math.radians(azimuth))
+    
+    return (xPosRotated, yPosRotated)
 
 class CanvasObject(object):
   def __init__(self, visObject, xPos=0, yPos=0):
@@ -131,24 +146,27 @@ class CanvasObject(object):
     self.__yPos = yPos
 
 class CanvasComponent(CanvasObject):
-  def __init__(self, component, image, *args, **kwargs):
+  def __init__(self, component, azimuth=0, *args, **kwargs):
     if not isinstance(component, Component):
       raise Exception('Specified component is not of type Component')
     
-    self.image = image
+    self.azimuth = azimuth
+    self.image = None
     
     super(CanvasComponent, self).__init__(visObject=component, *args, **kwargs)
   
-  @property
-  def image(self):
-    return self.__image
-  
-  @image.setter
-  def image(self, image):
-    if not isinstance(image, ImageTk.PhotoImage):
-      raise Exception('Specified image is not of type ImageTk.PhotoImage')
+  def getImage(self, svgDir):
+    self.image = self.visObject.toImage(svgDir=svgDir, azimuth=self.azimuth)
     
-    self.__image = image
+    return self.image
+  
+  @property
+  def azimuth(self):
+    return self.__azimuth
+  
+  @azimuth.setter
+  def azimuth(self, azimuth):
+    self.__azimuth = azimuth
 
 class Node(object):  
   def __init__(self, name, component, xPos, yPos, azimuth):
@@ -302,10 +320,12 @@ class Component(VisObject):
   def outputNodes(self, outputNodes):
     self.__outputNodes = outputNodes
   
-  def toImage(self, svgDir, width=-1, height=-1):
+  def toImage(self, svgDir, width=-1, height=-1, azimuth=0):
     """
     Returns a ImageTk.PhotoImage object represeting the svg file
     """
+    
+    print azimuth
     
     filepath = os.path.join(svgDir, self.filename)
     
@@ -327,9 +347,24 @@ class Component(VisObject):
     
     tkImage = ImageTk.PhotoImage('RGBA')
     image = Image.frombuffer('RGBA', (width, height), surface.get_data(), 'raw', 'BGRA', 0, 1)
+    image = image.rotate(azimuth, expand=True)
     tkImage.paste(image)
     
     return(tkImage)
+  
+  def getInputNode(self, nodeName):
+    for node in self.inputNodes:
+      if node.name == nodeName:
+	return node
+    
+    raise Exception('No input node with name {0} found'.format(nodeName))
+  
+  def getOutputNode(self, nodeName):
+    for node in self.outputNodes:
+      if node.name == nodeName:
+	return node
+    
+    raise Exception('No output node with name {0} found'.format(nodeName))
 
 class Source(Component):
   def __init__(self, outputNode, *args, **kwargs):    
