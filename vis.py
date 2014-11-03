@@ -50,34 +50,47 @@ class Optivis(object):
       
       self.canvasObjects.append(CanvasComponent(component=component, azimuth=45, xPos=250, yPos=250))
     
-    for link in self.links:
+    for link in self.links:      
       canvasComponent1 = self.getCanvasObject(link.outputNode.component)
       canvasComponent2 = self.getCanvasObject(link.inputNode.component)
       
-      xPos1 = canvasComponent1.xPos + link.outputNode.xPos
-      yPos1 = canvasComponent1.yPos + link.outputNode.yPos
+      # coordinates of output node for rotated component
+      (xOutput, yOutput) = Optivis.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
       
-      print xPos1
-      print yPos1
+      print "xOutput: {0}".format(xOutput)
+      print "yOutput: {0}".format(yOutput)
       
-      # rotate xPos1 and yPos1
-      (xPos1, yPos1) = Optivis.rotateCoordinates(xPos1, yPos1, canvasComponent1.visObject.width, canvasComponent1.visObject.height, canvasComponent1.azimuth)
+      # combined output node and component position
+      (xPos1, yPos1) = Optivis.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutput, yOutput))
       
-      print xPos1
-      print yPos1
+      outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
+      inputAzimuth = outputAzimuth + link.inputNode.azimuth + 180
       
-      # link lengths in cartesian coordinates
-      xLength = link.length * math.cos(math.radians(link.outputNode.azimuth))
-      yLength = link.length * math.sin(math.radians(link.outputNode.azimuth))
+      print "xPos1: {0}".format(xPos1)
+      print "yPos1: {0}".format(yPos1)
       
-      xPos2 = xPos1 + xLength
-      yPos2 = yPos1 + yLength
+      # link lengths in cartesian coordinates (well, 'Tkinter' coordinates)
+      xLength = link.length * math.cos(math.radians(outputAzimuth))
+      yLength = link.length * -math.sin(math.radians(outputAzimuth))
       
-      # update second component position FIXME: map this to the input node azimuth
-      canvasComponent2.xPos = xPos2 - link.inputNode.xPos
-      canvasComponent2.yPos = yPos2 - link.inputNode.yPos
+      print "xLength: {0}".format(xLength)
+      print "yLength: {0}".format(yLength)
+      
+      # coordinates of input node for rotated component input node
+      (xInput, yInput) = Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), inputAzimuth)
+      
+      # coordinates of second component
+      (xPos2, yPos2) = Optivis.translate((xPos1, yPos1), (xInput, yInput), (xLength, yLength))
+      
+      # update second component position and azimuth
+      canvasComponent2.xPos = xPos2
+      canvasComponent2.yPos = yPos2
+      canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       canvas.create_line(xPos1, yPos1, xPos2, yPos2)
+      
+      # start line
+      canvas.create_oval(xPos1 - 5, yPos1 - 5, xPos1 + 5, yPos1 + 5)
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
@@ -105,10 +118,18 @@ class Optivis(object):
     return canvasComponents
   
   @staticmethod
-  def rotateCoordinates(xPos, yPos, xWidth, yWidth, azimuth):
+  def translate(*args):
+    return map(sum, zip(*args))
+  
+  @staticmethod
+  def rotate((xPos, yPos), azimuth):
+    """
+    Rotation applied for the left-handed coordinate system used by Tkinter
+    """
+    
     # apply rotation matrix to xPos and yPos
-    xPosRotated = xPos + xWidth * math.cos(math.radians(azimuth)) - yWidth * math.sin(math.radians(azimuth))
-    yPosRotated = yPos + xWidth * math.sin(math.radians(azimuth)) + yWidth * math.cos(math.radians(azimuth))
+    xPosRotated = xPos * math.cos(math.radians(azimuth)) - yPos * math.sin(math.radians(azimuth))
+    yPosRotated = yPos * math.sin(math.radians(azimuth)) + yPos * math.cos(math.radians(azimuth))
     
     return (xPosRotated, yPosRotated)
 
@@ -325,8 +346,6 @@ class Component(VisObject):
     Returns a ImageTk.PhotoImage object represeting the svg file
     """
     
-    print azimuth
-    
     filepath = os.path.join(svgDir, self.filename)
     
     svg = rsvg.Handle(file=filepath)
@@ -347,7 +366,7 @@ class Component(VisObject):
     
     tkImage = ImageTk.PhotoImage('RGBA')
     image = Image.frombuffer('RGBA', (width, height), surface.get_data(), 'raw', 'BGRA', 0, 1)
-    image = image.rotate(azimuth, expand=True)
+    image = image.rotate(-azimuth, expand=True) # -azimuth used because we have a left handed coordinate system
     tkImage.paste(image)
     
     return(tkImage)
@@ -379,14 +398,14 @@ class Mirror(Component):
 
 class CavityMirror(Mirror):
   def __init__(self, filename="b-mir.svg", width=11, height=29):
-    inputNodes = [InputNode(name="fr", component=self, xPos=0, yPos=height/2, azimuth=180)]
-    outputNodes = [OutputNode(name="bk", component=self, xPos=11, yPos=height/2, azimuth=0)]
+    inputNodes = [InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=180)]
+    outputNodes = [OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0)]
     
     super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes)
 
 class Laser(Source):
   def __init__(self, filename="c-laser1.svg", width=62, height=46):
-    outputNode = OutputNode(name="out", component=self, xPos=0, yPos=height/2, azimuth=180)
+    outputNode = OutputNode(name="out", component=self, xPos=-width/2, yPos=0, azimuth=180)
     
     super(Laser, self).__init__(filename=filename, width=width, height=height, outputNode=outputNode)
 
@@ -394,6 +413,17 @@ if __name__ == '__main__':
   master = Tk.Tk()
   
   canvas = Tk.Canvas(master, width=500, height=500)
+  canvas.create_line(0, 100, 400, 500)
+  canvas.create_line(0, 80, 420, 500)
+  canvas.create_line(0, 60, 440, 500)
+  canvas.create_line(0, 40, 460, 500)
+  canvas.create_line(0, 20, 480, 500)
+  canvas.create_line(0, 0, 500, 500)
+  canvas.create_line(20, 0, 500, 480)
+  canvas.create_line(40, 0, 500, 460)
+  canvas.create_line(60, 0, 500, 440)
+  canvas.create_line(80, 0, 500, 420)
+  canvas.create_line(100, 0, 500, 400)
   
   table = Optivis()
   
