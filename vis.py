@@ -27,6 +27,12 @@ class Optivis(object):
     if not isinstance(link, Link):
       raise Exception('Specified link is not of type Link')
     
+    if not link.inputNode.component in self.components:
+      raise Exception('Input node component has not been added to table')
+    
+    if not link.outputNode.component in self.components:
+      raise Exception('Output node component has not been added to table')
+    
     self.links.append(link)
   
   @property
@@ -48,9 +54,12 @@ class Optivis(object):
       width = component.width * scale
       height = component.height * scale
       
-      self.canvasObjects.append(CanvasComponent(component=component, azimuth=45, xPos=250, yPos=250))
+      self.canvasObjects.append(CanvasComponent(component=component, azimuth=0, xPos=250, yPos=250))
     
-    for link in self.links:      
+    # list of nodes already linked
+    linkedNodes = []
+    
+    for link in self.links:
       canvasComponent1 = self.getCanvasObject(link.outputNode.component)
       canvasComponent2 = self.getCanvasObject(link.inputNode.component)
       
@@ -72,21 +81,40 @@ class Optivis(object):
       
       (xInput, yInput) = Optivis.translate((xOutput, yOutput), (xLength, yLength))
       
-      # coordinates of second component
+      # candidate position of second component
       (xPos2, yPos2) = Optivis.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
       
-      # update second component position and azimuth
-      canvasComponent2.xPos = xPos2
-      canvasComponent2.yPos = yPos2
+      # FIXME: potential bug with components linked across 180 degrees in a loop (i.e. position of component the same, but angle different) - do a similar check to the one below for angles      
+      if link.inputNode in linkedNodes:
+	# can't move component - already linked	
+	# check if linking it would require moving it
+	if not (canvasComponent2.xPos, canvasComponent2.yPos) == (xPos2, yPos2):
+	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it. Ignoring link length and angle!".format(canvasComponent2, canvasComponent1)
+	  
+	  # update input position
+	  (xInput, yInput) = Optivis.translate((canvasComponent2.xPos, canvasComponent2.yPos), Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth))
+      else:
+	# coordinates of second component
+	(xPos2, yPos2) = Optivis.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
+      
+	# update second component position
+	canvasComponent2.xPos = xPos2
+	canvasComponent2.yPos = yPos2
+      
+      # update second component azimuth to be the link azimuth minus the input azimuth
       canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
-      canvas.create_line(xOutput, yOutput, xInput, yInput)
+      # draw link
+      canvas.create_line(xOutput, yOutput, xInput, yInput, fill=link.colour)
       
-      # start line
+      # marker for start line
       canvas.create_oval(xOutput - 5, yOutput - 5, xOutput + 5, yOutput + 5, fill="red")
       
-      # end line
+      # marker for end line
       canvas.create_oval(xInput - 5, yInput - 5, xInput + 5, yInput + 5, fill="blue")
+      
+      # add link to list of links
+      linkedNodes.append(link.inputNode)
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
@@ -185,6 +213,10 @@ class CanvasComponent(CanvasObject):
   @azimuth.setter
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
+    
+  def __str__(self):
+    # return visObject's __str__
+    return self.visObject.__str__()
 
 class Node(object):  
   def __init__(self, name, component, xPos, yPos, azimuth):
@@ -255,10 +287,11 @@ class VisObject(object):
     #return self.filename == other.filename and self.width == other.width and self.height = other.height # FIXME: check also for inputNodes, etc
 
 class Link(VisObject):
-  def __init__(self, outputNode, inputNode, length):
+  def __init__(self, outputNode, inputNode, length, colour="red"):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
+    self.colour = colour
     
   @property
   def outputNode(self):
@@ -290,13 +323,31 @@ class Link(VisObject):
   def length(self, length):
     self.__length = length
   
+  @property
+  def colour(self):
+    return self.__colour
+  
+  @colour.setter
+  def colour(self, colour):
+    #FIXME: check for valid colours here
+    self.__colour = colour
+  
 class Component(VisObject):
-  def __init__(self, filename, width, height, inputNodes, outputNodes):
+  def __init__(self, name, filename, width, height, inputNodes, outputNodes):
+    self.name = name
     self.filename = filename
     self.width = width
     self.height = height
     self.inputNodes = inputNodes
     self.outputNodes = outputNodes
+  
+  @property
+  def name(self):
+    return self.__name
+  
+  @name.setter
+  def name(self, name):
+    self.__name = name
   
   @property
   def filename(self):
@@ -381,6 +432,9 @@ class Component(VisObject):
 	return node
     
     raise Exception('No output node with name {0} found'.format(nodeName))
+  
+  def __str__(self):
+    return self.name
 
 class Source(Component):
   def __init__(self, outputNode, *args, **kwargs):    
@@ -394,17 +448,26 @@ class Mirror(Component):
     super(Mirror, self).__init__(*args, **kwargs)
 
 class CavityMirror(Mirror):
-  def __init__(self, filename="b-mir.svg", width=11, height=29):
-    inputNodes = [InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=0)] # input node azimuth defined WRT input light direction
-    outputNodes = [OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0)] # output node azimuth defined WRT output light direction
+  def __init__(self, filename="b-mir.svg", width=11, height=29, aoi=0, *args, **kwargs):
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=aoi+0),
+      InputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=aoi+180)
+    ]
     
-    super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes)
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      OutputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi),
+      OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0-aoi)
+    ]
+    
+    super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class Laser(Source):
-  def __init__(self, filename="c-laser1.svg", width=62, height=46):
+  def __init__(self, filename="c-laser1.svg", width=62, height=46, *args, **kwargs):
     outputNode = OutputNode(name="out", component=self, xPos=-width/2, yPos=0, azimuth=180)
     
-    super(Laser, self).__init__(filename=filename, width=width, height=height, outputNode=outputNode)
+    super(Laser, self).__init__(filename=filename, width=width, height=height, outputNode=outputNode, *args, **kwargs)
 
 if __name__ == '__main__':
   master = Tk.Tk()
@@ -424,12 +487,27 @@ if __name__ == '__main__':
   
   table = Optivis()
   
-  l = Laser()
-  m = CavityMirror()
+  l1 = Laser(name="L1")
+  m1 = CavityMirror(name="M1", aoi=30)
+  m2 = CavityMirror(name="M2", aoi=15)
+  m3 = CavityMirror(name="M3", aoi=0)
   
-  table.addComponent(l)
-  table.addComponent(m)
-  table.addLink(Link(l.outputNodes[0], m.inputNodes[0], 100))
+  table.addComponent(l1)
+  table.addComponent(m1)
+  table.addComponent(m2)
+  table.addComponent(m3)
+  
+  table.addLink(Link(l1.outputNodes[0], m1.inputNodes[0], 100))
+  table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 100))
+  table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 150))
+  
+  #table.addComponent(m1)
+  #table.addComponent(m2)
+  #table.addComponent(m3)
+  
+  #table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 100))
+  #table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 100))
+  #table.addLink(Link(m3.outputNodes[0], m1.inputNodes[0], 100))
   
   table.vis(canvas)
 
