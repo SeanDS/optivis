@@ -55,42 +55,38 @@ class Optivis(object):
       canvasComponent2 = self.getCanvasObject(link.inputNode.component)
       
       # coordinates of output node for rotated component
-      (xOutput, yOutput) = Optivis.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
-      
-      print "xOutput: {0}".format(xOutput)
-      print "yOutput: {0}".format(yOutput)
+      (xOutputRelative, yOutputRelative) = Optivis.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
       
       # combined output node and component position
-      (xPos1, yPos1) = Optivis.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutput, yOutput))
+      (xOutput, yOutput) = Optivis.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutputRelative, yOutputRelative))
       
       outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
-      inputAzimuth = outputAzimuth + link.inputNode.azimuth + 180
-      
-      print "xPos1: {0}".format(xPos1)
-      print "yPos1: {0}".format(yPos1)
+      inputAzimuth = outputAzimuth
       
       # link lengths in cartesian coordinates (well, 'Tkinter' coordinates)
       xLength = link.length * math.cos(math.radians(outputAzimuth))
-      yLength = link.length * -math.sin(math.radians(outputAzimuth))
-      
-      print "xLength: {0}".format(xLength)
-      print "yLength: {0}".format(yLength)
+      yLength = link.length * math.sin(math.radians(outputAzimuth))
       
       # coordinates of input node for rotated component input node
-      (xInput, yInput) = Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), inputAzimuth)
+      (xInputRelative, yInputRelative) = Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), inputAzimuth - link.inputNode.azimuth)
+      
+      (xInput, yInput) = Optivis.translate((xOutput, yOutput), (xLength, yLength))
       
       # coordinates of second component
-      (xPos2, yPos2) = Optivis.translate((xPos1, yPos1), (xInput, yInput), (xLength, yLength))
+      (xPos2, yPos2) = Optivis.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
       
       # update second component position and azimuth
       canvasComponent2.xPos = xPos2
       canvasComponent2.yPos = yPos2
       canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
-      canvas.create_line(xPos1, yPos1, xPos2, yPos2)
+      canvas.create_line(xOutput, yOutput, xInput, yInput)
       
       # start line
-      canvas.create_oval(xPos1 - 5, yPos1 - 5, xPos1 + 5, yPos1 + 5)
+      canvas.create_oval(xOutput - 5, yOutput - 5, xOutput + 5, yOutput + 5, fill="red")
+      
+      # end line
+      canvas.create_oval(xInput - 5, yInput - 5, xInput + 5, yInput + 5, fill="blue")
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
@@ -124,12 +120,13 @@ class Optivis(object):
   @staticmethod
   def rotate((xPos, yPos), azimuth):
     """
-    Rotation applied for the left-handed coordinate system used by Tkinter
+    Rotation applied for the left-handed coordinate system used by Tkinter.
+    Azimuth is the angle in degrees to rotate in a clockwise direction.
     """
     
     # apply rotation matrix to xPos and yPos
     xPosRotated = xPos * math.cos(math.radians(azimuth)) - yPos * math.sin(math.radians(azimuth))
-    yPosRotated = yPos * math.sin(math.radians(azimuth)) + yPos * math.cos(math.radians(azimuth))
+    yPosRotated = xPos * math.sin(math.radians(azimuth)) + yPos * math.cos(math.radians(azimuth))
     
     return (xPosRotated, yPosRotated)
 
@@ -398,8 +395,8 @@ class Mirror(Component):
 
 class CavityMirror(Mirror):
   def __init__(self, filename="b-mir.svg", width=11, height=29):
-    inputNodes = [InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=180)]
-    outputNodes = [OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0)]
+    inputNodes = [InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=0)] # input node azimuth defined WRT input light direction
+    outputNodes = [OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0)] # output node azimuth defined WRT output light direction
     
     super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes)
 
@@ -413,17 +410,17 @@ if __name__ == '__main__':
   master = Tk.Tk()
   
   canvas = Tk.Canvas(master, width=500, height=500)
-  canvas.create_line(0, 100, 400, 500)
-  canvas.create_line(0, 80, 420, 500)
-  canvas.create_line(0, 60, 440, 500)
-  canvas.create_line(0, 40, 460, 500)
-  canvas.create_line(0, 20, 480, 500)
-  canvas.create_line(0, 0, 500, 500)
-  canvas.create_line(20, 0, 500, 480)
-  canvas.create_line(40, 0, 500, 460)
-  canvas.create_line(60, 0, 500, 440)
-  canvas.create_line(80, 0, 500, 420)
-  canvas.create_line(100, 0, 500, 400)
+  #canvas.create_line(0, 100, 400, 500)
+  #canvas.create_line(0, 80, 420, 500)
+  #canvas.create_line(0, 60, 440, 500)
+  #canvas.create_line(0, 40, 460, 500)
+  #canvas.create_line(0, 20, 480, 500)
+  #canvas.create_line(0, 0, 500, 500)
+  #canvas.create_line(20, 0, 500, 480)
+  #canvas.create_line(40, 0, 500, 460)
+  #canvas.create_line(60, 0, 500, 440)
+  #canvas.create_line(80, 0, 500, 420)
+  #canvas.create_line(100, 0, 500, 400)
   
   table = Optivis()
   
@@ -432,7 +429,7 @@ if __name__ == '__main__':
   
   table.addComponent(l)
   table.addComponent(m)
-  table.addLink(Link(l.outputNodes[0], m.inputNodes[0], 50))
+  table.addLink(Link(l.outputNodes[0], m.inputNodes[0], 100))
   
   table.vis(canvas)
 
