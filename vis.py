@@ -56,8 +56,8 @@ class Optivis(object):
       
       self.canvasObjects.append(CanvasComponent(component=component, azimuth=0, xPos=250, yPos=250))
     
-    # list of nodes already linked
-    linkedNodes = []
+    # list of componets already linked
+    linkedComponents = []
     
     for link in self.links:
       canvasComponent1 = self.getCanvasObject(link.outputNode.component)
@@ -81,18 +81,27 @@ class Optivis(object):
       
       (xInput, yInput) = Optivis.translate((xOutput, yOutput), (xLength, yLength))
       
-      # candidate position of second component
-      (xPos2, yPos2) = Optivis.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
-      
-      # FIXME: potential bug with components linked across 180 degrees in a loop (i.e. position of component the same, but angle different) - do a similar check to the one below for angles      
-      if link.inputNode in linkedNodes:
-	# can't move component - already linked	
-	# check if linking it would require moving it
-	if not (canvasComponent2.xPos, canvasComponent2.yPos) == (xPos2, yPos2):
+      # check if input component is already linked
+      if link.inputNode.component in linkedComponents:
+	# can't move component - already linked
+	
+	# get input node coordinates
+	(xInputTest, yInputTest) = Optivis.translate((canvasComponent2.xPos, canvasComponent2.yPos), Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth))
+	
+	#if not (canvasComponent2.xPos, canvasComponent2.yPos) == (xPos2, yPos2):
+	#if not (xInput, yInput) == (xInputTest, yInputTest):
+	if not self.compareCoordinates((xInput, yInput), (xInputTest, yInputTest)):
+	  # warn the user that they have specified a link longer/shorter or different angle than necessary to keep this component in its current position
 	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it. Ignoring link length and angle!".format(canvasComponent2, canvasComponent1)
 	  
-	  # update input position
-	  (xInput, yInput) = Optivis.translate((canvasComponent2.xPos, canvasComponent2.yPos), Optivis.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth))
+	  # print desired position
+	  print "\tDesired position: ({0}, {1})".format(xInput, yInput)
+	  
+	  # print overridden position
+	  print "\tOverridden position: ({0}, {1})".format(xInputTest, yInputTest)
+	  
+	  # override position
+	  (xInput, yInput) = (xInputTest, yInputTest)
       else:
 	# coordinates of second component
 	(xPos2, yPos2) = Optivis.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
@@ -108,19 +117,39 @@ class Optivis(object):
       canvas.create_line(xOutput, yOutput, xInput, yInput, fill=link.colour)
       
       # marker for start line
-      canvas.create_oval(xOutput - 5, yOutput - 5, xOutput + 5, yOutput + 5, fill="red")
+      canvas.create_oval(xOutput - 2, yOutput - 2, xOutput + 2, yOutput + 2, fill="red")
       
       # marker for end line
-      canvas.create_oval(xInput - 5, yInput - 5, xInput + 5, yInput + 5, fill="blue")
+      canvas.create_oval(xInput - 2, yInput - 2, xInput + 2, yInput + 2, fill="blue")
       
-      # add link to list of links
-      linkedNodes.append(link.inputNode)
+      # add components to list of components
+      linkedComponents.append(link.inputNode.component)
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
       canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.getImage(svgDir=self.svgDir), anchor=Tk.CENTER)
     
     canvas.pack()
+  
+  def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
+    if tol is rel is None:
+        raise TypeError('Cannot specify both absolute and relative errors are None')
+    
+    xTests = []
+    yTests = []
+    
+    if tol is not None:
+      xTests.append(tol)
+      yTests.append(tol)
+      
+    if rel is not None:
+      xTests.append(rel * abs(XY1[0]))
+      yTests.append(rel * abs(XY1[1]))
+    
+    assert xTests
+    assert yTests
+    
+    return (abs(XY1[0] - XY2[0]) <= max(xTests)) and (abs(XY1[1] - XY2[1]) <= max(yTests))
   
   def getCanvasObject(self, visObject):
     if not isinstance(visObject, VisObject):
@@ -463,67 +492,26 @@ class CavityMirror(Mirror):
     
     super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
+class BeamSplitter(Mirror):
+  def __init__(self, filename="b-bsp.svg", width=23, height=23, aoi=0, *args, **kwargs):
+    inputNodes = [
+      InputNode(name="frA", component=self, xPos=0, yPos=-height/2, azimuth=aoi+90),
+      InputNode(name="frB", component=self, xPos=width/2, yPos=0, azimuth=aoi+180),
+      InputNode(name="bkA", component=self, xPos=-width/2, yPos=0, azimuth=aoi),
+      InputNode(name="bkB", component=self, xPos=0, yPos=height/2, azimuth=aoi+270)
+    ]
+    
+    outputNodes = [
+      OutputNode(name="frA", component=self, xPos=width/2, yPos=0, azimuth=-aoi),
+      OutputNode(name="frB", component=self, xPos=0, yPos=-height/2, azimuth=270-aoi),
+      OutputNode(name="bkA", component=self, xPos=0, yPos=height/2, azimuth=90-aoi),
+      OutputNode(name="bkB", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi)
+    ]
+    
+    super(BeamSplitter, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
 class Laser(Source):
   def __init__(self, filename="c-laser1.svg", width=62, height=46, *args, **kwargs):
     outputNode = OutputNode(name="out", component=self, xPos=-width/2, yPos=0, azimuth=180)
     
     super(Laser, self).__init__(filename=filename, width=width, height=height, outputNode=outputNode, *args, **kwargs)
-
-if __name__ == '__main__':
-  master = Tk.Tk()
-  
-  canvas = Tk.Canvas(master, width=500, height=500)
-  #canvas.create_line(0, 100, 400, 500)
-  #canvas.create_line(0, 80, 420, 500)
-  #canvas.create_line(0, 60, 440, 500)
-  #canvas.create_line(0, 40, 460, 500)
-  #canvas.create_line(0, 20, 480, 500)
-  #canvas.create_line(0, 0, 500, 500)
-  #canvas.create_line(20, 0, 500, 480)
-  #canvas.create_line(40, 0, 500, 460)
-  #canvas.create_line(60, 0, 500, 440)
-  #canvas.create_line(80, 0, 500, 420)
-  #canvas.create_line(100, 0, 500, 400)
-  
-  table = Optivis()
-  
-  l1 = Laser(name="L1")
-  m1 = CavityMirror(name="M1", aoi=30)
-  m2 = CavityMirror(name="M2", aoi=15)
-  m3 = CavityMirror(name="M3", aoi=0)
-  
-  table.addComponent(l1)
-  table.addComponent(m1)
-  table.addComponent(m2)
-  table.addComponent(m3)
-  
-  table.addLink(Link(l1.outputNodes[0], m1.inputNodes[0], 100))
-  table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 100))
-  table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 150))
-  
-  #table.addComponent(m1)
-  #table.addComponent(m2)
-  #table.addComponent(m3)
-  
-  #table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 100))
-  #table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 100))
-  #table.addLink(Link(m3.outputNodes[0], m1.inputNodes[0], 100))
-  
-  table.vis(canvas)
-
-"""
-master = vis.Tk()
-
-canvas = vis.Canvas(master, width=200, height=100)
-canvas.pack()
-
-canvas.create_line(0, 0, 200, 100)
-canvas.create_line(0, 100, 200, 0, fill="red", dash=(4, 4))
-canvas.create_rectangle(50, 25, 150, 75, fill="blue")
-
-tkImage = svnToPhotoImage("svg/c-laser1.svg")
-
-canvas.create_image(100, 100, image=tkImage)
-
-vis.mainloop()
-"""
