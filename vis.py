@@ -132,6 +132,10 @@ class Optivis(object):
     canvas.pack()
   
   def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
+    """
+    Compare coordinate floats without precision errors. Based on http://code.activestate.com/recipes/577124-approximately-equal/.
+    """
+    
     if tol is rel is None:
         raise TypeError('Cannot specify both absolute and relative errors are None')
     
