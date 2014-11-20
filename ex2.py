@@ -1,11 +1,6 @@
 from vis import *
-import Tkinter as Tk
 
-master = Tk.Tk()
-
-canvas = Tk.Canvas(master, width=500, height=500)
-
-table = Optivis()
+table = Optivis(azimuth=0)
 
 l1 = Laser(name="L1")
 bs1 = BeamSplitter(name="BS", aoi=0)
@@ -25,4 +20,4 @@ table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 50))
 table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 61.5))
 table.addLink(Link(m3.outputNodes[0], bs1.inputNodes[2], 38.5))
 
-table.vis(canvas)
+table.vis()

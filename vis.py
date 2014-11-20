@@ -8,14 +8,34 @@ import rsvg
 import cairo
 
 class Optivis(object):
+  ###
+  # Tkinter objects
+
+  master = None
+  canvas = None
+
+  ###
+  # Optivis canvas components
+
   components = []
   links = []
   
   # This holds objects drawn on the canvas. This acts as a buffer for the canvas - deleting its contents will eventually delete the equivalent representation from the canvas!
   canvasObjects = []
   
-  def __init__(self, svgDir="svg"):
+  def __init__(self, width=500, height=500, svgDir="svg", azimuth=0):
+    self.width = width
+    self.height = height
     self.svgDir = svgDir
+    self.azimuth = azimuth
+
+    # create canvas
+    self.master = Tk.Tk()
+    self.canvas = Tk.Canvas(self.master, width=self.width, height=self.height)
+
+    # set title
+    # TODO: make this user-settable
+    self.master.title('Optivis')
     
   def addComponent(self, component):
     if not isinstance(component, Component):    
@@ -36,15 +56,39 @@ class Optivis(object):
     self.links.append(link)
   
   @property
+  def width(self):
+    return self.__width
+
+  @width.setter
+  def width(self, width):
+    self.__width = width
+
+  @property
+  def height(self):
+    return self.__height
+
+  @height.setter
+  def height(self, height):
+    self.__height = height
+
+  @property
   def svgDir(self):
     return self.__svgDir
   
   @svgDir.setter
   def svgDir(self, svgDir):
     self.__svgDir = svgDir
+
+  @property
+  def azimuth(self):
+    return self.__azimuth
   
-  def vis(self, canvas, scale=1):
-    if not isinstance(canvas, Tk.Canvas):
+  @azimuth.setter
+  def azimuth(self, azimuth):
+    self.__azimuth = azimuth
+  
+  def vis(self, scale=1):
+    if not isinstance(self.canvas, Tk.Canvas):
       raise Exception('Specified canvas is not of type Tkinter.Canvas')
     
     # clear image buffer
@@ -54,7 +98,10 @@ class Optivis(object):
       width = component.width * scale
       height = component.height * scale
       
-      self.canvasObjects.append(CanvasComponent(component=component, azimuth=0, xPos=250, yPos=250))
+      # add component to list of canvas objects
+      # azimuth of component is set to global azimuth - but in reality all but the first component will have its azimuth overridden based
+      # on input/output node alignment
+      self.canvasObjects.append(CanvasComponent(component=component, azimuth=self.azimuth, xPos=self.width / 2, yPos=self.height / 2))
     
     # list of componets already linked
     linkedComponents = []
@@ -114,22 +161,23 @@ class Optivis(object):
       canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       # draw link
-      canvas.create_line(xOutput, yOutput, xInput, yInput, fill=link.colour)
+      self.canvas.create_line(xOutput, yOutput, xInput, yInput, fill=link.colour)
       
       # marker for start line
-      canvas.create_oval(xOutput - 2, yOutput - 2, xOutput + 2, yOutput + 2, fill="red")
+      self.canvas.create_oval(xOutput - 2, yOutput - 2, xOutput + 2, yOutput + 2, fill="red")
       
       # marker for end line
-      canvas.create_oval(xInput - 2, yInput - 2, xInput + 2, yInput + 2, fill="blue")
+      self.canvas.create_oval(xInput - 2, yInput - 2, xInput + 2, yInput + 2, fill="blue")
       
       # add components to list of components
       linkedComponents.append(link.inputNode.component)
     
     # loop over components again, adding them
     for canvasComponent in self.getCanvasComponents():
-      canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.getImage(svgDir=self.svgDir), anchor=Tk.CENTER)
+      self.canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.getImage(svgDir=self.svgDir), anchor=Tk.CENTER)
     
-    canvas.pack()
+    # force redraw
+    self.canvas.pack()
   
   def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
     """
