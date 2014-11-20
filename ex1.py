@@ -16,4 +16,4 @@ table.addLink(Link(l1.outputNodes[0], m1.inputNodes[0], 100))
 table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 100))
 table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 150))
 
-table.vis()
+table.draw()

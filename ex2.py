@@ -20,4 +20,4 @@ table.addLink(Link(m1.outputNodes[0], m2.inputNodes[0], 50))
 table.addLink(Link(m2.outputNodes[0], m3.inputNodes[0], 61.5))
 table.addLink(Link(m3.outputNodes[0], bs1.inputNodes[2], 38.5))
 
-table.vis()
+table.draw()

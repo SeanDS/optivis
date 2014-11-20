@@ -9,10 +9,8 @@ import cairo
 
 class Optivis(object):
   ###
-  # Tkinter objects
-
-  master = None
-  canvas = None
+  # GUI
+  gui = None
 
   ###
   # Optivis canvas components
@@ -23,19 +21,16 @@ class Optivis(object):
   # This holds objects drawn on the canvas. This acts as a buffer for the canvas - deleting its contents will eventually delete the equivalent representation from the canvas!
   canvasObjects = []
   
-  def __init__(self, width=500, height=500, svgDir="svg", azimuth=0):
-    self.width = width
-    self.height = height
-    self.svgDir = svgDir
+  def __init__(self, width=500, height=500, azimuth=0):
     self.azimuth = azimuth
+    self.gui = GUI(width=width, height=height)
 
-    # create canvas
-    self.master = Tk.Tk()
-    self.canvas = Tk.Canvas(self.master, width=self.width, height=self.height)
+  def draw(self):
+    # create canvas objects
+    self.vis()
 
-    # set title
-    # TODO: make this user-settable
-    self.master.title('Optivis')
+    # draw them
+    self.gui.draw(self.canvasObjects)
     
   def addComponent(self, component):
     if not isinstance(component, Component):    
@@ -54,30 +49,6 @@ class Optivis(object):
       raise Exception('Output node component has not been added to table')
     
     self.links.append(link)
-  
-  @property
-  def width(self):
-    return self.__width
-
-  @width.setter
-  def width(self, width):
-    self.__width = width
-
-  @property
-  def height(self):
-    return self.__height
-
-  @height.setter
-  def height(self, height):
-    self.__height = height
-
-  @property
-  def svgDir(self):
-    return self.__svgDir
-  
-  @svgDir.setter
-  def svgDir(self, svgDir):
-    self.__svgDir = svgDir
 
   @property
   def azimuth(self):
@@ -87,28 +58,29 @@ class Optivis(object):
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
   
-  def vis(self, scale=1):
-    if not isinstance(self.canvas, Tk.Canvas):
-      raise Exception('Specified canvas is not of type Tkinter.Canvas')
-    
+  def createCanvasObjects(self):    
     # clear image buffer
     del self.canvasObjects[:]
     
     for component in self.components:
-      width = component.width * scale
-      height = component.height * scale
+      width = component.width
+      height = component.height
       
       # add component to list of canvas objects
       # azimuth of component is set to global azimuth - but in reality all but the first component will have its azimuth overridden based
       # on input/output node alignment
-      self.canvasObjects.append(CanvasComponent(component=component, azimuth=self.azimuth, xPos=self.width / 2, yPos=self.height / 2))
+      self.canvasObjects.append(CanvasComponent(component=component, azimuth=self.azimuth, xPos=self.gui.width / 2, yPos=self.gui.height / 2))
+
+  def vis(self):
+    # convert optical components to canvas objects
+    self.createCanvasObjects()
     
     # list of componets already linked
     linkedComponents = []
     
     for link in self.links:
-      canvasComponent1 = self.getCanvasObject(link.outputNode.component)
-      canvasComponent2 = self.getCanvasObject(link.inputNode.component)
+      canvasComponent1 = self.getCanvasComponent(link.outputNode.component)
+      canvasComponent2 = self.getCanvasComponent(link.inputNode.component)
       
       # coordinates of output node for rotated component
       (xOutputRelative, yOutputRelative) = Optivis.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
@@ -160,25 +132,16 @@ class Optivis(object):
       # update second component azimuth to be the link azimuth minus the input azimuth
       canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
-      # draw link
-      self.canvas.create_line(xOutput, yOutput, xInput, yInput, fill=link.colour)
-      
-      # marker for start line
-      self.canvas.create_oval(xOutput - 2, yOutput - 2, xOutput + 2, yOutput + 2, fill="red")
-      
-      # marker for end line
-      self.canvas.create_oval(xInput - 2, yInput - 2, xInput + 2, yInput + 2, fill="blue")
+      # add canvas link
+      self.canvasObjects.append(CanvasLink((xOutput, yOutput), (xInput, yInput), fill=link.colour))
+
+      # marker for start and end lines
+      #self.addMarker((xOutput, yOutput), fill="red") # start (output)
+      #self.addMarker((xInput, yInput), fill="blue")  # end (input)
       
       # add components to list of components
       linkedComponents.append(link.inputNode.component)
-    
-    # loop over components again, adding them
-    for canvasComponent in self.getCanvasComponents():
-      self.canvas.create_image(canvasComponent.xPos, canvasComponent.yPos, image=canvasComponent.getImage(svgDir=self.svgDir), anchor=Tk.CENTER)
-    
-    # force redraw
-    self.canvas.pack()
-  
+
   def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
     """
     Compare coordinate floats without precision errors. Based on http://code.activestate.com/recipes/577124-approximately-equal/.
@@ -203,13 +166,13 @@ class Optivis(object):
     
     return (abs(XY1[0] - XY2[0]) <= max(xTests)) and (abs(XY1[1] - XY2[1]) <= max(yTests))
   
-  def getCanvasObject(self, visObject):
-    if not isinstance(visObject, VisObject):
-      raise Exception('Specified canvas object is not of type VisObject')
+  def getCanvasComponent(self, component):
+    if not isinstance(component, Component):
+      raise Exception('Specified canvas component is not of type Component')
     
-    for thisObject in self.canvasObjects:
-      if thisObject.visObject == visObject:
-	return thisObject
+    for thisCanvasComponent in self.getCanvasComponents():
+      if thisCanvasComponent.component == component:
+	return thisCanvasComponent
     
     raise Exception('Cannot find specified canvas object in buffer (this shouldn\'t happen!)')
   
@@ -240,22 +203,31 @@ class Optivis(object):
     return (xPosRotated, yPosRotated)
 
 class CanvasObject(object):
-  def __init__(self, visObject, xPos=0, yPos=0):
-    self.visObject = visObject
+  def __init__(self):
+    return None
+
+  # FIXME: make draw() an abstract class
+
+class CanvasComponent(CanvasObject):
+  def __init__(self, component, azimuth=0, xPos=0, yPos=0):
+    if not isinstance(component, Component):
+      raise Exception('Specified component is not of type Component')
+    
+    self.azimuth = azimuth
+    self.image = None
+
+    self.component = component
     self.xPos = xPos
     self.yPos = yPos
 
-  @property
-  def visObject(self):
-    return self.__visObject
+    super(CanvasComponent, self).__init__()
+  
+  def draw(self, canvas, svgDir):
+    if not isinstance(canvas, Tk.Canvas):
+      raise Exception('Specified canvas is not of type Tk.Canvas')
 
-  @visObject.setter
-  def visObject(self, visObject):
-    if not isinstance(visObject, VisObject):
-      raise Exception('Specified canvas object is not of type VisObject')
-    
-    self.__visObject = visObject
-    
+    canvas.create_image(self.xPos, self.yPos, image=self.getImage(svgDir=svgDir), anchor=Tk.CENTER)
+
   @property
   def xPos(self):
     return self.__xPos
@@ -271,19 +243,9 @@ class CanvasObject(object):
   @yPos.setter
   def yPos(self, yPos):
     self.__yPos = yPos
-
-class CanvasComponent(CanvasObject):
-  def __init__(self, component, azimuth=0, *args, **kwargs):
-    if not isinstance(component, Component):
-      raise Exception('Specified component is not of type Component')
-    
-    self.azimuth = azimuth
-    self.image = None
-    
-    super(CanvasComponent, self).__init__(visObject=component, *args, **kwargs)
   
   def getImage(self, svgDir):
-    self.image = self.visObject.toImage(svgDir=svgDir, azimuth=self.azimuth)
+    self.image = self.component.toImage(svgDir=svgDir, azimuth=self.azimuth)
     
     return self.image
   
@@ -298,6 +260,119 @@ class CanvasComponent(CanvasObject):
   def __str__(self):
     # return visObject's __str__
     return self.visObject.__str__()
+
+class CanvasLink(CanvasObject):
+  def __init__(self, (xStart, yStart), (xEnd, yEnd), fill="black"):
+    self.startPos = (xStart, yStart)
+    self.endPos = (xEnd, yEnd)
+    self.fill = fill
+    
+    super(CanvasLink, self).__init__()
+
+  def draw(self, canvas, svgDir):
+    if not isinstance(canvas, Tk.Canvas):
+      raise Exception('Specified canvas is not of type Tk.Canvas')
+
+    canvas.create_line(self.startPos[0], self.startPos[1], self.endPos[0], self.endPos[1], fill=self.fill)
+
+  @property
+  def startPos(self):
+    return self.__startPos
+
+  @startPos.setter
+  def startPos(self, startPos):
+    self.__startPos = startPos
+
+  @property
+  def endPos(self):
+    return self.__endPos
+
+  @endPos.setter
+  def endPos(self, endPos):
+    self.__endPos = endPos
+
+  @property
+  def fill(self):
+    return self.__fill
+
+  @fill.setter
+  def fill(self, fill):
+    self.__fill = fill
+
+class GUI(object):
+  master = None
+  canvas = None
+
+  def __init__(self, width=500, height=500, title="Optivis", svgDir="svg"):
+    self.width = width
+    self.height = height
+    self.title = title
+    self.svgDir = svgDir
+
+    # create canvas
+    self.master = Tk.Tk()
+    self.canvas = Tk.Canvas(self.master, width=self.width, height=self.height)
+
+    self.initialise()
+
+  def initialise(self):
+    # set title
+    # TODO: make this user-settable
+    self.master.title(self.title)
+
+    # add menu
+    menuBar = Tk.Menu(self.master)
+    menuBar.add_command(label="Exit", command=self.quit)
+
+    self.master.config(menu=menuBar)
+
+  def quit(self):
+    self.master.destroy()
+
+  def draw(self, canvasComponents):
+    for canvasComponent in canvasComponents:
+      canvasComponent.draw(self.canvas, self.svgDir)
+
+    # force redraw
+    self.canvas.pack()
+
+    # run GUI loop
+    self.master.mainloop()
+  
+  #def addMarker(self, (xPos, yPos), radius=2, *args, **kwargs):
+  #  self.canvas.create_oval(xPos - radius, yPos - radius, xPos + radius, yPos + radius, *args, **kwargs)
+
+  @property
+  def width(self):
+    return self.__width
+
+  @width.setter
+  def width(self, width):
+    self.__width = width
+
+  @property
+  def height(self):
+    return self.__height
+
+  @height.setter
+  def height(self, height):
+    self.__height = height
+
+  @property
+  def title(self):
+    return self.__title
+
+  @title.setter
+  def title(self, title):
+    self.__title = title
+
+  @property
+  def svgDir(self):
+    return self.__svgDir
+
+  @svgDir.setter
+  def svgDir(self, svgDir):
+    self.__svgDir = svgDir
 
 class Node(object):  
   def __init__(self, name, component, xPos, yPos, azimuth):
