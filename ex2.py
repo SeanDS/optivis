@@ -1,9 +1,9 @@
 import Optivis
 
-bench = Optivis.Bench(azimuth=0)
+bench = Optivis.Bench(azimuth=180)
 
 l1 = Optivis.BenchObjects.Laser(name="L1")
-bs1 = Optivis.BenchObjects.BeamSplitter(name="BS", aoi=0)
+bs1 = Optivis.BenchObjects.BeamSplitter(name="BS", aoi=45)
 m1 = Optivis.BenchObjects.CavityMirror(name="M1", aoi=45)
 m2 = Optivis.BenchObjects.CavityMirror(name="M2", aoi=45)
 m3 = Optivis.BenchObjects.CavityMirror(name="M3", aoi=45)

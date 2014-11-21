@@ -58,8 +58,8 @@ class CanvasComponent(CanvasObject):
     self.__azimuth = azimuth
     
   def __str__(self):
-    # return visObject's __str__
-    return self.visObject.__str__()
+    # return component's __str__
+    return self.component.__str__()
 
 class CanvasLink(CanvasObject):
   def __init__(self, (xStart, yStart), (xEnd, yEnd), fill="black"):

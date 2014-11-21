@@ -151,14 +151,14 @@ class Component(BenchObject):
   
   def getInputNode(self, nodeName):
     for node in self.inputNodes:
-      if node.name == nodeName:
+      if node.name is nodeName:
 	return node
     
     raise Exception('No input node with name {0} found'.format(nodeName))
   
   def getOutputNode(self, nodeName):
     for node in self.outputNodes:
-      if node.name == nodeName:
+      if node.name is nodeName:
 	return node
     
     raise Exception('No output node with name {0} found'.format(nodeName))
@@ -194,7 +194,25 @@ class CavityMirror(Mirror):
     super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitter(Mirror):
-  def __init__(self, filename="b-bsp.svg", width=23, height=23, aoi=0, *args, **kwargs):
+  def __init__(self, filename="b-bsp.svg", width=11, height=29, aoi=-45, *args, **kwargs):
+    inputNodes = [
+      Nodes.InputNode(name="frA", component=self, xPos=-width/2, yPos=0, azimuth=aoi),
+      Nodes.InputNode(name="frB", component=self, xPos=-width/2, yPos=0, azimuth=-aoi),
+      Nodes.InputNode(name="bkA", component=self, xPos=width/2, yPos=0, azimuth=180-aoi),
+      Nodes.InputNode(name="bkB", component=self, xPos=width/2, yPos=0, azimuth=180+aoi)
+    ]
+    
+    outputNodes = [
+      Nodes.OutputNode(name="frA", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi),
+      Nodes.OutputNode(name="frB", component=self, xPos=-width/2, yPos=0, azimuth=180+aoi),
+      Nodes.OutputNode(name="bkA", component=self, xPos=width/2, yPos=0, azimuth=aoi),
+      Nodes.OutputNode(name="bkB", component=self, xPos=width/2, yPos=0, azimuth=-aoi)
+    ]
+    
+    super(BeamSplitter, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class BeamSplitterCube(Mirror):
+  def __init__(self, filename="b-bspcube.svg", width=23, height=23, aoi=0, *args, **kwargs):
     inputNodes = [
       Nodes.InputNode(name="frA", component=self, xPos=0, yPos=-height/2, azimuth=aoi+90),
       Nodes.InputNode(name="frB", component=self, xPos=width/2, yPos=0, azimuth=aoi+180),

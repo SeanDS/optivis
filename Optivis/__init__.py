@@ -82,21 +82,21 @@ class Bench(object):
       canvasComponent1 = self.getCanvasComponent(link.outputNode.component)
       canvasComponent2 = self.getCanvasComponent(link.inputNode.component)
       
+      outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
+      inputAzimuth = outputAzimuth
+      
       # coordinates of output node for rotated component
       (xOutputRelative, yOutputRelative) = Bench.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
       
       # combined output node and component position
       (xOutput, yOutput) = Bench.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutputRelative, yOutputRelative))
       
-      outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
-      inputAzimuth = outputAzimuth
-      
       # link lengths in cartesian coordinates (well, 'Tkinter' coordinates)
       xLength = link.length * math.cos(math.radians(outputAzimuth))
       yLength = link.length * math.sin(math.radians(outputAzimuth))
       
       # coordinates of input node for rotated component input node
-      (xInputRelative, yInputRelative) = Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), inputAzimuth - link.inputNode.azimuth)
+      (xInputRelative, yInputRelative) = Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth)
       
       (xInput, yInput) = Bench.translate((xOutput, yOutput), (xLength, yLength))
       
@@ -105,11 +105,11 @@ class Bench(object):
 	# can't move component - already linked
 	
 	# get input node coordinates
-	(xInputTest, yInputTest) = Bench.translate((canvasComponent2.xPos, canvasComponent2.yPos), Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth))
+	(xInputTest, yInputTest) = Bench.translate((canvasComponent2.xPos, canvasComponent2.yPos), Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth + link.inputNode.azimuth))
 	
 	#if not (canvasComponent2.xPos, canvasComponent2.yPos) == (xPos2, yPos2):
 	#if not (xInput, yInput) == (xInputTest, yInputTest):
-	if not self.compareCoordinates((xInput, yInput), (xInputTest, yInputTest)):
+	if not self.compareCoordinates((xInput, yInput), (xInputTest, yInputTest)):# and not inputAzimuth is (canvasComponent2.azimuth + link.inputNode.azimuth):
 	  # warn the user that they have specified a link longer/shorter or different angle than necessary to keep this component in its current position
 	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it. Ignoring link length and angle!".format(canvasComponent2, canvasComponent1)
 	  
@@ -119,8 +119,9 @@ class Bench(object):
 	  # print overridden position
 	  print "\tOverridden position: ({0}, {1})".format(xInputTest, yInputTest)
 	  
-	  # override position
+	  # override position and azimuth
 	  (xInput, yInput) = (xInputTest, yInputTest)
+	  #inputAzimuth = canvasComponent2.azimuth + link.inputNode.azimuth
       else:
 	# coordinates of second component
 	(xPos2, yPos2) = Bench.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
@@ -129,8 +130,8 @@ class Bench(object):
 	canvasComponent2.xPos = xPos2
 	canvasComponent2.yPos = yPos2
       
-      # update second component azimuth to be the link azimuth minus the input azimuth
-      canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
+	# update second component azimuth to be the link azimuth minus the input azimuth
+	canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       # add canvas link
       self.canvasObjects.append(CanvasLink((xOutput, yOutput), (xInput, yInput), fill=link.colour))
@@ -140,6 +141,7 @@ class Bench(object):
       #self.addMarker((xInput, yInput), fill="blue")  # end (input)
       
       # add components to list of components
+      # FIXME: don't add same component twice
       linkedComponents.append(link.inputNode.component)
 
   def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
