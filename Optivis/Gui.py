@@ -22,9 +22,13 @@ class GUI(object):
     # TODO: make this user-settable
     self.master.title(self.title)
 
-    # add menu
+    # make root menu
     menuBar = Tk.Menu(self.master)
-    menuBar.add_command(label="Exit", command=self.quit)
+    
+    # make and add file menu
+    fileMenu = Tk.Menu(menuBar, tearoff=0)
+    fileMenu.add_command(label="Exit", command=self.quit)
+    menuBar.add_cascade(label="File", menu=fileMenu)
 
     self.master.config(menu=menuBar)
 
