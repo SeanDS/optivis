@@ -1,3 +1,7 @@
+"""
+Demonstration of angles of incidence.
+"""
+
 import Optivis
 
 bench = Optivis.Bench()
@@ -12,8 +16,8 @@ bench.addComponent(m1)
 bench.addComponent(m2)
 bench.addComponent(m3)
 
-bench.addLink(Optivis.BenchObjects.Link(l1.outputNodes[0], m1.inputNodes[0], 100))
-bench.addLink(Optivis.BenchObjects.Link(m1.outputNodes[0], m2.inputNodes[0], 100))
-bench.addLink(Optivis.BenchObjects.Link(m2.outputNodes[0], m3.inputNodes[0], 150))
+bench.addLink(Optivis.BenchObjects.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 100))
+bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode('fr'), 100))
+bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 150))
 
 bench.draw()

@@ -1,3 +1,7 @@
+"""
+Demonstration of beam splitter's inputs and outputs.
+"""
+
 import Optivis
 
 bench = Optivis.Bench(azimuth=180)
@@ -14,10 +18,10 @@ bench.addComponent(m1)
 bench.addComponent(m2)
 bench.addComponent(m3)
 
-bench.addLink(Optivis.BenchObjects.Link(l1.outputNodes[0], bs1.inputNodes[0], 100))
-bench.addLink(Optivis.BenchObjects.Link(bs1.outputNodes[2], m1.inputNodes[0], 50))
-bench.addLink(Optivis.BenchObjects.Link(m1.outputNodes[0], m2.inputNodes[0], 50))
-bench.addLink(Optivis.BenchObjects.Link(m2.outputNodes[0], m3.inputNodes[0], 61.5))
-bench.addLink(Optivis.BenchObjects.Link(m3.outputNodes[0], bs1.inputNodes[2], 38.5))
+bench.addLink(Optivis.BenchObjects.Link(l1.getOutputNode('out'), bs1.getInputNode('frA'), 100))
+bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkA'), m1.getInputNode('fr'), 50))
+bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode('fr'), 50))
+bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58))
+bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5))
 
 bench.draw()
