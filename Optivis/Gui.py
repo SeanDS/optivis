@@ -39,6 +39,9 @@ class GUI(object):
     for canvasComponent in canvasComponents:
       canvasComponent.draw(self.canvas, self.svgDir)
 
+    # arrange z-order
+    self.arrangeZ()
+
     # force redraw
     self.canvas.pack()
 
@@ -47,6 +50,17 @@ class GUI(object):
   
   #def addMarker(self, (xPos, yPos), radius=2, *args, **kwargs):
   #  self.canvas.create_oval(xPos - radius, yPos - radius, xPos + radius, yPos + radius, *args, **kwargs)
+
+  def arrangeZ(self):
+    """
+    Arrange z-order of components using their tags
+    """
+    
+    # send start markers to top
+    self.canvas.tag_raise("startmarker")
+  
+    # now send end markers to top
+    self.canvas.tag_raise("endmarker")
 
   @property
   def width(self):
