@@ -81,9 +81,13 @@ class CanvasComponent(CanvasObject):
     return self.component.__str__()
 
 class CanvasLink(CanvasObject):
-  def __init__(self, (xStart, yStart), (xEnd, yEnd), fill="red", startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+  def __init__(self, (xStart, yStart), (xEnd, yEnd), width, fill="red", startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+    if width < 0:
+      raise Exception('Specified width is invalid')
+    
     self.startPos = (xStart, yStart)
     self.endPos = (xEnd, yEnd)
+    self.width = width
     self.fill = fill
     self.startMarker = startMarker
     self.endMarker = endMarker
@@ -95,7 +99,7 @@ class CanvasLink(CanvasObject):
     super(CanvasLink, self).__init__()
 
   def _draw(self, canvas):
-    canvas.create_line(self.startPos[0], self.startPos[1], self.endPos[0], self.endPos[1], fill=self.fill)
+    canvas.create_line(self.startPos[0], self.startPos[1], self.endPos[0], self.endPos[1], width=self.width, fill=self.fill)
     
     # add markers if necessary
     if self.startMarker: canvas.create_oval(self.startPos[0] - self.startMarkerRadius, self.startPos[1] - self.startMarkerRadius, self.startPos[0] + self.startMarkerRadius, self.startPos[1] + self.startMarkerRadius, outline=self.startMarkerOutline, tags="startmarker")
@@ -116,6 +120,14 @@ class CanvasLink(CanvasObject):
   @endPos.setter
   def endPos(self, endPos):
     self.__endPos = endPos
+    
+  @property
+  def width(self):
+    return self.__width
+
+  @width.setter
+  def width(self, width):
+    self.__width = width
 
   @property
   def fill(self):

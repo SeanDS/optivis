@@ -200,7 +200,7 @@ class Bench(object):
 	canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       # add canvas link
-      self.canvasObjects.append(CanvasLink((xOutput, yOutput), (xInput, yInput), fill=link.colour, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
+      self.canvasObjects.append(CanvasLink((xOutput, yOutput), (xInput, yInput), width=self.zoom, fill=link.colour, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
       
       # add components to list of components
       # FIXME: don't add same component twice
