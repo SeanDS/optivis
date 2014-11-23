@@ -6,10 +6,14 @@ class CanvasObject(object):
   def __init__(self):
     return None
 
-  # FIXME: make draw() an abstract class
+  def draw(self, canvas):
+    if not isinstance(canvas, Tk.Canvas):
+      raise Exception('Specified canvas is not of type Tk.Canvas')
+    
+    self._draw(canvas)
 
 class CanvasComponent(CanvasObject):
-  def __init__(self, component, azimuth=0, xPos=0, yPos=0):
+  def __init__(self, component, width, height, azimuth=0, xPos=0, yPos=0):
     if not isinstance(component, BenchObjects.Component):
       raise Exception('Specified component is not of type BenchObjects.Component')
     
@@ -17,16 +21,31 @@ class CanvasComponent(CanvasObject):
     self.image = None
 
     self.component = component
+    self.width = width
+    self.height = height
     self.xPos = xPos
     self.yPos = yPos
 
     super(CanvasComponent, self).__init__()
   
-  def draw(self, canvas, svgDir):
-    if not isinstance(canvas, Tk.Canvas):
-      raise Exception('Specified canvas is not of type Tk.Canvas')
+  def _draw(self, canvas):
+    canvas.create_image(self.xPos, self.yPos, image=self.getImage(), anchor=Tk.CENTER)
 
-    canvas.create_image(self.xPos, self.yPos, image=self.getImage(svgDir=svgDir), anchor=Tk.CENTER)
+  @property
+  def width(self):
+    return self.__width
+  
+  @width.setter
+  def width(self, width):
+    self.__width = width
+  
+  @property
+  def height(self):
+    return self.__height
+  
+  @height.setter
+  def height(self, height):
+    self.__height = height
 
   @property
   def xPos(self):
@@ -44,8 +63,8 @@ class CanvasComponent(CanvasObject):
   def yPos(self, yPos):
     self.__yPos = yPos
   
-  def getImage(self, svgDir):
-    self.image = self.component.toImage(svgDir=svgDir, azimuth=self.azimuth)
+  def getImage(self):
+    self.image = self.component.toImage(width=self.width, height=self.height, azimuth=self.azimuth)
     
     return self.image
   
@@ -75,10 +94,7 @@ class CanvasLink(CanvasObject):
     
     super(CanvasLink, self).__init__()
 
-  def draw(self, canvas, svgDir):
-    if not isinstance(canvas, Tk.Canvas):
-      raise Exception('Specified canvas is not of type Tk.Canvas')
-
+  def _draw(self, canvas):
     canvas.create_line(self.startPos[0], self.startPos[1], self.endPos[0], self.endPos[1], fill=self.fill)
     
     # add markers if necessary

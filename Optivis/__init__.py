@@ -21,9 +21,10 @@ class Bench(object):
   # This holds objects drawn on the canvas. This acts as a buffer for the canvas - deleting its contents will eventually delete the equivalent representation from the canvas!
   canvasObjects = []
   
-  def __init__(self, width=500, height=500, azimuth=0, startMarker=True, endMarker=True, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+  def __init__(self, width=500, height=500, azimuth=0, zoom=1.0, startMarker=True, endMarker=True, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
     self.gui = GUI(width=width, height=height)
     self.azimuth = azimuth
+    self.zoom = zoom
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
@@ -63,6 +64,14 @@ class Bench(object):
   @azimuth.setter
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
+    
+  @property
+  def zoom(self):
+    return self.__zoom
+  
+  @zoom.setter
+  def zoom(self, zoom):
+    self.__zoom = zoom
     
   @property
   def startMarker(self):
@@ -117,13 +126,13 @@ class Bench(object):
     del self.canvasObjects[:]
     
     for component in self.components:
-      width = component.width
-      height = component.height
+      width = int(component.refWidth * self.zoom)
+      height = int(component.refHeight * self.zoom)
       
       # add component to list of canvas objects
       # azimuth of component is set to global azimuth - but in reality all but the first component will have its azimuth overridden based
       # on input/output node alignment
-      self.canvasObjects.append(CanvasComponent(component=component, azimuth=self.azimuth, xPos=self.gui.width / 2, yPos=self.gui.height / 2))
+      self.canvasObjects.append(CanvasComponent(component=component, width=width, height=height, azimuth=self.azimuth, xPos=self.gui.width / 2, yPos=self.gui.height / 2))
 
   def vis(self):
     # convert optical components to canvas objects
@@ -139,18 +148,24 @@ class Bench(object):
       outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
       inputAzimuth = outputAzimuth
       
+      # node positions relative to components' centers
+      outputNodeX = link.outputNode.xPos * canvasComponent1.width
+      outputNodeY = link.outputNode.yPos * canvasComponent1.height
+      inputNodeX = link.inputNode.xPos * canvasComponent2.width
+      inputNodeY = link.inputNode.yPos * canvasComponent2.height
+      
       # coordinates of output node for rotated component
-      (xOutputRelative, yOutputRelative) = Bench.rotate((link.outputNode.xPos, link.outputNode.yPos), canvasComponent1.azimuth)
+      (xOutputRelative, yOutputRelative) = Bench.rotate((outputNodeX, outputNodeY), canvasComponent1.azimuth)
       
       # combined output node and component position
       (xOutput, yOutput) = Bench.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutputRelative, yOutputRelative))
       
       # link lengths in cartesian coordinates (well, 'Tkinter' coordinates)
-      xLength = link.length * math.cos(math.radians(outputAzimuth))
-      yLength = link.length * math.sin(math.radians(outputAzimuth))
+      xLength = link.length * math.cos(math.radians(outputAzimuth)) * self.zoom
+      yLength = link.length * math.sin(math.radians(outputAzimuth)) * self.zoom
       
       # coordinates of input node for rotated component input node
-      (xInputRelative, yInputRelative) = Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), inputAzimuth - link.inputNode.azimuth)
+      (xInputRelative, yInputRelative) = Bench.rotate((inputNodeX, inputNodeY), inputAzimuth - link.inputNode.azimuth)
       
       (xInput, yInput) = Bench.translate((xOutput, yOutput), (xLength, yLength))
       
@@ -159,7 +174,7 @@ class Bench(object):
 	# can't move component - already linked
 	
 	# test input node coordinates
-	(xInputTest, yInputTest) = Bench.translate((canvasComponent2.xPos, canvasComponent2.yPos), Bench.rotate((link.inputNode.xPos, link.inputNode.yPos), canvasComponent2.azimuth))
+	(xInputTest, yInputTest) = Bench.translate((canvasComponent2.xPos, canvasComponent2.yPos), Bench.rotate((inputNodeX, inputNodeY), canvasComponent2.azimuth))
 	
 	if not self.compareCoordinates((xInput, yInput), (xInputTest, yInputTest)):
 	  # warn the user that they have specified a link longer/shorter or different angle than necessary to keep this component in its current position

@@ -63,11 +63,13 @@ class Link(BenchObject):
     self.__colour = colour
 
 class Component(BenchObject):
-  def __init__(self, name, filename, width, height, inputNodes, outputNodes):
+  svgDir = 'svg'
+  
+  def __init__(self, name, filename, refWidth, refHeight, inputNodes, outputNodes):
     self.name = name
     self.filename = filename
-    self.width = width
-    self.height = height
+    self.refWidth = refWidth
+    self.refHeight = refHeight
     self.inputNodes = inputNodes
     self.outputNodes = outputNodes
   
@@ -88,20 +90,20 @@ class Component(BenchObject):
     self.__filename = filename
   
   @property
-  def width(self):
-    return self.__width
+  def refWidth(self):
+    return self.__refWidth
   
-  @width.setter
-  def width(self, width):
-    self.__width = width
+  @refWidth.setter
+  def refWidth(self, refWidth):
+    self.__refWidth = refWidth
   
   @property
-  def height(self):
-    return self.__height
+  def refHeight(self):
+    return self.__refHeight
   
-  @height.setter
-  def height(self, height):
-    self.__height = height
+  @refHeight.setter
+  def refHeight(self, refHeight):
+    self.__refHeight = refHeight
   
   @property
   def inputNodes(self):
@@ -119,27 +121,22 @@ class Component(BenchObject):
   def outputNodes(self, outputNodes):
     self.__outputNodes = outputNodes
   
-  def toImage(self, svgDir, width=-1, height=-1, azimuth=0):
+  def toImage(self, width, height, azimuth=0):
     """
     Returns a ImageTk.PhotoImage object represeting the svg file
     """
     
-    filepath = os.path.join(svgDir, self.filename)
+    filepath = os.path.join(self.svgDir, self.filename)
     
     svg = rsvg.Handle(file=filepath)
-    
-    if width < 0:
-      width = svg.get_dimension_data()[0]
-    
-    if height < 0:
-      height = svg.get_dimension_data()[1]
-    
-    height = int(height)
-    width = int(width)
     
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     context = cairo.Context(surface)
     
+    # scale svg
+    context.scale(width / self.refWidth, height / self.refHeight)
+    
+    # render as bitmap
     svg.render_cairo(context)
     
     tkImage = ImageTk.PhotoImage('RGBA')
@@ -178,59 +175,59 @@ class Mirror(Component):
     super(Mirror, self).__init__(*args, **kwargs)
 
 class CavityMirror(Mirror):
-  def __init__(self, filename="b-mir.svg", width=11, height=29, aoi=0, *args, **kwargs):
+  def __init__(self, filename="b-mir.svg", refWidth=11, refHeight=29, aoi=0, *args, **kwargs):
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      Nodes.InputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=aoi+0),
-      Nodes.InputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=aoi+180)
+      Nodes.InputNode(name="fr", component=self, xPos=-0.5, yPos=0, azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, xPos=0.5, yPos=0, azimuth=aoi+180)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      Nodes.OutputNode(name="fr", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi),
-      Nodes.OutputNode(name="bk", component=self, xPos=width/2, yPos=0, azimuth=0-aoi)
+      Nodes.OutputNode(name="fr", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, xPos=0.5, yPos=0, azimuth=0-aoi)
     ]
     
-    super(CavityMirror, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(CavityMirror, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitter(Mirror):
-  def __init__(self, filename="b-bsp.svg", width=11, height=29, aoi=-45, *args, **kwargs):
+  def __init__(self, filename="b-bsp.svg", refWidth=11, refHeight=29, aoi=-45, *args, **kwargs):
     inputNodes = [
-      Nodes.InputNode(name="frA", component=self, xPos=-width/2, yPos=0, azimuth=aoi),
-      Nodes.InputNode(name="frB", component=self, xPos=-width/2, yPos=0, azimuth=-aoi),
-      Nodes.InputNode(name="bkA", component=self, xPos=width/2, yPos=0, azimuth=180-aoi),
-      Nodes.InputNode(name="bkB", component=self, xPos=width/2, yPos=0, azimuth=180+aoi)
+      Nodes.InputNode(name="frA", component=self, xPos=-0.5, yPos=0, azimuth=aoi),
+      Nodes.InputNode(name="frB", component=self, xPos=-0.5, yPos=0, azimuth=-aoi),
+      Nodes.InputNode(name="bkA", component=self, xPos=0.5, yPos=0, azimuth=180-aoi),
+      Nodes.InputNode(name="bkB", component=self, xPos=0.5, yPos=0, azimuth=180+aoi)
     ]
     
     outputNodes = [
-      Nodes.OutputNode(name="frA", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi),
-      Nodes.OutputNode(name="frB", component=self, xPos=-width/2, yPos=0, azimuth=180+aoi),
-      Nodes.OutputNode(name="bkA", component=self, xPos=width/2, yPos=0, azimuth=aoi),
-      Nodes.OutputNode(name="bkB", component=self, xPos=width/2, yPos=0, azimuth=-aoi)
+      Nodes.OutputNode(name="frA", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi),
+      Nodes.OutputNode(name="frB", component=self, xPos=-0.5, yPos=0, azimuth=180+aoi),
+      Nodes.OutputNode(name="bkA", component=self, xPos=0.5, yPos=0, azimuth=aoi),
+      Nodes.OutputNode(name="bkB", component=self, xPos=0.5, yPos=0, azimuth=-aoi)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitter, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitterCube(Mirror):
-  def __init__(self, filename="b-bspcube.svg", width=23, height=23, aoi=0, *args, **kwargs):
+  def __init__(self, filename="b-bspcube.svg", refWidth=23, refHeight=23, aoi=0, *args, **kwargs):
     inputNodes = [
-      Nodes.InputNode(name="frA", component=self, xPos=0, yPos=-height/2, azimuth=aoi+90),
-      Nodes.InputNode(name="frB", component=self, xPos=width/2, yPos=0, azimuth=aoi+180),
-      Nodes.InputNode(name="bkA", component=self, xPos=-width/2, yPos=0, azimuth=aoi),
-      Nodes.InputNode(name="bkB", component=self, xPos=0, yPos=height/2, azimuth=aoi+270)
+      Nodes.InputNode(name="frA", component=self, xPos=0, yPos=-0.5, azimuth=aoi+90),
+      Nodes.InputNode(name="frB", component=self, xPos=0.5, yPos=0, azimuth=aoi+180),
+      Nodes.InputNode(name="bkA", component=self, xPos=-0.5, yPos=0, azimuth=aoi),
+      Nodes.InputNode(name="bkB", component=self, xPos=0, yPos=0.5, azimuth=aoi+270)
     ]
     
     outputNodes = [
-      Nodes.OutputNode(name="frA", component=self, xPos=width/2, yPos=0, azimuth=-aoi),
-      Nodes.OutputNode(name="frB", component=self, xPos=0, yPos=-height/2, azimuth=270-aoi),
-      Nodes.OutputNode(name="bkA", component=self, xPos=0, yPos=height/2, azimuth=90-aoi),
-      Nodes.OutputNode(name="bkB", component=self, xPos=-width/2, yPos=0, azimuth=180-aoi)
+      Nodes.OutputNode(name="frA", component=self, xPos=0.5, yPos=0, azimuth=-aoi),
+      Nodes.OutputNode(name="frB", component=self, xPos=0, yPos=-0.5, azimuth=270-aoi),
+      Nodes.OutputNode(name="bkA", component=self, xPos=0, yPos=0.5, azimuth=90-aoi),
+      Nodes.OutputNode(name="bkB", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, width=width, height=height, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitter, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class Laser(Source):
-  def __init__(self, filename="c-laser1.svg", width=62, height=46, *args, **kwargs):
-    outputNode = Nodes.OutputNode(name="out", component=self, xPos=-width/2, yPos=0, azimuth=180)
+  def __init__(self, filename="c-laser1.svg", refWidth=62, refHeight=46, *args, **kwargs):
+    outputNode = Nodes.OutputNode(name="out", component=self, xPos=-0.5, yPos=0, azimuth=180)
     
-    super(Laser, self).__init__(filename=filename, width=width, height=height, outputNode=outputNode, *args, **kwargs)
+    super(Laser, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, outputNode=outputNode, *args, **kwargs)

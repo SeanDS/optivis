@@ -3,6 +3,10 @@ import BenchObjects
 
 class Node(object):  
   def __init__(self, name, component, xPos, yPos, azimuth):
+    """
+    xPos and yPos are normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
+    """
+    
     self.name = name
     self.component = component
     self.xPos = xPos

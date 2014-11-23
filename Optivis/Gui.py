@@ -5,11 +5,10 @@ class GUI(object):
   master = None
   canvas = None
 
-  def __init__(self, width=500, height=500, title="Optivis", svgDir="svg"):
+  def __init__(self, width=500, height=500, title="Optivis"):
     self.width = width
     self.height = height
     self.title = title
-    self.svgDir = svgDir
 
     # create canvas
     self.master = Tk.Tk()
@@ -19,7 +18,6 @@ class GUI(object):
 
   def initialise(self):
     # set title
-    # TODO: make this user-settable
     self.master.title(self.title)
 
     # make root menu
@@ -37,7 +35,7 @@ class GUI(object):
 
   def draw(self, canvasComponents):
     for canvasComponent in canvasComponents:
-      canvasComponent.draw(self.canvas, self.svgDir)
+      canvasComponent.draw(self.canvas)
 
     # arrange z-order
     self.arrangeZ()
@@ -85,11 +83,3 @@ class GUI(object):
   @title.setter
   def title(self, title):
     self.__title = title
-
-  @property
-  def svgDir(self):
-    return self.__svgDir
-
-  @svgDir.setter
-  def svgDir(self, svgDir):
-    self.__svgDir = svgDir
