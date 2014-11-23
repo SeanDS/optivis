@@ -3,8 +3,9 @@ Demonstration of beam splitter's inputs and outputs.
 """
 
 import Optivis
+import Optivis.GUI
 
-bench = Optivis.Bench(azimuth=180)
+bench = Optivis.Bench(title="Example 2")
 
 l1 = Optivis.BenchObjects.Laser(name="L1")
 bs1 = Optivis.BenchObjects.BeamSplitter(name="BS", aoi=45)
@@ -24,4 +25,5 @@ bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode(
 bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58))
 bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5))
 
-bench.draw()
+gui = Optivis.GUI.Tkinter(bench=bench, azimuth=180)
+gui.show()

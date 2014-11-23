@@ -3,8 +3,9 @@ Demonstration of scaling.
 """
 
 import Optivis
+import Optivis.GUI
 
-bench = Optivis.Bench(width=1000, height=700, zoom=2, azimuth=180, startMarker=False, endMarker=False)
+bench = Optivis.Bench(title="Example 4")
 
 l1 = Optivis.BenchObjects.Laser(name="L1")
 m1 = Optivis.BenchObjects.CavityMirror(name="M1")
@@ -27,4 +28,5 @@ bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkA'), m3.getInputNod
 bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkB'), m4.getInputNode('fr'), 50))
 bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), m4.getInputNode('fr'), 38.27))
 
-bench.draw()
+gui = Optivis.GUI.Tkinter(bench=bench, width=1000, height=700, zoom=2, azimuth=180, startMarker=False, endMarker=False)
+gui.show()
