@@ -1,6 +1,6 @@
 from __future__ import division
 import Tkinter as Tk
-import BenchObjects
+import Optivis.BenchObjects
 
 class CanvasObject(object):
   def __init__(self):
@@ -14,8 +14,8 @@ class CanvasObject(object):
 
 class CanvasComponent(CanvasObject):
   def __init__(self, component, width, height, azimuth=0, xPos=0, yPos=0):
-    if not isinstance(component, BenchObjects.Component):
-      raise Exception('Specified component is not of type BenchObjects.Component')
+    if not isinstance(component, Optivis.BenchObjects.Component):
+      raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
     
     self.azimuth = azimuth
     self.image = None

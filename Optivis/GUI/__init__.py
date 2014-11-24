@@ -3,7 +3,7 @@ import Tkinter as Tk
 import math
 from Optivis import Bench
 from Optivis.BenchObjects import *
-from Optivis.CanvasObjects import *
+from CanvasObjects import *
 from Optivis.Nodes import *
 
 class Tkinter(object):
