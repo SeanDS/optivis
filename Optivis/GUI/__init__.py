@@ -57,9 +57,6 @@ class Tkinter(object):
     # get canvas objects
     canvasObjects = self.layout()
     
-    # centre object collection on screen
-    self.centre(canvasObjects)
-    
     for canvasObject in canvasObjects:
       canvasObject.draw(self.canvas)
 
@@ -154,19 +151,6 @@ class Tkinter(object):
       # FIXME: don't add same component twice
       linkedComponents.append(link.inputNode.component)
       
-    return canvasObjects
-  
-  def centre(self, canvasObjects):
-    # find maximum and minimum coordinates in collection of components
-    xMinComponent = None
-    yMinComponent = None
-    xMaxComponent = None
-    yMaxComponent = None
-    
-    for canvasObject in canvasObjects:
-      if isinstance(canvasObject, CanvasComponent):
-	(topLeft, bottomRight) = canvasObject.getBoundingBox()
-    
     return canvasObjects
   
   def findCanvasComponent(self, component, canvasComponents):

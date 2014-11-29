@@ -1,10 +1,5 @@
 from __future__ import division
-import os
 import math
-import Image
-import ImageTk
-import rsvg
-import cairo
 
 import Optivis
 import Nodes
@@ -116,31 +111,6 @@ class Component(BenchObject):
   @outputNodes.setter
   def outputNodes(self, outputNodes):
     self.__outputNodes = outputNodes
-  
-  def toImage(self, size, azimuth=0):
-    """
-    Returns a ImageTk.PhotoImage object represeting the svg file
-    """
-    
-    filepath = os.path.join(self.svgDir, self.filename)
-    
-    svg = rsvg.Handle(file=filepath)
-    
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(size.x), int(size.y))
-    context = cairo.Context(surface)
-    
-    # scale svg
-    context.scale(size.x / self.size.x, size.y / self.size.y)
-    
-    # render as bitmap
-    svg.render_cairo(context)
-    
-    tkImage = ImageTk.PhotoImage('RGBA')
-    image = Image.frombuffer('RGBA', (int(size.x), int(size.y)), surface.get_data(), 'raw', 'BGRA', 0, 1)
-    image = image.rotate(-azimuth, expand=True) # -azimuth used because we have a left handed coordinate system
-    tkImage.paste(image)
-    
-    return(tkImage)
   
   def getInputNode(self, nodeName):
     for node in self.inputNodes:

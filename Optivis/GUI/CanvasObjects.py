@@ -1,5 +1,12 @@
 from __future__ import division
+
+import os
 import Tkinter as Tk
+import Image
+import ImageTk
+import rsvg
+import cairo
+
 import Optivis
 import Optivis.GUI
 import Optivis.BenchObjects
@@ -31,8 +38,11 @@ class CanvasComponent(CanvasObject):
 
     super(CanvasComponent, self).__init__()
   
-  def _draw(self, canvas):
-    canvas.create_image(int(self.position.x), int(self.position.y), image=self.getImage(), anchor=Tk.CENTER)
+  def _draw(self, canvas):    
+    # store image in object (NOTE: this is necessary for Tkinter to correctly draw the image)
+    self.image = self.getImage()
+    
+    canvas.create_image(int(self.position.x), int(self.position.y), image=self.image, anchor=Tk.CENTER)
 
   @property
   def size(self):
@@ -53,11 +63,6 @@ class CanvasComponent(CanvasObject):
     
     self.__position = position
   
-  def getImage(self):
-    self.image = self.component.toImage(size=self.size, azimuth=self.azimuth)
-    
-    return self.image
-  
   @property
   def azimuth(self):
     return self.__azimuth
@@ -65,37 +70,31 @@ class CanvasComponent(CanvasObject):
   @azimuth.setter
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
-    
-  def getBoundingBox(self):
+  
+  def getImage(self):
     """
-    Returns the top left and bottom right coordinates of the box bounding this component
+    Returns a ImageTk.PhotoImage object represeting the svg file
     """
     
-    topLeft = self.position.translate(self.size.flip() / 2).rotate(self.azimuth)
-    topRight = self.position.translate(Optivis.Coordinates(self.size.x, -self.size.y) / 2).rotate(self.azimuth)
-    bottomLeft = self.position.translate(Optivis.Coordinates(-self.size.x, self.size.y) / 2).rotate(self.azimuth)
-    bottomRight = self.position.translate(self.size.x / 2).rotate(self.azimuth)
+    filepath = os.path.join(self.component.svgDir, self.component.filename)
     
-    minPos = topLeft
-    maxPos = topLeft
+    svg = rsvg.Handle(file=filepath)
     
-    # find maximum position
-    if topRight.x > maxPos.x: maxPos.x = topRight.x
-    if topRight.y > maxPos.y: maxPos.y = topRight.y
-    if bottomLeft.x > maxPos.x: maxPos.x = bottomLeft.x
-    if bottomLeft.y > maxPos.y: maxPos.y = bottomLeft.y
-    if bottomRight.x > maxPos.x: maxPos.x = bottomRight.x
-    if bottomRight.y > maxPos.y: maxPos.y = bottomRight.y
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(self.size.x), int(self.size.y))
+    context = cairo.Context(surface)
     
-    # find minimum position
-    if topRight.x < minPos.x: minPos.x = topRight.x
-    if topRight.y < minPos.y: minPos.y = topRight.y
-    if bottomLeft.x < minPos.x: minPos.x = bottomLeft.x
-    if bottomLeft.y < minPos.y: minPos.y = bottomLeft.y
-    if bottomRight.x < minPos.x: minPos.x = bottomRight.x
-    if bottomRight.y < minPos.y: minPos.y = bottomRight.y
+    # scale svg
+    context.scale(self.size.x / self.component.size.x, self.size.y / self.component.size.y)
     
-    return minPos, maxPos
+    # render as bitmap
+    svg.render_cairo(context)
+    
+    tkImage = ImageTk.PhotoImage('RGBA')
+    image = Image.frombuffer('RGBA', (int(self.size.x), int(self.size.y)), surface.get_data(), 'raw', 'BGRA', 0, 1)
+    image = image.rotate(-self.azimuth, expand=True) # -azimuth used because we have a left handed coordinate system
+    tkImage.paste(image)
+    
+    return(tkImage)
     
   def __str__(self):
     # return component's __str__
