@@ -1,5 +1,7 @@
 from __future__ import division
 import Tkinter as Tk
+import Optivis
+import Optivis.GUI
 import Optivis.BenchObjects
 
 class CanvasObject(object):
@@ -13,58 +15,46 @@ class CanvasObject(object):
     self._draw(canvas)
 
 class CanvasComponent(CanvasObject):
-  def __init__(self, component, width, height, azimuth=0, xPos=0, yPos=0):
+  def __init__(self, component, size, azimuth=0, position=None):
     if not isinstance(component, Optivis.BenchObjects.Component):
       raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
     
-    self.azimuth = azimuth
+    if position is None:
+      position = Optivis.Coordinates(0, 0)
+    
     self.image = None
 
     self.component = component
-    self.width = width
-    self.height = height
-    self.xPos = xPos
-    self.yPos = yPos
+    self.size = size
+    self.azimuth = azimuth
+    self.position = position
 
     super(CanvasComponent, self).__init__()
   
   def _draw(self, canvas):
-    canvas.create_image(self.xPos, self.yPos, image=self.getImage(), anchor=Tk.CENTER)
+    canvas.create_image(int(self.position.x), int(self.position.y), image=self.getImage(), anchor=Tk.CENTER)
 
   @property
-  def width(self):
-    return self.__width
+  def size(self):
+    return self.__size
   
-  @width.setter
-  def width(self, width):
-    self.__width = width
-  
-  @property
-  def height(self):
-    return self.__height
-  
-  @height.setter
-  def height(self, height):
-    self.__height = height
+  @size.setter
+  def size(self, size):
+    self.__size = size
 
   @property
-  def xPos(self):
-    return self.__xPos
+  def position(self):
+    return self.__position
   
-  @xPos.setter
-  def xPos(self, xPos):
-    self.__xPos = xPos
-  
-  @property
-  def yPos(self):
-    return self.__yPos
-  
-  @yPos.setter
-  def yPos(self, yPos):
-    self.__yPos = yPos
+  @position.setter
+  def position(self, position):
+    if not isinstance(position, Optivis.Coordinates):
+      raise Exception('Specified position is not of type Optivis.Coordinates')
+    
+    self.__position = position
   
   def getImage(self):
-    self.image = self.component.toImage(width=self.width, height=self.height, azimuth=self.azimuth)
+    self.image = self.component.toImage(size=self.size, azimuth=self.azimuth)
     
     return self.image
   
@@ -76,17 +66,48 @@ class CanvasComponent(CanvasObject):
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
     
+  def getBoundingBox(self):
+    """
+    Returns the top left and bottom right coordinates of the box bounding this component
+    """
+    
+    topLeft = self.position.translate(self.size.flip() / 2).rotate(self.azimuth)
+    topRight = self.position.translate(Optivis.Coordinates(self.size.x, -self.size.y) / 2).rotate(self.azimuth)
+    bottomLeft = self.position.translate(Optivis.Coordinates(-self.size.x, self.size.y) / 2).rotate(self.azimuth)
+    bottomRight = self.position.translate(self.size.x / 2).rotate(self.azimuth)
+    
+    minPos = topLeft
+    maxPos = topLeft
+    
+    # find maximum position
+    if topRight.x > maxPos.x: maxPos.x = topRight.x
+    if topRight.y > maxPos.y: maxPos.y = topRight.y
+    if bottomLeft.x > maxPos.x: maxPos.x = bottomLeft.x
+    if bottomLeft.y > maxPos.y: maxPos.y = bottomLeft.y
+    if bottomRight.x > maxPos.x: maxPos.x = bottomRight.x
+    if bottomRight.y > maxPos.y: maxPos.y = bottomRight.y
+    
+    # find minimum position
+    if topRight.x < minPos.x: minPos.x = topRight.x
+    if topRight.y < minPos.y: minPos.y = topRight.y
+    if bottomLeft.x < minPos.x: minPos.x = bottomLeft.x
+    if bottomLeft.y < minPos.y: minPos.y = bottomLeft.y
+    if bottomRight.x < minPos.x: minPos.x = bottomRight.x
+    if bottomRight.y < minPos.y: minPos.y = bottomRight.y
+    
+    return minPos, maxPos
+    
   def __str__(self):
     # return component's __str__
     return self.component.__str__()
 
 class CanvasLink(CanvasObject):
-  def __init__(self, (xStart, yStart), (xEnd, yEnd), width, fill="red", startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+  def __init__(self, start, end, width, fill="red", startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
     if width < 0:
       raise Exception('Specified width is invalid')
     
-    self.startPos = (xStart, yStart)
-    self.endPos = (xEnd, yEnd)
+    self.start = start
+    self.end = end
     self.width = width
     self.fill = fill
     self.startMarker = startMarker
@@ -99,27 +120,33 @@ class CanvasLink(CanvasObject):
     super(CanvasLink, self).__init__()
 
   def _draw(self, canvas):
-    canvas.create_line(self.startPos[0], self.startPos[1], self.endPos[0], self.endPos[1], width=self.width, fill=self.fill)
+    canvas.create_line(int(self.start.x), int(self.start.y), int(self.end.x), int(self.end.y), width=self.width, fill=self.fill)
     
     # add markers if necessary
-    if self.startMarker: canvas.create_oval(self.startPos[0] - self.startMarkerRadius, self.startPos[1] - self.startMarkerRadius, self.startPos[0] + self.startMarkerRadius, self.startPos[1] + self.startMarkerRadius, outline=self.startMarkerOutline, tags="startmarker")
-    if self.endMarker: canvas.create_oval(self.endPos[0] - self.endMarkerRadius, self.endPos[1] - self.endMarkerRadius, self.endPos[0] + self.endMarkerRadius, self.endPos[1] + self.endMarkerRadius, outline=self.endMarkerOutline, tags="endmarker")
+    if self.startMarker: canvas.create_oval(int(self.start.x - self.startMarkerRadius), int(self.start.y - self.startMarkerRadius), int(self.start.x + self.startMarkerRadius), int(self.start.y + self.startMarkerRadius), outline=self.startMarkerOutline, tags="startmarker")
+    if self.endMarker: canvas.create_oval(int(self.end.x - self.endMarkerRadius), int(self.end.y - self.endMarkerRadius), int(self.end.x + self.endMarkerRadius), int(self.end.y + self.endMarkerRadius), outline=self.endMarkerOutline, tags="endmarker")
 
   @property
-  def startPos(self):
-    return self.__startPos
+  def start(self):
+    return self.__start
 
-  @startPos.setter
-  def startPos(self, startPos):
-    self.__startPos = startPos
+  @start.setter
+  def start(self, start):
+    if not isinstance(start, Optivis.Coordinates):
+      raise Exception('Specified start is not of type Optivis.Coordinates')
+    
+    self.__start = start
 
   @property
-  def endPos(self):
-    return self.__endPos
+  def end(self):
+    return self.__end
 
-  @endPos.setter
-  def endPos(self, endPos):
-    self.__endPos = endPos
+  @end.setter
+  def end(self, end):
+    if not isinstance(end, Optivis.Coordinates):
+      raise Exception('Specified end is not of type Optivis.Coordinates')
+    
+    self.__end = end
     
   @property
   def width(self):

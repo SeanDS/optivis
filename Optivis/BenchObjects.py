@@ -5,6 +5,8 @@ import Image
 import ImageTk
 import rsvg
 import cairo
+
+import Optivis
 import Nodes
 
 class BenchObject(object):
@@ -65,11 +67,10 @@ class Link(BenchObject):
 class Component(BenchObject):
   svgDir = 'svg'
   
-  def __init__(self, name, filename, refWidth, refHeight, inputNodes, outputNodes):
+  def __init__(self, name, filename, size, inputNodes, outputNodes):
     self.name = name
     self.filename = filename
-    self.refWidth = refWidth
-    self.refHeight = refHeight
+    self.size = size
     self.inputNodes = inputNodes
     self.outputNodes = outputNodes
   
@@ -88,22 +89,17 @@ class Component(BenchObject):
   @filename.setter
   def filename(self, filename):
     self.__filename = filename
-  
+    
   @property
-  def refWidth(self):
-    return self.__refWidth
+  def size(self):
+    return self.__size
   
-  @refWidth.setter
-  def refWidth(self, refWidth):
-    self.__refWidth = refWidth
-  
-  @property
-  def refHeight(self):
-    return self.__refHeight
-  
-  @refHeight.setter
-  def refHeight(self, refHeight):
-    self.__refHeight = refHeight
+  @size.setter
+  def size(self, size):
+    if not isinstance(size, Optivis.Coordinates):
+      raise Exception('Specified size is not of type Optivis.Coordinates')
+    
+    self.__size = size
   
   @property
   def inputNodes(self):
@@ -121,7 +117,7 @@ class Component(BenchObject):
   def outputNodes(self, outputNodes):
     self.__outputNodes = outputNodes
   
-  def toImage(self, width, height, azimuth=0):
+  def toImage(self, size, azimuth=0):
     """
     Returns a ImageTk.PhotoImage object represeting the svg file
     """
@@ -130,17 +126,17 @@ class Component(BenchObject):
     
     svg = rsvg.Handle(file=filepath)
     
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(size.x), int(size.y))
     context = cairo.Context(surface)
     
     # scale svg
-    context.scale(width / self.refWidth, height / self.refHeight)
+    context.scale(size.x / self.size.x, size.y / self.size.y)
     
     # render as bitmap
     svg.render_cairo(context)
     
     tkImage = ImageTk.PhotoImage('RGBA')
-    image = Image.frombuffer('RGBA', (width, height), surface.get_data(), 'raw', 'BGRA', 0, 1)
+    image = Image.frombuffer('RGBA', (int(size.x), int(size.y)), surface.get_data(), 'raw', 'BGRA', 0, 1)
     image = image.rotate(-azimuth, expand=True) # -azimuth used because we have a left handed coordinate system
     tkImage.paste(image)
     
@@ -175,59 +171,71 @@ class Mirror(Component):
     super(Mirror, self).__init__(*args, **kwargs)
 
 class CavityMirror(Mirror):
-  def __init__(self, filename="b-mir.svg", refWidth=11, refHeight=29, aoi=0, *args, **kwargs):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-mir.svg"
+    size = Optivis.Coordinates(11, 29)
+    
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      Nodes.InputNode(name="fr", component=self, xPos=-0.5, yPos=0, azimuth=aoi+0),
-      Nodes.InputNode(name="bk", component=self, xPos=0.5, yPos=0, azimuth=aoi+180)
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      Nodes.OutputNode(name="fr", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi),
-      Nodes.OutputNode(name="bk", component=self, xPos=0.5, yPos=0, azimuth=0-aoi)
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
     ]
     
-    super(CavityMirror, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(CavityMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitter(Mirror):
-  def __init__(self, filename="b-bsp.svg", refWidth=11, refHeight=29, aoi=-45, *args, **kwargs):
+  def __init__(self, aoi=-45, *args, **kwargs):
+    filename = "b-bsp.svg"
+    size = Optivis.Coordinates(11, 29)
+    
     inputNodes = [
-      Nodes.InputNode(name="frA", component=self, xPos=-0.5, yPos=0, azimuth=aoi),
-      Nodes.InputNode(name="frB", component=self, xPos=-0.5, yPos=0, azimuth=-aoi),
-      Nodes.InputNode(name="bkA", component=self, xPos=0.5, yPos=0, azimuth=180-aoi),
-      Nodes.InputNode(name="bkB", component=self, xPos=0.5, yPos=0, azimuth=180+aoi)
+      Nodes.InputNode(name="frA", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi),
+      Nodes.InputNode(name="frB", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=-aoi),
+      Nodes.InputNode(name="bkA", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=180-aoi),
+      Nodes.InputNode(name="bkB", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=180+aoi)
     ]
     
     outputNodes = [
-      Nodes.OutputNode(name="frA", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi),
-      Nodes.OutputNode(name="frB", component=self, xPos=-0.5, yPos=0, azimuth=180+aoi),
-      Nodes.OutputNode(name="bkA", component=self, xPos=0.5, yPos=0, azimuth=aoi),
-      Nodes.OutputNode(name="bkB", component=self, xPos=0.5, yPos=0, azimuth=-aoi)
+      Nodes.OutputNode(name="frA", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="frB", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180+aoi),
+      Nodes.OutputNode(name="bkA", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi),
+      Nodes.OutputNode(name="bkB", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=-aoi)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitterCube(Mirror):
-  def __init__(self, filename="b-bspcube.svg", refWidth=23, refHeight=23, aoi=0, *args, **kwargs):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-bspcube.svg"
+    size = Optivis.Coordinates(23, 23)
+    
     inputNodes = [
-      Nodes.InputNode(name="frA", component=self, xPos=0, yPos=-0.5, azimuth=aoi+90),
-      Nodes.InputNode(name="frB", component=self, xPos=0.5, yPos=0, azimuth=aoi+180),
-      Nodes.InputNode(name="bkA", component=self, xPos=-0.5, yPos=0, azimuth=aoi),
-      Nodes.InputNode(name="bkB", component=self, xPos=0, yPos=0.5, azimuth=aoi+270)
+      Nodes.InputNode(name="frA", component=self, position=Optivis.Coordinates(0, -0.5), azimuth=aoi+90),
+      Nodes.InputNode(name="frB", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180),
+      Nodes.InputNode(name="bkA", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi),
+      Nodes.InputNode(name="bkB", component=self, position=Optivis.Coordinates(0, 0.5), azimuth=aoi+270)
     ]
     
     outputNodes = [
-      Nodes.OutputNode(name="frA", component=self, xPos=0.5, yPos=0, azimuth=-aoi),
-      Nodes.OutputNode(name="frB", component=self, xPos=0, yPos=-0.5, azimuth=270-aoi),
-      Nodes.OutputNode(name="bkA", component=self, xPos=0, yPos=0.5, azimuth=90-aoi),
-      Nodes.OutputNode(name="bkB", component=self, xPos=-0.5, yPos=0, azimuth=180-aoi)
+      Nodes.OutputNode(name="frA", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=-aoi),
+      Nodes.OutputNode(name="frB", component=self, position=Optivis.Coordinates(0, -0.5), azimuth=270-aoi),
+      Nodes.OutputNode(name="bkA", component=self, position=Optivis.Coordinates(0, 0.5), azimuth=90-aoi),
+      Nodes.OutputNode(name="bkB", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class Laser(Source):
-  def __init__(self, filename="c-laser1.svg", refWidth=62, refHeight=46, *args, **kwargs):
-    outputNode = Nodes.OutputNode(name="out", component=self, xPos=-0.5, yPos=0, azimuth=180)
+  def __init__(self, *args, **kwargs):
+    filename = "c-laser1.svg"
+    size = Optivis.Coordinates(62, 46)
     
-    super(Laser, self).__init__(filename=filename, refWidth=refWidth, refHeight=refHeight, outputNode=outputNode, *args, **kwargs)
+    outputNode = Nodes.OutputNode(name="out", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180)
+    
+    super(Laser, self).__init__(filename=filename, size=size, outputNode=outputNode, *args, **kwargs)

@@ -1,7 +1,6 @@
 from __future__ import division
 import Tkinter as Tk
-import math
-from Optivis import Bench
+import Optivis
 from Optivis.BenchObjects import *
 from CanvasObjects import *
 from Optivis.Nodes import *
@@ -10,15 +9,17 @@ class Tkinter(object):
   master = None
   canvas = None
 
-  def __init__(self, bench, width=500, height=500, azimuth=0, zoom=1.0, startMarker=True, endMarker=True, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
-    if not isinstance(bench, Bench):
-      raise Exception('Specified bench is not of type Bench')
+  def __init__(self, bench, size=None, azimuth=0, zoom=1.0, startMarker=True, endMarker=True, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+    if not isinstance(bench, Optivis.Bench):
+      raise Exception('Specified bench is not of type Optivis.Bench')
     
     title = "Optivis - {0}".format(bench.title)
     
+    if size is None:
+      size = Optivis.Coordinates(500, 500)
+    
     self.bench = bench
-    self.width = width
-    self.height = height
+    self.size = size
     self.azimuth = azimuth
     self.zoom = zoom
     self.title = title
@@ -31,7 +32,7 @@ class Tkinter(object):
 
     # create canvas
     self.master = Tk.Tk()
-    self.canvas = Tk.Canvas(self.master, width=self.width, height=self.height)
+    self.canvas = Tk.Canvas(self.master, width=self.size.x, height=self.size.y)
 
     self.initialise()
   
@@ -56,6 +57,9 @@ class Tkinter(object):
     # get canvas objects
     canvasObjects = self.layout()
     
+    # centre object collection on screen
+    self.centre(canvasObjects)
+    
     for canvasObject in canvasObjects:
       canvasObject.draw(self.canvas)
 
@@ -78,13 +82,12 @@ class Tkinter(object):
     canvasObjects = []
     
     for component in self.bench.components:
-      width = int(component.refWidth * self.zoom)
-      height = int(component.refHeight * self.zoom)
+      size = component.size * self.zoom
       
       # add component to list of canvas components
       # azimuth of component is set to global azimuth - but in reality all but the first component will have its azimuth overridden based
       # on input/output node alignment
-      canvasObjects.append(CanvasComponent(component=component, width=width, height=height, azimuth=self.azimuth, xPos=self.width / 2, yPos=self.height / 2))
+      canvasObjects.append(CanvasComponent(component=component, size=size, azimuth=self.azimuth, position=self.size / 2))
     
     ###
     # Layout and link everything
@@ -93,92 +96,78 @@ class Tkinter(object):
       canvasComponent1 = self.findCanvasComponent(link.outputNode.component, canvasObjects)
       canvasComponent2 = self.findCanvasComponent(link.inputNode.component, canvasObjects)
       
+      # absolute angle of output beam
       outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
+      
+      # absolute input angle the same as output angle (light travels in a straight line!)
       inputAzimuth = outputAzimuth
       
       # node positions relative to components' centers
-      outputNodeX = link.outputNode.xPos * canvasComponent1.width
-      outputNodeY = link.outputNode.yPos * canvasComponent1.height
-      inputNodeX = link.inputNode.xPos * canvasComponent2.width
-      inputNodeY = link.inputNode.yPos * canvasComponent2.height
+      outputNodeRelativePosition = link.outputNode.position * canvasComponent1.size
+      inputNodeRelativePosition = link.inputNode.position * canvasComponent2.size
       
       # coordinates of output node for rotated component
-      (xOutputRelative, yOutputRelative) = Tkinter.rotate((outputNodeX, outputNodeY), canvasComponent1.azimuth)
+      outputNodeRelativeRotatedPosition = outputNodeRelativePosition.rotate(canvasComponent1.azimuth)
       
       # combined output node and component position
-      (xOutput, yOutput) = Tkinter.translate((canvasComponent1.xPos, canvasComponent1.yPos), (xOutputRelative, yOutputRelative))
+      outputNodeAbsolutePosition = canvasComponent1.position.translate(outputNodeRelativeRotatedPosition)
       
-      # link lengths in cartesian coordinates (well, 'Tkinter' coordinates)
-      xLength = link.length * math.cos(math.radians(outputAzimuth)) * self.zoom
-      yLength = link.length * math.sin(math.radians(outputAzimuth)) * self.zoom
+      # create link end position (unrotated)
+      linkEndPosition = Optivis.Coordinates(link.length, 0).rotate(outputAzimuth) * self.zoom
       
       # coordinates of input node for rotated component input node
-      (xInputRelative, yInputRelative) = Tkinter.rotate((inputNodeX, inputNodeY), inputAzimuth - link.inputNode.azimuth)
+      inputNodeRelativeRotatedPosition = inputNodeRelativePosition.rotate(inputAzimuth - link.inputNode.azimuth)
       
-      (xInput, yInput) = Tkinter.translate((xOutput, yOutput), (xLength, yLength))
+      # absolute input node position
+      inputNodeAbsolutePosition = outputNodeAbsolutePosition.translate(linkEndPosition)
       
       # check if input component is already linked
       if link.inputNode.component in linkedComponents:
 	# can't move component - already linked
 	
-	# test input node coordinates
-	(xInputTest, yInputTest) = Tkinter.translate((canvasComponent2.xPos, canvasComponent2.yPos), Tkinter.rotate((inputNodeX, inputNodeY), canvasComponent2.azimuth))
+	# input node position as previously defined by loop
+	inputNodeClampedPosition = canvasComponent2.position.translate(inputNodeRelativePosition.rotate(canvasComponent2.azimuth))
 	
-	if not self.compareCoordinates((xInput, yInput), (xInputTest, yInputTest)):
+	if not inputNodeClampedPosition == inputNodeAbsolutePosition:
 	  # warn the user that they have specified a link longer/shorter or different angle than necessary to keep this component in its current position
 	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it or using a different angle of incidence. Ignoring link length and angle!".format(canvasComponent2, canvasComponent1)
 	  
 	  # print desired position
-	  print "\tDesired position: ({0}, {1})".format(xInput, yInput)
+	  print "\tDesired position: ({0}, {1})".format(inputNodeAbsolutePosition.x, inputNodeAbsolutePosition.y)
 	  
 	  # print overridden position
-	  print "\tOverridden position: ({0}, {1})".format(xInputTest, yInputTest)
+	  print "\tOverridden position: ({0}, {1})".format(inputNodeClampedPosition.x, inputNodeClampedPosition.y)
 	  
 	  # override position and azimuth
-	  (xInput, yInput) = (xInputTest, yInputTest)
+	  inputNodeAbsolutePosition = inputNodeClampedPosition
       else:
 	# coordinates of second component
-	(xPos2, yPos2) = Tkinter.translate((xOutput, yOutput), (-xInputRelative, -yInputRelative), (xLength, yLength))
-      
-	# update second component position
-	canvasComponent2.xPos = xPos2
-	canvasComponent2.yPos = yPos2
+	canvasComponent2.position = inputNodeAbsolutePosition.translate(inputNodeRelativeRotatedPosition.flip())#outputNodeAbsolutePosition.translate(inputNodeRelativeRotatedPosition, linkEndPosition)
       
 	# update second component azimuth to be the link azimuth minus the input's azimuth
 	canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       # add canvas link
-      canvasObjects.append(CanvasLink((xOutput, yOutput), (xInput, yInput), width=self.zoom, fill=link.colour, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
+      canvasObjects.append(CanvasLink(start=outputNodeAbsolutePosition, end=inputNodeAbsolutePosition, width=self.zoom, fill=link.colour, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
       
       # add components to list of components
       # FIXME: don't add same component twice
       linkedComponents.append(link.inputNode.component)
       
     return canvasObjects
-
-  def compareCoordinates(self, XY1, XY2, tol=1e-18, rel=1e-7):
-    """
-    Compare coordinate floats without precision errors. Based on http://code.activestate.com/recipes/577124-approximately-equal/.
-    """
+  
+  def centre(self, canvasObjects):
+    # find maximum and minimum coordinates in collection of components
+    xMinComponent = None
+    yMinComponent = None
+    xMaxComponent = None
+    yMaxComponent = None
     
-    if tol is rel is None:
-        raise TypeError('Cannot specify both absolute and relative errors are None')
+    for canvasObject in canvasObjects:
+      if isinstance(canvasObject, CanvasComponent):
+	(topLeft, bottomRight) = canvasObject.getBoundingBox()
     
-    xTests = []
-    yTests = []
-    
-    if tol is not None:
-      xTests.append(tol)
-      yTests.append(tol)
-      
-    if rel is not None:
-      xTests.append(rel * abs(XY1[0]))
-      yTests.append(rel * abs(XY1[1]))
-    
-    assert xTests
-    assert yTests
-    
-    return (abs(XY1[0] - XY2[0]) <= max(xTests)) and (abs(XY1[1] - XY2[1]) <= max(yTests))
+    return canvasObjects
   
   def findCanvasComponent(self, component, canvasComponents):
     if not isinstance(component, Component):
@@ -189,23 +178,6 @@ class Tkinter(object):
 	return thisCanvasComponent
     
     raise Exception('Cannot find specified canvas object in buffer (this shouldn\'t happen!)')
-  
-  @staticmethod
-  def translate(*args):
-    return map(sum, zip(*args))
-  
-  @staticmethod
-  def rotate((xPos, yPos), azimuth):
-    """
-    Rotation applied for the left-handed coordinate system used by Tkinter.
-    Azimuth is the angle in degrees to rotate in a clockwise direction.
-    """
-    
-    # apply rotation matrix to xPos and yPos
-    xPosRotated = xPos * math.cos(math.radians(azimuth)) - yPos * math.sin(math.radians(azimuth))
-    yPosRotated = xPos * math.sin(math.radians(azimuth)) + yPos * math.cos(math.radians(azimuth))
-    
-    return (xPosRotated, yPosRotated)
 
   def arrangeZ(self):
     """
@@ -219,20 +191,15 @@ class Tkinter(object):
     self.canvas.tag_raise("endmarker")
 
   @property
-  def width(self):
-    return self.__width
+  def size(self):
+    return self.__size
 
-  @width.setter
-  def width(self, width):
-    self.__width = width
-
-  @property
-  def height(self):
-    return self.__height
-
-  @height.setter
-  def height(self, height):
-    self.__height = height
+  @size.setter
+  def size(self, size):
+    if not isinstance(size, Optivis.Coordinates):
+      raise Exception('Specified size is not of type Optivis.Coordinates')
+    
+    self.__size = size
     
   @property
   def azimuth(self):

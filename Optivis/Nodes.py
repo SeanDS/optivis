@@ -1,16 +1,16 @@
 from __future__ import division
 import BenchObjects
+import Optivis
 
 class Node(object):  
-  def __init__(self, name, component, xPos, yPos, azimuth):
+  def __init__(self, name, component, position, azimuth):
     """
-    xPos and yPos are normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
+    position is normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
     """
     
     self.name = name
     self.component = component
-    self.xPos = xPos
-    self.yPos = yPos
+    self.position = position
     self.azimuth = azimuth
   
   @property
@@ -33,20 +33,15 @@ class Node(object):
     self.__component = component
     
   @property
-  def xPos(self):
-    return self.__xPos
+  def position(self):
+    return self.__position
   
-  @xPos.setter
-  def xPos(self, xPos):
-    self.__xPos = xPos
-  
-  @property
-  def yPos(self):
-    return self.__yPos
-  
-  @yPos.setter
-  def yPos(self, yPos):
-    self.__yPos = yPos
+  @position.setter
+  def position(self, position):
+    if not isinstance(position, Optivis.Coordinates):
+      raise Exception('Specified position is not of type Optivis.Coordinates')
+    
+    self.__position = position
   
   @property
   def azimuth(self):
