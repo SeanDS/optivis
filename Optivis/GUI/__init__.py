@@ -58,7 +58,7 @@ class Tkinter(object):
     canvasObjects = self.layout()
     
     # centre everything
-    # TODO: write centre code
+    self.centre(canvasObjects)
     
     # draw objects
     for canvasObject in canvasObjects:
@@ -166,6 +166,38 @@ class Tkinter(object):
 	return thisCanvasComponent
     
     raise Exception('Cannot find specified canvas object in buffer (this shouldn\'t happen!)')
+
+  def centre(self, canvasObjects):
+    # min and max positions
+    minPos = Optivis.Coordinates(float('inf'), float('inf'))
+    maxPos = Optivis.Coordinates(float('-inf'), float('-inf'))
+    
+    for canvasObject in canvasObjects:
+      if isinstance(canvasObject, CanvasComponent):
+	(thisMinPos, thisMaxPos) = canvasObject.getBoundingBox()
+	
+	if thisMinPos.x < minPos.x: minPos.x = thisMinPos.x
+	if thisMinPos.y < minPos.y: minPos.y = thisMinPos.y
+	
+	if thisMaxPos.x > maxPos.x: maxPos.x = thisMaxPos.x
+	if thisMaxPos.y > maxPos.y: maxPos.y = thisMaxPos.y
+    
+    # work out size from min and max
+    size = maxPos - minPos
+    
+    # centre coordinates of group
+    groupCentre = maxPos - size / 2
+    
+    # correction factor to middle of screen
+    correction = self.size / 2 - groupCentre
+    
+    # loop over all objects, applying a translation
+    for canvasObject in canvasObjects:
+      if isinstance(canvasObject, CanvasComponent):
+	canvasObject.position = canvasObject.position.translate(correction)
+      elif isinstance(canvasObject, CanvasLink):
+	canvasObject.start = canvasObject.start.translate(correction)
+	canvasObject.end = canvasObject.end.translate(correction)
 
   def arrangeZ(self):
     """
