@@ -144,6 +144,9 @@ class Coordinates(object):
       return Coordinates(self.x / factor.x, self.y / factor.y)
     else:
       return Coordinates(self.x / factor, self.y / factor)
+  
+  def __div__(self, factor):
+    return self.__truediv__(factor)
     
   def __add__(self, factor):
     if isinstance(factor, Coordinates):

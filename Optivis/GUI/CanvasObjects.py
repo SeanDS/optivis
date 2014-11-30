@@ -95,6 +95,32 @@ class CanvasComponent(CanvasObject):
     tkImage.paste(image)
     
     return(tkImage)
+  
+  def getBoundingBox(self):
+    # get nominal corner positions
+    topLeft = self.size * Optivis.Coordinates(-0.5, -0.5)
+    topRight = self.size * Optivis.Coordinates(0.5, -0.5)
+    bottomLeft = self.size * Optivis.Coordinates(-0.5, 0.5)
+    bottomRight = self.size * Optivis.Coordinates(0.5, 0.5)
+    
+    # rotate corners by azimuth
+    topLeft = topLeft.rotate(self.azimuth)
+    topRight = topRight.rotate(self.azimuth)
+    bottomLeft = bottomLeft.rotate(self.azimuth)
+    bottomRight = bottomRight.rotate(self.azimuth)
+    
+    # find min and max coordinates    
+    xPositions = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
+    yPositions = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
+    
+    minPos = Optivis.Coordinates(min(xPositions), min(yPositions))
+    maxPos = Optivis.Coordinates(max(xPositions), max(yPositions))
+    
+    # add global position
+    minPos = minPos.translate(self.position)
+    maxPos = maxPos.translate(self.position)
+    
+    return minPos, maxPos
     
   def __str__(self):
     # return component's __str__

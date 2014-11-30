@@ -57,6 +57,10 @@ class Tkinter(object):
     # get canvas objects
     canvasObjects = self.layout()
     
+    # centre everything
+    # TODO: write centre code
+    
+    # draw objects
     for canvasObject in canvasObjects:
       canvasObject.draw(self.canvas)
 
