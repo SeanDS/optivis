@@ -360,12 +360,11 @@ class Sink(Component):
     
     super(Sink, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
  
-# NOTE: DISABLED due to issue with rsvg opening this image
-#class Photodiode(Sink):
-#  def __init__(self, *args, **kwargs):
-#    filename = "c-pd1.svg"
-#    size = Optivis.Coordinates(16, 23)
-#    
-#    inputNode = Nodes.InputNode(name="in", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=0)
-#    
-#    super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
+class Photodiode(Sink):
+  def __init__(self, *args, **kwargs):
+    filename = "e-pd1.svg"
+    size = Optivis.Coordinates(16, 23)
+    
+    inputNode = Nodes.InputNode(name="in", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=0)
+    
+    super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
