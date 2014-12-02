@@ -25,5 +25,5 @@ bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode(
 bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58))
 bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5))
 
-gui = Optivis.GUI.Tkinter(bench=bench, azimuth=180)
+gui = Optivis.GUI.Tkinter(bench=bench, azimuth=180, startMarker=True, endMarker=True)
 gui.show()

@@ -1,10 +1,13 @@
 from __future__ import division
 import math
+import abc
 
 import Optivis
 import Nodes
 
 class BenchObject(object):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self):
     # nothing to do
     return
@@ -60,6 +63,8 @@ class Link(BenchObject):
     self.__colour = colour
 
 class Component(BenchObject):
+  __metaclass__ = abc.ABCMeta
+  
   svgDir = 'svg'
   
   def __init__(self, name, filename, size, inputNodes, outputNodes):
@@ -130,13 +135,26 @@ class Component(BenchObject):
     return self.name
 
 class Source(Component):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self, outputNode, *args, **kwargs):    
     inputNodes = []
     outputNodes = [outputNode]
     
     super(Source, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    
+class Laser(Source):
+  def __init__(self, *args, **kwargs):
+    filename = "c-laser1.svg"
+    size = Optivis.Coordinates(62, 46)
+    
+    outputNode = Nodes.OutputNode(name="out", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180)
+    
+    super(Laser, self).__init__(filename=filename, size=size, outputNode=outputNode, *args, **kwargs)
 
 class Mirror(Component):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self, *args, **kwargs):
     super(Mirror, self).__init__(*args, **kwargs)
 
@@ -201,11 +219,153 @@ class BeamSplitterCube(Mirror):
     
     super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
-class Laser(Source):
+class Lens(Component):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self, *args, **kwargs):
-    filename = "c-laser1.svg"
-    size = Optivis.Coordinates(62, 46)
+    super(Lens, self).__init__(*args, **kwargs)
+
+class ConvexLens(Lens):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-lens2.svg"
+    size = Optivis.Coordinates(9, 23)
     
-    outputNode = Nodes.OutputNode(name="out", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180)
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
     
-    super(Laser, self).__init__(filename=filename, size=size, outputNode=outputNode, *args, **kwargs)
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(ConvexLens, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class ConcaveLens(Lens):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-lens3.svg"
+    size = Optivis.Coordinates(9, 23)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(ConcaveLens, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    
+class Plate(Component):
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, *args, **kwargs):
+    super(Plate, self).__init__(*args, **kwargs)
+
+class QuarterWavePlate(Plate):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-wpred.svg" # FIXME: is this the 'standard' colour for a QWP?
+    size = Optivis.Coordinates(5, 23)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(QuarterWavePlate, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    
+class HalfWavePlate(Plate):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-wpgn.svg" # FIXME: is this the 'standard' colour for a HWP?
+    size = Optivis.Coordinates(5, 23)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(HalfWavePlate, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    
+class Modulator(Component):
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, *args, **kwargs):
+    super(Modulator, self).__init__(*args, **kwargs)
+    
+class ElectroopticModulator(Modulator):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "c-eom2.svg"
+    size = Optivis.Coordinates(32, 32)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(ElectroopticModulator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class FaradayIsolator(Component):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "c-isolator.svg"
+    size = Optivis.Coordinates(52, 23)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      Nodes.InputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=aoi+0),
+      Nodes.InputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      Nodes.OutputNode(name="fr", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=180-aoi),
+      Nodes.OutputNode(name="bk", component=self, position=Optivis.Coordinates(0.5, 0), azimuth=0-aoi)
+    ]
+    
+    super(FaradayIsolator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class Sink(Component):
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, inputNode, *args, **kwargs):    
+    outputNodes = []
+    inputNodes = [inputNode]
+    
+    super(Sink, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+ 
+# NOTE: DISABLED due to issue with rsvg opening this image
+#class Photodiode(Sink):
+#  def __init__(self, *args, **kwargs):
+#    filename = "c-pd1.svg"
+#    size = Optivis.Coordinates(16, 23)
+#    
+#    inputNode = Nodes.InputNode(name="in", component=self, position=Optivis.Coordinates(-0.5, 0), azimuth=0)
+#    
+#    super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)

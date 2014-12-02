@@ -9,7 +9,7 @@ class Tkinter(object):
   master = None
   canvas = None
 
-  def __init__(self, bench, size=None, azimuth=0, zoom=1.0, startMarker=True, endMarker=True, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+  def __init__(self, bench, size=None, azimuth=0, zoom=1.0, startMarker=False, endMarker=False, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
     if not isinstance(bench, Optivis.Bench):
       raise Exception('Specified bench is not of type Optivis.Bench')
     
