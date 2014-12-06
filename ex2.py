@@ -1,5 +1,5 @@
 """
-Demonstration of beam splitter's inputs and outputs.
+Demonstration of angles of incidence.
 """
 
 import Optivis
@@ -7,23 +7,40 @@ import Optivis.Gui
 
 bench = Optivis.Bench(title="Example 2")
 
-l1 = Optivis.BenchObjects.Laser(name="L1")
-bs1 = Optivis.BenchObjects.BeamSplitter(name="BS", aoi=45)
-m1 = Optivis.BenchObjects.CavityMirror(name="M1", aoi=45)
-m2 = Optivis.BenchObjects.CavityMirror(name="M2", aoi=45)
-m3 = Optivis.BenchObjects.CavityMirror(name="M3", aoi=45)
+laser = Optivis.BenchObjects.Laser(name="Laser")
+wp1 = Optivis.BenchObjects.QuarterWavePlate(name="Quarter Wave Plate")
+wp2 = Optivis.BenchObjects.HalfWavePlate(name="Half Wave Plate")
+isol = Optivis.BenchObjects.FaradayIsolator(name="Faraday Isolator")
+eom = Optivis.BenchObjects.ElectroopticModulator(name="EOM")
+lens1 = Optivis.BenchObjects.ConvexLens(name="Lens 1")
+lens2 = Optivis.BenchObjects.ConcaveLens(name="Lens 2")
+mirror1 = Optivis.BenchObjects.CavityMirror(name="Mirror 1", aoi=30)
+mirror2 = Optivis.BenchObjects.CavityMirror(name="Mirror 2", aoi=15)
+mirror3 = Optivis.BenchObjects.CavityMirror(name="Mirror 3", aoi=-45)
+pd = Optivis.BenchObjects.Photodiode(name="Photodiode")
 
-bench.addComponent(l1)
-bench.addComponent(bs1)
-bench.addComponent(m1)
-bench.addComponent(m2)
-bench.addComponent(m3)
+bench.addComponent(laser)
+bench.addComponent(wp1)
+bench.addComponent(wp2)
+bench.addComponent(isol)
+bench.addComponent(eom)
+bench.addComponent(lens1)
+bench.addComponent(lens2)
+bench.addComponent(mirror1)
+bench.addComponent(mirror2)
+bench.addComponent(mirror3)
+bench.addComponent(pd)
 
-bench.addLink(Optivis.BenchObjects.Link(l1.getOutputNode('out'), bs1.getInputNode('frA'), 100))
-bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkA'), m1.getInputNode('fr'), 50))
-bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode('fr'), 50))
-bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58))
-bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5))
+bench.addLink(Optivis.BenchObjects.Link(laser.getOutputNode('out'), wp1.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(wp1.getOutputNode('bk'), wp2.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(wp2.getOutputNode('bk'), isol.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(isol.getOutputNode('bk'), lens1.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(lens1.getOutputNode('bk'), lens2.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(lens2.getOutputNode('bk'), eom.getInputNode('fr'), 10))
+bench.addLink(Optivis.BenchObjects.Link(eom.getOutputNode('bk'), mirror1.getInputNode('fr'), 100))
+bench.addLink(Optivis.BenchObjects.Link(mirror1.getOutputNode('fr'), mirror2.getInputNode('fr'), 100))
+bench.addLink(Optivis.BenchObjects.Link(mirror2.getOutputNode('fr'), mirror3.getInputNode('fr'), 150))
+bench.addLink(Optivis.BenchObjects.Link(mirror3.getOutputNode('fr'), pd.getInputNode('in'), 150))
 
-gui = Optivis.Gui.Qt(bench=bench, azimuth=180, startMarker=True, endMarker=True)
+gui = Optivis.Gui.Qt(bench)
 gui.show()

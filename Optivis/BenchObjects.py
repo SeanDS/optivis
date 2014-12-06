@@ -17,10 +17,11 @@ class BenchObject(object):
     #return self.filename == other.filename and self.width == other.width and self.height = other.height # FIXME: check also for inputNodes, etc
 
 class Link(BenchObject):
-  def __init__(self, outputNode, inputNode, length, colour="red"):
+  def __init__(self, outputNode, inputNode, length, width=1.0, colour="red"):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
+    self.width = width
     self.colour = colour
     
   @property
@@ -52,6 +53,17 @@ class Link(BenchObject):
   @length.setter
   def length(self, length):
     self.__length = length
+    
+  @property
+  def width(self):
+    return self.__width
+
+  @width.setter
+  def width(self, width):
+    if width < 0:
+      raise Exception('Specified width is invalid')
+    
+    self.__width = width
   
   @property
   def colour(self):

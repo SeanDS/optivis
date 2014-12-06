@@ -101,20 +101,25 @@ class QtCanvasComponent(CanvasComponent):
     path = os.path.join(self.component.svgDir, self.component.filename)
     
     svgItem = PyQt4.QtSvg.QGraphicsSvgItem(path)
+    svgItem.setPos(self.position.x + self.component.size.x / 2, self.position.y + self.component.size.y / 2)
+    #svgItem.setPos(self.position.x, self.position.y)
     svgItem.setTransformOriginPoint(self.component.size.x / 2, self.component.size.y / 2)
-    svgItem.setPos(self.position.x, self.position.y)
-    svgItem.setRotation(self.azimuth)
+    
+    transform = PyQt4.QtGui.QTransform()
+    transform.rotate(self.azimuth)
+    
+    # rotate about the centre
+    svgItem.setTransform(transform)
     
     scene.addItem(svgItem)
 
 class CanvasLink(CanvasObject):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, link, start, end, width, startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):    
+  def __init__(self, link, start, end, startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):    
     self.link = link
     self.start = start
     self.end = end
-    self.width = width
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
@@ -156,17 +161,6 @@ class CanvasLink(CanvasObject):
       raise Exception('Specified end is not of type Optivis.Coordinates')
     
     self.__end = end
-    
-  @property
-  def width(self):
-    return self.__width
-
-  @width.setter
-  def width(self, width):
-    if width < 0:
-      raise Exception('Specified width is invalid')
-    
-    self.__width = width
 
   @property
   def fill(self):
@@ -229,7 +223,7 @@ class QtCanvasLink(CanvasLink):
     super(QtCanvasLink, self).__init__(*args, **kwargs)
 
   def draw(self, scene):
-    pen = PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, 2, PyQt4.QtCore.Qt.SolidLine)
+    pen = PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, self.link.width, PyQt4.QtCore.Qt.SolidLine)
     line = PyQt4.QtGui.QGraphicsLineItem(self.start.x, self.start.y, self.end.x, self.end.y)
     line.setPen(pen)
     

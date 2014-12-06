@@ -142,8 +142,12 @@ class Qt(AbstractGui):
     self.initialise()
   
   def initialise(self):
+    # set view antialiasing
+    self.view.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
+    
     # scale window
-    #self.scene.sceneRect = PyQt4.QtCore.QRectF(500, 500, self.size.x, self.size.y)
+    self.view.resize(self.size.x, self.size.y)
+    self.view.scale(self.zoom, self.zoom)
     
     # set title
     #self.master.title(self.title)
@@ -176,7 +180,7 @@ class Qt(AbstractGui):
       canvasComponents.append(QtCanvasComponent(component=component, size=size, azimuth=self.azimuth, position=self.size / 2))
     
     for link in self.bench.links:
-      canvasLinks.append(QtCanvasLink(link=link, start=Optivis.Coordinates(0, 0), end=Optivis.Coordinates(0, 0), width=self.zoom, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
+      canvasLinks.append(QtCanvasLink(link=link, start=Optivis.Coordinates(0, 0), end=Optivis.Coordinates(0, 0), startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
     
     return (canvasComponents, canvasLinks)
 

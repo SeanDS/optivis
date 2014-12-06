@@ -96,7 +96,7 @@ class SimpleLayout(AbstractLayout):
       outputNodeAbsolutePosition = canvasComponent1.position.translate(outputNodeRelativeRotatedPosition)
       
       # create link end position (unrotated)
-      linkEndPosition = Optivis.Coordinates(link.length, 0).rotate(outputAzimuth) * self.gui.zoom
+      linkEndPosition = Optivis.Coordinates(link.length, 0).rotate(outputAzimuth)
       
       # coordinates of input node for rotated component input node
       inputNodeRelativeRotatedPosition = inputNodeRelativePosition.rotate(inputAzimuth - link.inputNode.azimuth)
