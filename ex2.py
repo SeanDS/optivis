@@ -3,7 +3,7 @@ Demonstration of beam splitter's inputs and outputs.
 """
 
 import Optivis
-import Optivis.GUI
+import Optivis.Gui
 
 bench = Optivis.Bench(title="Example 2")
 
@@ -25,5 +25,5 @@ bench.addLink(Optivis.BenchObjects.Link(m1.getOutputNode('fr'), m2.getInputNode(
 bench.addLink(Optivis.BenchObjects.Link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58))
 bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5))
 
-gui = Optivis.GUI.Tk(bench=bench, azimuth=180, startMarker=True, endMarker=True)
+gui = Optivis.Gui.Qt(bench=bench, azimuth=180, startMarker=True, endMarker=True)
 gui.show()

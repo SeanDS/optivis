@@ -3,7 +3,7 @@ Demonstration of funky angles of incidence.
 """
 
 import Optivis
-import Optivis.GUI
+import Optivis.Gui
 
 bench = Optivis.Bench(title="Example 3")
 
@@ -28,5 +28,5 @@ bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkA'), m3.getInputNod
 bench.addLink(Optivis.BenchObjects.Link(bs1.getOutputNode('bkB'), m4.getInputNode('fr'), 50))
 bench.addLink(Optivis.BenchObjects.Link(m3.getOutputNode('fr'), m4.getInputNode('fr'), 38.27))
 
-gui = Optivis.GUI.Tk(bench=bench, azimuth=180, startMarker=False, endMarker=False)
+gui = Optivis.Gui.Qt(bench=bench, azimuth=180, startMarker=False, endMarker=False)
 gui.show()

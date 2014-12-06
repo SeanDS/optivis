@@ -1,35 +1,33 @@
 from __future__ import division
-
 import os
-import Tkinter as Tk
-import Image
-import ImageTk
-import rsvg
-import cairo
+import abc
+
+import PyQt4.QtCore
+import PyQt4.QtGui
+import PyQt4.QtSvg
 
 import Optivis
-import Optivis.GUI
 import Optivis.BenchObjects
 
 class CanvasObject(object):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self):
     return None
 
-  def draw(self, canvas):
-    if not isinstance(canvas, Tk.Canvas):
-      raise Exception('Specified canvas is not of type Tk.Canvas')
-    
-    self._draw(canvas)
+  @abc.abstractmethod
+  def draw(self, *args, **kwargs):
+    return
 
 class CanvasComponent(CanvasObject):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self, component, size, azimuth=0, position=None):
     if not isinstance(component, Optivis.BenchObjects.Component):
       raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
     
     if position is None:
       position = Optivis.Coordinates(0, 0)
-    
-    self.image = None
 
     self.component = component
     self.size = size
@@ -37,12 +35,6 @@ class CanvasComponent(CanvasObject):
     self.position = position
 
     super(CanvasComponent, self).__init__()
-  
-  def _draw(self, canvas):    
-    # store image in object (NOTE: this is necessary for Tkinter to correctly draw the image)
-    self.image = self.getImage()
-    
-    canvas.create_image(int(self.position.x), int(self.position.y), image=self.image, anchor=Tk.CENTER)
 
   @property
   def size(self):
@@ -70,31 +62,6 @@ class CanvasComponent(CanvasObject):
   @azimuth.setter
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
-  
-  def getImage(self):
-    """
-    Returns a ImageTk.PhotoImage object represeting the svg file
-    """
-    
-    filepath = os.path.join(self.component.svgDir, self.component.filename)
-    
-    svg = rsvg.Handle(file=filepath)
-    
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(self.size.x), int(self.size.y))
-    context = cairo.Context(surface)
-    
-    # scale svg
-    context.scale(self.size.x / self.component.size.x, self.size.y / self.component.size.y)
-    
-    # render as bitmap
-    svg.render_cairo(context)
-    
-    tkImage = ImageTk.PhotoImage('RGBA')
-    image = Image.frombuffer('RGBA', (int(self.size.x), int(self.size.y)), surface.get_data(), 'raw', 'BGRA', 0, 1)
-    image = image.rotate(-self.azimuth, expand=True) # -azimuth used because we have a left handed coordinate system
-    tkImage.paste(image)
-    
-    return(tkImage)
   
   def getBoundingBox(self):
     # get nominal corner positions
@@ -126,15 +93,28 @@ class CanvasComponent(CanvasObject):
     # return component's __str__
     return self.component.__str__()
 
-class CanvasLink(CanvasObject):
-  def __init__(self, start, end, width, fill="red", startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
-    if width < 0:
-      raise Exception('Specified width is invalid')
+class QtCanvasComponent(CanvasComponent):  
+  def __init__(self, *args, **kwargs):
+    super(QtCanvasComponent, self).__init__(*args, **kwargs)
+  
+  def draw(self, scene):    
+    path = os.path.join(self.component.svgDir, self.component.filename)
     
+    svgItem = PyQt4.QtSvg.QGraphicsSvgItem(path)
+    svgItem.setTransformOriginPoint(self.component.size.x / 2, self.component.size.y / 2)
+    svgItem.setPos(self.position.x, self.position.y)
+    svgItem.setRotation(self.azimuth)
+    
+    scene.addItem(svgItem)
+
+class CanvasLink(CanvasObject):
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, link, start, end, width, startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):    
+    self.link = link
     self.start = start
     self.end = end
     self.width = width
-    self.fill = fill
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
@@ -144,12 +124,16 @@ class CanvasLink(CanvasObject):
     
     super(CanvasLink, self).__init__()
 
-  def _draw(self, canvas):
-    canvas.create_line(int(self.start.x), int(self.start.y), int(self.end.x), int(self.end.y), width=self.width, fill=self.fill)
+  @property
+  def link(self):
+    return self.__link
+
+  @link.setter
+  def link(self, link):
+    if not isinstance(link, Optivis.BenchObjects.Link):
+      raise Exception('Specified link is not of type Link')
     
-    # add markers if necessary
-    if self.startMarker: canvas.create_oval(int(self.start.x - self.startMarkerRadius), int(self.start.y - self.startMarkerRadius), int(self.start.x + self.startMarkerRadius), int(self.start.y + self.startMarkerRadius), outline=self.startMarkerOutline, tags="startmarker")
-    if self.endMarker: canvas.create_oval(int(self.end.x - self.endMarkerRadius), int(self.end.y - self.endMarkerRadius), int(self.end.x + self.endMarkerRadius), int(self.end.y + self.endMarkerRadius), outline=self.endMarkerOutline, tags="endmarker")
+    self.__link = link
 
   @property
   def start(self):
@@ -179,6 +163,9 @@ class CanvasLink(CanvasObject):
 
   @width.setter
   def width(self, width):
+    if width < 0:
+      raise Exception('Specified width is invalid')
+    
     self.__width = width
 
   @property
@@ -236,3 +223,23 @@ class CanvasLink(CanvasObject):
   @endMarkerOutline.setter
   def endMarkerOutline(self, endMarkerOutline):
     self.__endMarkerOutline = endMarkerOutline
+
+class QtCanvasLink(CanvasLink):  
+  def __init__(self, *args, **kwargs):    
+    super(QtCanvasLink, self).__init__(*args, **kwargs)
+
+  def draw(self, scene):
+    pen = PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, 2, PyQt4.QtCore.Qt.SolidLine)
+    line = PyQt4.QtGui.QGraphicsLineItem(self.start.x, self.start.y, self.end.x, self.end.y)
+    line.setPen(pen)
+    
+    scene.addItem(line)
+    
+    # add markers if necessary
+    #if self.startMarker:
+      #painter.setPen(PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, 1, PyQt4.QtCore.Qt.SolidLine))      
+      #painter.drawEllipse(int(self.start.x - self.startMarkerRadius), int(self.start.y - self.startMarkerRadius), int(self.start.x + self.startMarkerRadius), int(self.start.y + self.startMarkerRadius))
+      
+    #if self.endMarker:
+      #painter.setPen(PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.blue, 2, PyQt4.QtCore.Qt.SolidLine))      
+      #painter.drawEllipse(int(self.end.x - self.endMarkerRadius), int(self.end.y - self.endMarkerRadius), int(self.end.x + self.endMarkerRadius), int(self.end.y + self.endMarkerRadius))
