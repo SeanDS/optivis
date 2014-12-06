@@ -42,5 +42,5 @@ bench.addLink(Optivis.BenchObjects.Link(mirror1.getOutputNode('fr'), mirror2.get
 bench.addLink(Optivis.BenchObjects.Link(mirror2.getOutputNode('fr'), mirror3.getInputNode('fr'), 150))
 bench.addLink(Optivis.BenchObjects.Link(mirror3.getOutputNode('fr'), pd.getInputNode('in'), 150))
 
-gui = Optivis.GUI.Tkinter(bench)
+gui = Optivis.GUI.Tk(bench)
 gui.show()

@@ -1,11 +1,11 @@
 from __future__ import division
-import Tkinter as Tk
+import Tkinter
 import Optivis
 from Optivis.BenchObjects import *
 from CanvasObjects import *
 from Optivis.Nodes import *
 
-class Tkinter(object):
+class Tk(object):
   master = None
   canvas = None
 
@@ -31,8 +31,8 @@ class Tkinter(object):
     self.endMarkerOutline = endMarkerOutline
 
     # create canvas
-    self.master = Tk.Tk()
-    self.canvas = Tk.Canvas(self.master, width=self.size.x, height=self.size.y)
+    self.master = Tkinter.Tk()
+    self.canvas = Tkinter.Canvas(self.master, width=self.size.x, height=self.size.y)
 
     self.initialise()
   
@@ -41,10 +41,10 @@ class Tkinter(object):
     self.master.title(self.title)
 
     # make root menu
-    menuBar = Tk.Menu(self.master)
+    menuBar = Tkinter.Menu(self.master)
     
     # make and add file menu
-    fileMenu = Tk.Menu(menuBar, tearoff=0)
+    fileMenu = Tkinter.Menu(menuBar, tearoff=0)
     fileMenu.add_command(label="Exit", command=self.quit)
     menuBar.add_cascade(label="File", menu=fileMenu)
 
