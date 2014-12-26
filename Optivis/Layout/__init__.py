@@ -2,7 +2,7 @@ from __future__ import division
 
 import abc
 
-import Optivis
+import Optivis.BenchObjects
 import Optivis.Gui
 
 class AbstractLayout(object):
@@ -18,8 +18,8 @@ class AbstractLayout(object):
     return
   
   def getCanvasComponent(self, component):
-    if not isinstance(component, Optivis.Component):
-      raise Exception('Specified component is not of type Component')
+    if not isinstance(component, Optivis.BenchObjects.Component):
+      raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
     
     for thisCanvasComponent in self.canvasComponents:
       if thisCanvasComponent.component == component:
@@ -28,8 +28,8 @@ class AbstractLayout(object):
     raise Exception('Cannot find specified canvas component in list!')
   
   def getCanvasLink(self, link):
-    if not isinstance(link, Optivis.Link):
-      raise Exception('Specified link is not of type Link')
+    if not isinstance(link, Optivis.BenchObjects.Link):
+      raise Exception('Specified link is not of type Optivis.BenchObjects.Link')
     
     for thisCanvasLink in self.canvasLinks:
       if thisCanvasLink.link == link:
@@ -86,8 +86,8 @@ class SimpleLayout(AbstractLayout):
       inputAzimuth = outputAzimuth
       
       # node positions relative to components' centers
-      outputNodeRelativePosition = link.outputNode.position * canvasComponent1.size
-      inputNodeRelativePosition = link.inputNode.position * canvasComponent2.size
+      outputNodeRelativePosition = link.outputNode.position * canvasComponent1.component.size
+      inputNodeRelativePosition = link.inputNode.position * canvasComponent2.component.size
       
       # coordinates of output node for rotated component
       outputNodeRelativeRotatedPosition = outputNodeRelativePosition.rotate(canvasComponent1.azimuth)
@@ -95,7 +95,7 @@ class SimpleLayout(AbstractLayout):
       # combined output node and component position
       outputNodeAbsolutePosition = canvasComponent1.position.translate(outputNodeRelativeRotatedPosition)
       
-      # create link end position (unrotated)
+      # create link end position
       linkEndPosition = Optivis.Coordinates(link.length, 0).rotate(outputAzimuth)
       
       # coordinates of input node for rotated component input node
@@ -137,34 +137,3 @@ class SimpleLayout(AbstractLayout):
       # add components to list of components
       # FIXME: don't add same component twice
       linkedComponents.append(link.inputNode.component)
-
-  def centre(self):
-    # min and max positions
-    minPos = Optivis.Coordinates(float('inf'), float('inf'))
-    maxPos = Optivis.Coordinates(float('-inf'), float('-inf'))
-    
-    for canvasComponent in self.canvasComponents:
-      (thisMinPos, thisMaxPos) = canvasComponent.getBoundingBox()
-      
-      if thisMinPos.x < minPos.x: minPos.x = thisMinPos.x
-      if thisMinPos.y < minPos.y: minPos.y = thisMinPos.y
-      
-      if thisMaxPos.x > maxPos.x: maxPos.x = thisMaxPos.x
-      if thisMaxPos.y > maxPos.y: maxPos.y = thisMaxPos.y
-    
-    # work out size from min and max
-    size = maxPos - minPos
-    
-    # centre coordinates of group
-    groupCentre = maxPos - size / 2
-    
-    # correction factor to middle of screen
-    correction = self.gui.size / 2 - groupCentre
-    
-    # loop over all objects, applying a translation
-    for canvasComponent in self.canvasComponents:
-      canvasComponent.position = canvasComponent.position.translate(correction)
-    
-    for canvasLink in self.canvasLinks:
-      canvasLink.start = canvasLink.start.translate(correction)
-      canvasLink.end = canvasLink.end.translate(correction)

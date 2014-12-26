@@ -1,5 +1,5 @@
 """
-Demonstration of scaling.
+Demonstration of laser and mirror.
 """
 
 import Optivis

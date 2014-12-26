@@ -22,27 +22,19 @@ class CanvasObject(object):
 class CanvasComponent(CanvasObject):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, component, size, azimuth=0, position=None):
+  def __init__(self, component, azimuth=0, position=None):
     if not isinstance(component, Optivis.BenchObjects.Component):
       raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
     
     if position is None:
+      # No position defined, so create a default one.
       position = Optivis.Coordinates(0, 0)
 
     self.component = component
-    self.size = size
     self.azimuth = azimuth
     self.position = position
 
     super(CanvasComponent, self).__init__()
-
-  @property
-  def size(self):
-    return self.__size
-  
-  @size.setter
-  def size(self, size):
-    self.__size = size
 
   @property
   def position(self):
@@ -97,26 +89,38 @@ class QtCanvasComponent(CanvasComponent):
   def __init__(self, *args, **kwargs):
     super(QtCanvasComponent, self).__init__(*args, **kwargs)
   
-  def draw(self, scene):    
+  def draw(self, scene):
+    # Create full system path from filename and SVG directory.
     path = os.path.join(self.component.svgDir, self.component.filename)
     
+    # Create graphical representation of SVG image at path.
     svgItem = PyQt4.QtSvg.QGraphicsSvgItem(path)
-    svgItem.setPos(self.position.x + self.component.size.x / 2, self.position.y + self.component.size.y / 2)
-    #svgItem.setPos(self.position.x, self.position.y)
-    svgItem.setTransformOriginPoint(self.component.size.x / 2, self.component.size.y / 2)
     
-    transform = PyQt4.QtGui.QTransform()
-    transform.rotate(self.azimuth)
+    # Set position of top-left corner.
+    # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
+    svgItem.setPos(self.position.x - self.component.size.x / 2, self.position.y - self.component.size.y / 2)
     
-    # rotate about the centre
-    svgItem.setTransform(transform)
+    # Rotate clockwise.
+    # Qt rotates with respect to the component's origin, i.e. top left, so to rotate around the centre we need to translate it before and after rotating it.
+    svgItem.translate(self.component.size.x / 2, self.component.size.y / 2)
+    svgItem.rotate(self.azimuth)
+    svgItem.translate(-self.component.size.x / 2, -self.component.size.y / 2)
     
     scene.addItem(svgItem)
 
 class CanvasLink(CanvasObject):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, link, start, end, startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):    
+  def __init__(self, link, start, end, startMarker=True, endMarker=True, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):
+    
+    if start is None:
+      # No start position defined, so create a default one.
+      start = Optivis.Coordinates(0, 0)
+    
+    if end is None:
+      # No end position defined, so create a default one.
+      end = Optivis.Coordinates(0, 0)
+    
     self.link = link
     self.start = start
     self.end = end
@@ -124,8 +128,8 @@ class CanvasLink(CanvasObject):
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
     self.endMarkerRadius = endMarkerRadius
-    self.startMarkerOutline = startMarkerOutline
-    self.endMarkerOutline = endMarkerOutline
+    self.startMarkerColor = startMarkerColor
+    self.endMarkerColor = endMarkerColor
     
     super(CanvasLink, self).__init__()
 
@@ -203,22 +207,22 @@ class CanvasLink(CanvasObject):
     self.__endMarkerRadius = endMarkerRadius
     
   @property
-  def startMarkerOutline(self):
-    return self.__startMarkerOutline
+  def startMarkerColor(self):
+    return self.__startMarkerColor
   
-  @startMarkerOutline.setter
-  def startMarkerOutline(self, startMarkerOutline):
-    self.__startMarkerOutline = startMarkerOutline
+  @startMarkerColor.setter
+  def startMarkerColor(self, startMarkerColor):
+    self.__startMarkerColor = startMarkerColor
     
   @property
-  def endMarkerOutline(self):
-    return self.__endMarkerOutline
+  def endMarkerColor(self):
+    return self.__endMarkerColor
   
-  @endMarkerOutline.setter
-  def endMarkerOutline(self, endMarkerOutline):
-    self.__endMarkerOutline = endMarkerOutline
+  @endMarkerColor.setter
+  def endMarkerColor(self, endMarkerColor):
+    self.__endMarkerColor = endMarkerColor
 
-class QtCanvasLink(CanvasLink):  
+class QtCanvasLink(CanvasLink):
   def __init__(self, *args, **kwargs):    
     super(QtCanvasLink, self).__init__(*args, **kwargs)
 
@@ -227,13 +231,20 @@ class QtCanvasLink(CanvasLink):
     line = PyQt4.QtGui.QGraphicsLineItem(self.start.x, self.start.y, self.end.x, self.end.y)
     line.setPen(pen)
     
+    # add line to graphics scene
     scene.addItem(line)
     
     # add markers if necessary
-    #if self.startMarker:
-      #painter.setPen(PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, 1, PyQt4.QtCore.Qt.SolidLine))      
-      #painter.drawEllipse(int(self.start.x - self.startMarkerRadius), int(self.start.y - self.startMarkerRadius), int(self.start.x + self.startMarkerRadius), int(self.start.y + self.startMarkerRadius))
+    if self.startMarker:
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.start.x - self.startMarkerRadius, self.start.y - self.startMarkerRadius, self.startMarkerRadius * 2, self.startMarkerRadius * 2)
+      pen = PyQt4.QtGui.QPen(self.startMarkerColor, 1, PyQt4.QtCore.Qt.SolidLine)
+      circle.setPen(pen)
       
-    #if self.endMarker:
-      #painter.setPen(PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.blue, 2, PyQt4.QtCore.Qt.SolidLine))      
-      #painter.drawEllipse(int(self.end.x - self.endMarkerRadius), int(self.end.y - self.endMarkerRadius), int(self.end.x + self.endMarkerRadius), int(self.end.y + self.endMarkerRadius))
+      scene.addItem(circle)
+      
+    if self.endMarker:
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.end.x - self.endMarkerRadius, self.end.y - self.endMarkerRadius, self.endMarkerRadius * 2, self.endMarkerRadius * 2)
+      pen = PyQt4.QtGui.QPen(self.endMarkerColor, 1, PyQt4.QtCore.Qt.SolidLine)
+      circle.setPen(pen)
+      
+      scene.addItem(circle)

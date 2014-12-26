@@ -8,15 +8,13 @@ import PyQt4.QtCore
 import PyQt4.QtGui
 
 import Optivis
-from Optivis.BenchObjects import *
-from CanvasObjects import *
-from Optivis.Nodes import *
 import Optivis.Layout
+import CanvasObjects
 
 class AbstractGui(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, bench, size=None, azimuth=0, zoom=1.0, startMarker=False, endMarker=False, startMarkerRadius=4, endMarkerRadius=2, startMarkerOutline="red", endMarkerOutline="blue"):
+  def __init__(self, bench, size=None, azimuth=0, zoom=1.0, startMarker=False, endMarker=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
     if not isinstance(bench, Optivis.Bench):
       raise Exception('Specified bench is not of type Optivis.Bench')
     
@@ -24,6 +22,12 @@ class AbstractGui(object):
     
     if size is None:
       size = Optivis.Coordinates(500, 500)
+      
+    if startMarkerColor is None:
+      startMarkerColor = PyQt4.QtCore.Qt.red
+    
+    if endMarkerColor is None:
+      endMarkerColor = PyQt4.QtCore.Qt.blue
     
     self.bench = bench
     self.size = size
@@ -34,8 +38,8 @@ class AbstractGui(object):
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
     self.endMarkerRadius = endMarkerRadius
-    self.startMarkerOutline = startMarkerOutline
-    self.endMarkerOutline = endMarkerOutline
+    self.startMarkerColor = startMarkerColor
+    self.endMarkerColor = endMarkerColor
     
     return
   
@@ -111,20 +115,20 @@ class AbstractGui(object):
     self.__endMarkerRadius = endMarkerRadius
     
   @property
-  def startMarkerOutline(self):
-    return self.__startMarkerOutline
+  def startMarkerColor(self):
+    return self.__startMarkerColor
   
-  @startMarkerOutline.setter
-  def startMarkerOutline(self, startMarkerOutline):
-    self.__startMarkerOutline = startMarkerOutline
+  @startMarkerColor.setter
+  def startMarkerColor(self, startMarkerColor):
+    self.__startMarkerColor = startMarkerColor
     
   @property
-  def endMarkerOutline(self):
-    return self.__endMarkerOutline
+  def endMarkerColor(self):
+    return self.__endMarkerColor
   
-  @endMarkerOutline.setter
-  def endMarkerOutline(self, endMarkerOutline):
-    self.__endMarkerOutline = endMarkerOutline
+  @endMarkerColor.setter
+  def endMarkerColor(self, endMarkerColor):
+    self.__endMarkerColor = endMarkerColor
 
 class Qt(AbstractGui):
   application = None
@@ -149,18 +153,9 @@ class Qt(AbstractGui):
     self.view.resize(self.size.x, self.size.y)
     self.view.scale(self.zoom, self.zoom)
     
-    # set title
-    #self.master.title(self.title)
+    # set window title
+    self.view.setWindowTitle(self.title)
 
-    # make root menu
-    #menuBar = Tkinter.Menu(self.master)
-    
-    # make and add file menu
-    #fileMenu = Tkinter.Menu(menuBar, tearoff=0)
-    #fileMenu.add_command(label="Exit", command=self.quit)
-    #menuBar.add_cascade(label="File", menu=fileMenu)
-
-    #self.master.config(menu=menuBar)
     return
 
   def quit(self):
@@ -172,25 +167,23 @@ class Qt(AbstractGui):
     canvasLinks = []
     
     for component in self.bench.components:
-      size = component.size * self.zoom
-      
-      # add component to list of canvas components
-      # azimuth of component is set to global azimuth - but in reality all but the first component will have its azimuth overridden based
-      # on input/output node alignment
-      canvasComponents.append(QtCanvasComponent(component=component, size=size, azimuth=self.azimuth, position=self.size / 2))
+      # Add component to list of canvas components.
+      # All but the first component's azimuth will be overridden by the layout manager.
+      canvasComponents.append(CanvasObjects.QtCanvasComponent(component=component, azimuth=self.azimuth, position=None))
     
     for link in self.bench.links:
-      canvasLinks.append(QtCanvasLink(link=link, start=Optivis.Coordinates(0, 0), end=Optivis.Coordinates(0, 0), startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerOutline=self.startMarkerOutline, endMarkerOutline=self.endMarkerOutline))
+      # Add link to list of canvas links.
+      canvasLinks.append(CanvasObjects.QtCanvasLink(link=link, start=None, end=None, startMarker=self.startMarker, endMarker=self.endMarker, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor))
     
     return (canvasComponents, canvasLinks)
 
   def show(self):
+    # get bench objects as separate lists of components and links
     (canvasComponents, canvasLinks) = self.createCanvasObjectLists()
     
+    # instantiate layout manager and arrange objects
     layout = Optivis.Layout.SimpleLayout(self, canvasComponents, canvasLinks)
-    
     layout.arrange()
-    layout.centre()
     
     # draw objects
     for canvasLink in canvasLinks:
@@ -199,6 +192,7 @@ class Qt(AbstractGui):
     for canvasComponent in canvasComponents:
       canvasComponent.draw(self.scene)
 
+    # show on screen
     self.view.show()
     
     sys.exit(self.application.exec_())

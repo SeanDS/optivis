@@ -3,7 +3,7 @@ from __future__ import division
 import datetime
 import math
 
-from BenchObjects import Component, Link
+import BenchObjects
 
 class Bench(object):
   ###
@@ -21,14 +21,14 @@ class Bench(object):
     return
     
   def addComponent(self, component):
-    if not isinstance(component, Component):    
-      raise Exception('Specified component is not of type Component')
+    if not isinstance(component, BenchObjects.Component):    
+      raise Exception('Specified component is not of type BenchObjects.Component')
     
     self.components.append(component)
   
   def addLink(self, link):
-    if not isinstance(link, Link):
-      raise Exception('Specified link is not of type Link')
+    if not isinstance(link, BenchObjects.Link):
+      raise Exception('Specified link is not of type BenchObjects.Link')
     
     if not link.inputNode.component in self.components:
       raise Exception('Input node component has not been added to table')
@@ -77,7 +77,7 @@ class Coordinates(object):
   
   def rotate(self, azimuth):
     """
-    Rotation applied for the left-handed coordinate system used by Tkinter.
+    Rotation of coordinates about the origin using a left-handed coordinate system.
     Azimuth is the angle in degrees to rotate in a clockwise direction.
     """
     
