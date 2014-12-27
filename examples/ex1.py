@@ -2,6 +2,10 @@
 Demonstration of laser and mirror.
 """
 
+import sys
+
+sys.path.append('..')
+
 import Optivis
 import Optivis.Gui
 

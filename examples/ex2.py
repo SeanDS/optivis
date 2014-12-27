@@ -2,6 +2,10 @@
 Demonstration of components with non-zero angles of incidence.
 """
 
+import sys
+
+sys.path.append('..')
+
 import Optivis
 import Optivis.Gui
 

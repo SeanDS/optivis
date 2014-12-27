@@ -79,7 +79,7 @@ class Link(BenchObject):
 class Component(BenchObject):
   __metaclass__ = abc.ABCMeta
   
-  svgDir = os.path.join('Optivis', 'assets')
+  svgDir = os.path.join(os.path.dirname(__file__), 'assets')
   
   def __init__(self, name, filename, size, inputNodes, outputNodes):
     self.name = name

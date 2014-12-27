@@ -2,6 +2,10 @@
 Demonstration of scaling.
 """
 
+import sys
+
+sys.path.append('..')
+
 import Optivis
 import Optivis.Gui
 
