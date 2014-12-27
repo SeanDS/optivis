@@ -1,4 +1,6 @@
 from __future__ import division
+
+import os
 import math
 import abc
 
@@ -77,7 +79,7 @@ class Link(BenchObject):
 class Component(BenchObject):
   __metaclass__ = abc.ABCMeta
   
-  svgDir = 'svg'
+  svgDir = os.path.join('Optivis', 'assets')
   
   def __init__(self, name, filename, size, inputNodes, outputNodes):
     self.name = name
