@@ -1,6 +1,5 @@
-from __future__ import division
-import BenchObjects
-import Optivis
+import optivis.geometry
+import components
 
 class Node(object):  
   def __init__(self, name, component, position, azimuth):
@@ -27,8 +26,8 @@ class Node(object):
 
   @component.setter
   def component(self, component):
-    if not isinstance(component, BenchObjects.Component):
-      raise Exception('Specified component is not of type BenchObjects.Component')
+    if not isinstance(component, components.AbstractComponent):
+      raise Exception('Specified component is not of type components.AbstractComponent')
     
     self.__component = component
     
@@ -38,8 +37,8 @@ class Node(object):
   
   @position.setter
   def position(self, position):
-    if not isinstance(position, Optivis.Coordinates):
-      raise Exception('Specified position is not of type Optivis.Coordinates')
+    if not isinstance(position, optivis.geometry.Coordinates):
+      raise Exception('Specified position is not of type optivis.geometry.Coordinates')
     
     self.__position = position
   

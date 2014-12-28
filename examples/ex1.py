@@ -6,18 +6,20 @@ import sys
 
 sys.path.append('..')
 
-import Optivis
-import Optivis.Gui
+import optivis.scene as scene
+import optivis.bench.links as links
+import optivis.bench.components as components
+import optivis.gui.canvas as canvas
 
-bench = Optivis.Bench(title="Example 1")
+scene = scene.Scene(title="Example 1")
 
-l1 = Optivis.BenchObjects.Laser(name="L1")
-m1 = Optivis.BenchObjects.CavityMirror(name="M1")
+l1 = components.Laser(name="L1")
+m1 = components.CavityMirror(name="M1")
 
-bench.addComponent(l1)
-bench.addComponent(m1)
+scene.addComponent(l1)
+scene.addComponent(m1)
 
-bench.addLink(Optivis.BenchObjects.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 50))
+scene.addLink(links.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 50))
 
-gui = Optivis.Gui.Qt(bench=bench, size=Optivis.Coordinates(500, 500), zoom=1, azimuth=0, startMarker=False, endMarker=False)
+gui = canvas.Simple(scene=scene)
 gui.show()

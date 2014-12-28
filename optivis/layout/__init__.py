@@ -2,8 +2,10 @@ from __future__ import division
 
 import abc
 
-import Optivis.BenchObjects
-import Optivis.Gui
+import optivis.geometry
+import optivis.bench.components
+import optivis.bench.links
+import optivis.gui
 
 class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
@@ -18,8 +20,8 @@ class AbstractLayout(object):
     return
   
   def getCanvasComponent(self, component):
-    if not isinstance(component, Optivis.BenchObjects.Component):
-      raise Exception('Specified component is not of type Optivis.BenchObjects.Component')
+    if not isinstance(component, optivis.bench.components.AbstractComponent):
+      raise Exception('Specified component is not of type optivis.bench.components.AbstractComponent')
     
     for thisCanvasComponent in self.canvasComponents:
       if thisCanvasComponent.component == component:
@@ -28,8 +30,8 @@ class AbstractLayout(object):
     raise Exception('Cannot find specified canvas component in list!')
   
   def getCanvasLink(self, link):
-    if not isinstance(link, Optivis.BenchObjects.Link):
-      raise Exception('Specified link is not of type Optivis.BenchObjects.Link')
+    if not isinstance(link, optivis.bench.links.AbstractLink):
+      raise Exception('Specified link is not of type optivis.bench.links.AbstractLink')
     
     for thisCanvasLink in self.canvasLinks:
       if thisCanvasLink.link == link:
@@ -43,8 +45,8 @@ class AbstractLayout(object):
   
   @gui.setter
   def gui(self, gui):
-    if not isinstance(gui, Optivis.Gui.AbstractGui):
-      raise Exception('Specified gui is not of type Optivis.Gui.AbstractGui')
+    if not isinstance(gui, optivis.gui.AbstractGui):
+      raise Exception('Specified gui is not of type optivis.gui.AbstractGui')
     
     self.__gui = gui
   
@@ -74,7 +76,7 @@ class SimpleLayout(AbstractLayout):
     ###
     # Layout and link everything
     
-    for link in self.gui.bench.links:
+    for link in self.gui.scene.links:
       canvasLink = self.getCanvasLink(link)
       canvasComponent1 = self.getCanvasComponent(link.outputNode.component)
       canvasComponent2 = self.getCanvasComponent(link.inputNode.component)
@@ -96,7 +98,7 @@ class SimpleLayout(AbstractLayout):
       outputNodeAbsolutePosition = canvasComponent1.position.translate(outputNodeRelativeRotatedPosition)
       
       # create link end position
-      linkEndPosition = Optivis.Coordinates(link.length, 0).rotate(outputAzimuth)
+      linkEndPosition = optivis.geometry.Coordinates(link.length, 0).rotate(outputAzimuth)
       
       # coordinates of input node for rotated component input node
       inputNodeRelativeRotatedPosition = inputNodeRelativePosition.rotate(inputAzimuth - link.inputNode.azimuth)
