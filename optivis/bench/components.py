@@ -199,14 +199,14 @@ class ConcaveLens(Lens):
     
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.35, 0), azimuth=aoi+0),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.35, 0), azimuth=aoi+180)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.35, 0), azimuth=180-aoi),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.35, 0), azimuth=0-aoi)
     ]
     
     super(ConcaveLens, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
