@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 
 import PyQt4.Qt
@@ -48,6 +49,11 @@ class Simple(optivis.gui.AbstractGui):
     menubar = self.qMainWindow.menuBar()
     fileMenu = menubar.addMenu('&File')
     
+    exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
+    exportAction.setShortcut('Ctrl+E')
+    exportAction.triggered.connect(self.export)
+    fileMenu.addAction(exportAction)
+    
     exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
     exitAction.setShortcut('Ctrl+Q')
     exitAction.triggered.connect(self.qApplication.quit)
@@ -89,6 +95,60 @@ class Simple(optivis.gui.AbstractGui):
     self.qMainWindow.show()
     
     sys.exit(self.qApplication.exec_())
+  
+  def export(self):
+    # generate file path
+    directory = os.path.join(os.path.expanduser('~'), 'export.svg')
+    
+    # get path to file to export to
+    while True:    
+      dialog = PyQt4.Qt.QFileDialog(parent=self.qMainWindow, caption='Export SVG', directory=directory, filter='SVG files (*.svg)')
+      dialog.setAcceptMode(PyQt4.Qt.QFileDialog.AcceptSave)
+      dialog.setFileMode(PyQt4.Qt.QFileDialog.AnyFile)
+
+      # show dialog
+      dialog.exec_()
+      
+      if len(dialog.selectedFiles()) is 0:
+	# no filename specified
+	return
+
+      # get path
+      path = dialog.selectedFiles()[0]
+      
+      try:
+	open(path, 'w').close()
+	os.unlink(path)
+	
+	break;
+      except OSError:
+	PyQt4.Qt.QMessageBox.critical(self.qMainWindow, 'Filename invalid', 'The specified filename is invalid')
+      except IOError:
+	PyQt4.Qt.QMessageBox.critical(self.qMainWindow, 'Permission denied', 'You do not have permission to save the file to the specified location.')
+
+    # export SVG
+    return self.exportSvg(path)
+  
+  def exportSvg(self, path):
+    # get bounding rectangle for graphics scene
+    sceneRect = self.qScene.itemsBoundingRect()
+    
+    generator = PyQt4.QtSvg.QSvgGenerator()
+    generator.setFileName(path)
+    generator.setSize(PyQt4.Qt.QSize(sceneRect.width(), sceneRect.height()))
+    generator.setTitle(self.title)
+    
+    # create painter
+    painter = PyQt4.Qt.QPainter()
+    painter.begin(generator)
+    
+    # convert scene to SVG image
+    self.qScene.render(painter)
+    
+    # finish painting
+    painter.end()
+    
+    return True
 
 class CanvasComponent(optivis.gui.AbstractCanvasComponent):  
   def __init__(self, *args, **kwargs):
