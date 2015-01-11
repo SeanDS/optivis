@@ -11,34 +11,48 @@ import optivis.layout
 
 class Simple(optivis.gui.AbstractGui):
   qApplication = None
+  qMainWindow = None
   qScene = None
   qView = None
 
   def __init__(self, *args, **kwargs):
     super(Simple, self).__init__(*args, **kwargs)
 
-    # create application and canvas
-    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
-    self.qScene = PyQt4.QtGui.QGraphicsScene()
-    self.qView = PyQt4.QtGui.QGraphicsView(self.qScene)
-
     self.initialise()
   
   def initialise(self):
+    # create application
+    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
+    self.qMainWindow = PyQt4.Qt.QMainWindow()
+    
+    # create drawing area
+    self.qScene = PyQt4.QtGui.QGraphicsScene()
+    self.qView = PyQt4.QtGui.QGraphicsView(self.qScene, self.qMainWindow)
+    
     # set view antialiasing
     self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
     
-    # scale window
-    self.qView.resize(self.size.x, self.size.y)
+    # scale view by zoom level
     self.qView.scale(self.zoom, self.zoom)
     
+    # set application's central widget
+    self.qMainWindow.setCentralWidget(self.qView)
+    
     # set window title
-    self.qView.setWindowTitle(self.title)
+    self.qMainWindow.setWindowTitle(self.title)
+    
+    # resize to fit content
+    self.qMainWindow.resize(self.size.x, self.size.y)
+    
+    # add menu and menu items
+    menubar = self.qMainWindow.menuBar()
+    fileMenu = menubar.addMenu('&File')
+    
+    exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
+    exitAction.setShortcut('Ctrl+Q')
+    exitAction.triggered.connect(self.qApplication.quit)
+    fileMenu.addAction(exitAction)
 
-    return
-
-  def quit(self):
-    #self.master.destroy()
     return
 
   def createCanvasObjectLists(self):
@@ -72,7 +86,7 @@ class Simple(optivis.gui.AbstractGui):
       canvasComponent.draw(self.qScene)
 
     # show on screen
-    self.qView.show()
+    self.qMainWindow.show()
     
     sys.exit(self.qApplication.exec_())
 
