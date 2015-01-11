@@ -9,7 +9,7 @@ sys.path.append('..')
 import optivis.scene as scene
 import optivis.bench.links as links
 import optivis.bench.components as components
-import optivis.gui.canvas as canvas
+import optivis.view.canvas as canvas
 
 scene = scene.Scene(title="Example 1")
 

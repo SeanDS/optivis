@@ -10,34 +10,12 @@ import optivis.bench.links
 class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, scene, canvasComponents, canvasLinks):
+  def __init__(self, scene):
     self.scene = scene
-    self.canvasComponents = canvasComponents
-    self.canvasLinks = canvasLinks
   
   @abc.abstractmethod
   def arrange(self):
     return
-  
-  def getCanvasComponent(self, component):
-    if not isinstance(component, optivis.bench.components.AbstractComponent):
-      raise Exception('Specified component is not of type optivis.bench.components.AbstractComponent')
-    
-    for thisCanvasComponent in self.canvasComponents:
-      if thisCanvasComponent.component == component:
-	return thisCanvasComponent
-    
-    raise Exception('Cannot find specified canvas component in list!')
-  
-  def getCanvasLink(self, link):
-    if not isinstance(link, optivis.bench.links.AbstractLink):
-      raise Exception('Specified link is not of type optivis.bench.links.AbstractLink')
-    
-    for thisCanvasLink in self.canvasLinks:
-      if thisCanvasLink.link == link:
-	return thisCanvasLink
-    
-    raise Exception('Cannot find specified canvas link in list!')
   
   @property
   def scene(self):
@@ -49,22 +27,6 @@ class AbstractLayout(object):
       raise Exception('Specified scene is not of type optivis.scene.Scene')
     
     self.__scene = scene
-  
-  @property
-  def canvasComponents(self):
-    return self.__canvasComponents
-  
-  @canvasComponents.setter
-  def canvasComponents(self, canvasComponents):
-    self.__canvasComponents = canvasComponents
-    
-  @property
-  def canvasLinks(self):
-    return self.__canvasLinks
-  
-  @canvasLinks.setter
-  def canvasLinks(self, canvasLinks):
-    self.__canvasLinks = canvasLinks
     
 class SimpleLayout(AbstractLayout):
   def __init__(self, *args, **kwargs):
@@ -73,29 +35,31 @@ class SimpleLayout(AbstractLayout):
   def arrange(self):
     linkedComponents = []
     
+    # explicitly set first component's azimuth as per user instruction
+    self.scene.components[0].azimuth = self.scene.azimuth
+    
     ###
     # Layout and link everything
     
     for link in self.scene.links:
-      canvasLink = self.getCanvasLink(link)
-      canvasComponent1 = self.getCanvasComponent(link.outputNode.component)
-      canvasComponent2 = self.getCanvasComponent(link.inputNode.component)
+      component1 = link.outputNode.component
+      component2 = link.inputNode.component
       
       # absolute angle of output beam
-      outputAzimuth = canvasComponent1.azimuth + link.outputNode.azimuth
+      outputAzimuth = component1.azimuth + link.outputNode.azimuth
       
       # absolute input angle the same as output angle (light travels in a straight line!)
       inputAzimuth = outputAzimuth
       
       # node positions relative to components' centers
-      outputNodeRelativePosition = link.outputNode.position * canvasComponent1.component.size
-      inputNodeRelativePosition = link.inputNode.position * canvasComponent2.component.size
+      outputNodeRelativePosition = link.outputNode.position * component1.size
+      inputNodeRelativePosition = link.inputNode.position * component2.size
       
       # coordinates of output node for rotated component
-      outputNodeRelativeRotatedPosition = outputNodeRelativePosition.rotate(canvasComponent1.azimuth)
+      outputNodeRelativeRotatedPosition = outputNodeRelativePosition.rotate(component1.azimuth)
       
       # combined output node and component position
-      outputNodeAbsolutePosition = canvasComponent1.position.translate(outputNodeRelativeRotatedPosition)
+      outputNodeAbsolutePosition = component1.position.translate(outputNodeRelativeRotatedPosition)
       
       # create link end position
       linkEndPosition = optivis.geometry.Coordinates(link.length, 0).rotate(outputAzimuth)
@@ -111,11 +75,11 @@ class SimpleLayout(AbstractLayout):
 	# can't move component - already linked
 	
 	# input node position as previously defined by loop
-	inputNodeClampedPosition = canvasComponent2.position.translate(inputNodeRelativePosition.rotate(canvasComponent2.azimuth))
+	inputNodeClampedPosition = component2.position.translate(inputNodeRelativePosition.rotate(component2.azimuth))
 	
 	if not inputNodeClampedPosition == inputNodeAbsolutePosition:
 	  # warn the user that they have specified a link longer/shorter or different angle than necessary to keep this component in its current position
-	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it or using a different angle of incidence. Ignoring link length and angle!".format(canvasComponent2, canvasComponent1)
+	  print "WARNING: component {0} already constrained by a link, and linking it to component {1} would require moving it or using a different angle of incidence. Ignoring link length and angle!".format(component2, component1)
 	  
 	  # print desired position
 	  print "\tDesired position: ({0}, {1})".format(inputNodeAbsolutePosition.x, inputNodeAbsolutePosition.y)
@@ -127,15 +91,15 @@ class SimpleLayout(AbstractLayout):
 	  inputNodeAbsolutePosition = inputNodeClampedPosition
       else:
 	# coordinates of second component
-	canvasComponent2.position = inputNodeAbsolutePosition.translate(inputNodeRelativeRotatedPosition.flip())#outputNodeAbsolutePosition.translate(inputNodeRelativeRotatedPosition, linkEndPosition)
+	component2.position = inputNodeAbsolutePosition.translate(inputNodeRelativeRotatedPosition.flip())
       
 	# update second component azimuth to be the link azimuth minus the input's azimuth
-	canvasComponent2.azimuth = inputAzimuth - link.inputNode.azimuth
+	component2.azimuth = inputAzimuth - link.inputNode.azimuth
       
       # set link nodes
-      canvasLink.start = outputNodeAbsolutePosition
-      canvasLink.end = inputNodeAbsolutePosition
+      link.start = outputNodeAbsolutePosition
+      link.end = inputNodeAbsolutePosition
       
       # add components to list of components
       # FIXME: don't add same component twice
-      linkedComponents.append(link.inputNode.component)
+      linkedComponents.append(component2)

@@ -12,15 +12,46 @@ class AbstractComponent(object):
   
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
-  def __init__(self, name, filename, size, inputNodes, outputNodes):
+  def __init__(self, name, filename, size, inputNodes, outputNodes, azimuth=0, position=None):
+    if position is None:
+      position = optivis.geometry.Coordinates(0, 0)
+    
     self.name = name
     self.filename = filename
     self.size = size
     self.inputNodes = inputNodes
     self.outputNodes = outputNodes
+    self.azimuth = azimuth
+    self.position = position
     
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
+  
+  #def getBoundingBox(self):
+    ## get nominal corner positions
+    #topLeft = self.size * optivis.geometry.Coordinates(-0.5, -0.5)
+    #topRight = self.size * optivis.geometry.Coordinates(0.5, -0.5)
+    #bottomLeft = self.size * optivis.geometry.Coordinates(-0.5, 0.5)
+    #bottomRight = self.size * optivis.geometry.Coordinates(0.5, 0.5)
+    
+    ## rotate corners by azimuth
+    #topLeft = topLeft.rotate(self.azimuth)
+    #topRight = topRight.rotate(self.azimuth)
+    #bottomLeft = bottomLeft.rotate(self.azimuth)
+    #bottomRight = bottomRight.rotate(self.azimuth)
+    
+    ## find min and max coordinates    
+    #xPositions = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
+    #yPositions = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
+    
+    #minPos = optivis.geometry.Coordinates(min(xPositions), min(yPositions))
+    #maxPos = optivis.geometry.Coordinates(max(xPositions), max(yPositions))
+    
+    ## add global position
+    #minPos = minPos.translate(self.position)
+    #maxPos = maxPos.translate(self.position)
+    
+    #return minPos, maxPos
   
   @property
   def name(self):
@@ -64,6 +95,25 @@ class AbstractComponent(object):
   @outputNodes.setter
   def outputNodes(self, outputNodes):
     self.__outputNodes = outputNodes
+    
+  @property
+  def azimuth(self):
+    return self.__azimuth
+  
+  @azimuth.setter
+  def azimuth(self, azimuth):
+    self.__azimuth = azimuth
+    
+  @property
+  def position(self):
+    return self.__position
+  
+  @position.setter
+  def position(self, position):
+    if not isinstance(position, optivis.geometry.Coordinates):
+      raise Exception('Specified position is not of type optivis.geometry.Coordinates')
+    
+    self.__position = position
   
   def getInputNode(self, nodeName):
     for node in self.inputNodes:
@@ -81,6 +131,16 @@ class AbstractComponent(object):
   
   def __str__(self):
     return self.name
+  
+class AbstractDrawableComponent(object):
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self):
+    return None
+
+  @abc.abstractmethod
+  def draw(self, *args, **kwargs):
+    return
 
 class Source(AbstractComponent):
   __metaclass__ = abc.ABCMeta

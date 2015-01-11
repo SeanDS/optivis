@@ -9,10 +9,10 @@ sys.path.append('..')
 import optivis.scene as scene
 import optivis.bench.links as links
 import optivis.bench.components as components
-import optivis.gui.canvas as canvas
+import optivis.view.canvas as canvas
 import optivis.geometry as geometry
 
-scene = scene.Scene(title="Example 5")
+scene = scene.Scene(title="Example 5", azimuth=180)
 
 l1 = components.Laser(name="L1")
 m1 = components.CavityMirror(name="M1")
@@ -35,5 +35,5 @@ scene.addLink(links.Link(bs1.getOutputNode('bkA'), m3.getInputNode('fr'), 50))
 scene.addLink(links.Link(bs1.getOutputNode('bkB'), m4.getInputNode('fr'), 50))
 scene.addLink(links.Link(m3.getOutputNode('fr'), m4.getInputNode('fr'), 38.27))
 
-gui = canvas.Simple(scene=scene, size=geometry.Coordinates(1000, 700), zoom=3, azimuth=180)
+gui = canvas.Simple(scene=scene, size=geometry.Coordinates(1000, 700), zoom=3)
 gui.show()

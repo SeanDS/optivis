@@ -9,9 +9,9 @@ sys.path.append('..')
 import optivis.scene as scene
 import optivis.bench.links as links
 import optivis.bench.components as components
-import optivis.gui.canvas as canvas
+import optivis.view.canvas as canvas
 
-scene = scene.Scene(title="Example 2")
+scene = scene.Scene(title="Example 2", azimuth=180)
 
 laser = components.Laser(name="Laser")
 wp1 = components.QuarterWavePlate(name="Quarter Wave Plate")
@@ -48,5 +48,5 @@ scene.addLink(links.Link(mirror1.getOutputNode('fr'), mirror2.getInputNode('fr')
 scene.addLink(links.Link(mirror2.getOutputNode('fr'), mirror3.getInputNode('fr'), 150))
 scene.addLink(links.Link(mirror3.getOutputNode('fr'), pd.getInputNode('in'), 65))
 
-gui = canvas.Simple(scene, azimuth=180)
+gui = canvas.Simple(scene)
 gui.show()
