@@ -81,7 +81,7 @@ class Simple(optivis.gui.AbstractGui):
     (canvasComponents, canvasLinks) = self.createCanvasObjectLists()
     
     # instantiate layout manager and arrange objects
-    layout = optivis.layout.SimpleLayout(self, canvasComponents, canvasLinks)
+    layout = optivis.layout.SimpleLayout(self.scene, canvasComponents, canvasLinks)
     layout.arrange()
     
     # draw objects

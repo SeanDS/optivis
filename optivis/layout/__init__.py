@@ -2,16 +2,16 @@ from __future__ import division
 
 import abc
 
+import optivis
 import optivis.geometry
 import optivis.bench.components
 import optivis.bench.links
-import optivis.gui
 
 class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, gui, canvasComponents, canvasLinks):
-    self.gui = gui
+  def __init__(self, scene, canvasComponents, canvasLinks):
+    self.scene = scene
     self.canvasComponents = canvasComponents
     self.canvasLinks = canvasLinks
   
@@ -40,15 +40,15 @@ class AbstractLayout(object):
     raise Exception('Cannot find specified canvas link in list!')
   
   @property
-  def gui(self):
-    return self.__gui
+  def scene(self):
+    return self.__scene
   
-  @gui.setter
-  def gui(self, gui):
-    if not isinstance(gui, optivis.gui.AbstractGui):
-      raise Exception('Specified gui is not of type optivis.gui.AbstractGui')
+  @scene.setter
+  def scene(self, scene):
+    if not isinstance(scene, optivis.scene.Scene):
+      raise Exception('Specified scene is not of type optivis.scene.Scene')
     
-    self.__gui = gui
+    self.__scene = scene
   
   @property
   def canvasComponents(self):
@@ -76,7 +76,7 @@ class SimpleLayout(AbstractLayout):
     ###
     # Layout and link everything
     
-    for link in self.gui.scene.links:
+    for link in self.scene.links:
       canvasLink = self.getCanvasLink(link)
       canvasComponent1 = self.getCanvasComponent(link.outputNode.component)
       canvasComponent2 = self.getCanvasComponent(link.inputNode.component)
