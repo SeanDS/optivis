@@ -27,31 +27,31 @@ class AbstractComponent(object):
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
   
-  #def getBoundingBox(self):
-    ## get nominal corner positions
-    #topLeft = self.size * optivis.geometry.Coordinates(-0.5, -0.5)
-    #topRight = self.size * optivis.geometry.Coordinates(0.5, -0.5)
-    #bottomLeft = self.size * optivis.geometry.Coordinates(-0.5, 0.5)
-    #bottomRight = self.size * optivis.geometry.Coordinates(0.5, 0.5)
+  def getBoundingBox(self):
+    # get nominal corner positions
+    topLeft = self.size * optivis.geometry.Coordinates(-0.5, -0.5)
+    topRight = self.size * optivis.geometry.Coordinates(0.5, -0.5)
+    bottomLeft = self.size * optivis.geometry.Coordinates(-0.5, 0.5)
+    bottomRight = self.size * optivis.geometry.Coordinates(0.5, 0.5)
     
-    ## rotate corners by azimuth
-    #topLeft = topLeft.rotate(self.azimuth)
-    #topRight = topRight.rotate(self.azimuth)
-    #bottomLeft = bottomLeft.rotate(self.azimuth)
-    #bottomRight = bottomRight.rotate(self.azimuth)
+    # rotate corners by azimuth
+    topLeft = topLeft.rotate(self.azimuth)
+    topRight = topRight.rotate(self.azimuth)
+    bottomLeft = bottomLeft.rotate(self.azimuth)
+    bottomRight = bottomRight.rotate(self.azimuth)
     
-    ## find min and max coordinates    
-    #xPositions = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
-    #yPositions = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
+    # find min and max coordinates    
+    xPositions = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
+    yPositions = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
     
-    #minPos = optivis.geometry.Coordinates(min(xPositions), min(yPositions))
-    #maxPos = optivis.geometry.Coordinates(max(xPositions), max(yPositions))
+    minPos = optivis.geometry.Coordinates(min(xPositions), min(yPositions))
+    maxPos = optivis.geometry.Coordinates(max(xPositions), max(yPositions))
     
-    ## add global position
-    #minPos = minPos.translate(self.position)
-    #maxPos = maxPos.translate(self.position)
+    # add global position
+    minPos = minPos.translate(self.position)
+    maxPos = maxPos.translate(self.position)
     
-    #return minPos, maxPos
+    return minPos, maxPos
   
   @property
   def name(self):

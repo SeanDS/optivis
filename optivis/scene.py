@@ -1,6 +1,6 @@
 import datetime
-from xml.etree import ElementTree as et
 
+import geometry
 import bench.components
 import bench.links
 
@@ -56,9 +56,18 @@ class Scene(object):
     
     self.links.append(link)
   
-  def exportSvg(self, path, width, height):
-    return
-  
-  def getSvgElementTree(self, width, height):
-    # create document
-    document = et.Element('svg', width=width, height=height, version='1.1', xmlns='http://www.w3.org/2000/svg')
+  def getBoundingBox(self):
+    # set initial bounds to infinity
+    lowerBound = geometry.Coordinates(float('inf'), float('inf'))
+    upperBound = geometry.Coordinates(float('-inf'), float('-inf'))
+    
+    # loop over components to find actual bounds
+    for component in self.components:
+      (thisLowerBound, thisUpperBound) = component.getBoundingBox()
+      
+      if thisLowerBound.x < lowerBound.x: lowerBound.x = thisLowerBound.x
+      if thisLowerBound.y < lowerBound.y: lowerBound.y = thisLowerBound.y
+      if thisUpperBound.x > upperBound.x: upperBound.x = thisUpperBound.x
+      if thisUpperBound.y > upperBound.y: upperBound.y = thisUpperBound.y
+    
+    return (lowerBound, upperBound)

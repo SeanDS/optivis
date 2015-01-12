@@ -8,6 +8,7 @@ import PyQt4.QtGui
 import PyQt4.QtSvg
 
 import optivis.view
+import optivis.view.svg
 import optivis.layout
 import optivis.bench.components
 import optivis.bench.links
@@ -68,7 +69,6 @@ class Simple(optivis.view.AbstractDrawable):
     
     for component in self.scene.components:
       # Add component to list of canvas components.
-      # All but the first component's azimuth will be overridden by the layout manager.
       drawableComponents.append(CanvasComponent(component))
     
     return drawableComponents
@@ -133,25 +133,8 @@ class Simple(optivis.view.AbstractDrawable):
     return self.exportSvg(path)
   
   def exportSvg(self, path):
-    # get bounding rectangle for graphics scene
-    sceneRect = self.qScene.itemsBoundingRect()
-    
-    generator = PyQt4.QtSvg.QSvgGenerator()
-    generator.setFileName(path)
-    generator.setSize(PyQt4.Qt.QSize(sceneRect.width(), sceneRect.height()))
-    generator.setTitle(self.title)
-    
-    # create painter
-    painter = PyQt4.Qt.QPainter()
-    painter.begin(generator)
-    
-    # convert scene to SVG image
-    self.qScene.render(painter)
-    
-    # finish painting
-    painter.end()
-    
-    return True
+    svgView = optivis.view.svg.Svg(self.scene)
+    svgView.export(path)
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
   def __init__(self, component, *args, **kwargs):
