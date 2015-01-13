@@ -1,3 +1,5 @@
+from __future__ import unicode_literals, division
+
 import datetime
 
 import geometry
@@ -14,8 +16,6 @@ class Scene(object):
     
     self.title = title
     self.azimuth = azimuth
-    
-    return
   
   @property
   def title(self):
@@ -23,6 +23,9 @@ class Scene(object):
 
   @title.setter
   def title(self, title):
+    if not isinstance(title, basestring):
+      raise Exception('Specified title is not of type basestring')
+    
     self.__title = title
     
   @property
@@ -31,11 +34,12 @@ class Scene(object):
   
   @azimuth.setter
   def azimuth(self, azimuth):
-    self.__azimuth = azimuth
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    self.__azimuth = float(azimuth)
     
   def addComponent(self, component):
     if not isinstance(component, bench.components.AbstractComponent):
-      raise Exception('Specified component is not of type bench.components.AbstractComponent')
+      raise Exception('Specified component is not of type AbstractComponent')
     
     self.components.append(component)
   
@@ -46,13 +50,13 @@ class Scene(object):
   
   def addLink(self, link):
     if not isinstance(link, bench.links.AbstractLink):
-      raise Exception('Specified link is not of type bench.links.AbstractLink')
+      raise Exception('Specified link is not of type AbstractLink')
     
     if not link.inputNode.component in self.components:
-      raise Exception('Input node component has not been added to table')
+      raise Exception('Input node component has not been added to scene')
     
     if not link.outputNode.component in self.components:
-      raise Exception('Output node component has not been added to table')
+      raise Exception('Output node component has not been added to scene')
     
     self.links.append(link)
   

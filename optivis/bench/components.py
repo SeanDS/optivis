@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import unicode_literals, division
 
 import os
 import math
@@ -12,7 +12,7 @@ class AbstractComponent(object):
   
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
-  def __init__(self, name, filename, size, inputNodes, outputNodes, azimuth=0, position=None):
+  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None):
     if position is None:
       position = optivis.geometry.Coordinates(0, 0)
     
@@ -117,14 +117,14 @@ class AbstractComponent(object):
   
   def getInputNode(self, nodeName):
     for node in self.inputNodes:
-      if node.name is nodeName:
+      if node.name == nodeName:
 	return node
     
     raise Exception('No input node with name {0} found'.format(nodeName))
   
   def getOutputNode(self, nodeName):
     for node in self.outputNodes:
-      if node.name is nodeName:
+      if node.name == nodeName:
 	return node
     
     raise Exception('No output node with name {0} found'.format(nodeName))
@@ -145,7 +145,7 @@ class AbstractDrawableComponent(object):
 class Source(AbstractComponent):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, outputNode, *args, **kwargs):    
+  def __init__(self, outputNode, *args, **kwargs):
     inputNodes = []
     outputNodes = [outputNode]
     
