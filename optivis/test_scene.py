@@ -16,9 +16,9 @@ class TestSceneInstantiation(TestCase):
     self.assertRaises(Exception, optivis.scene.Scene, title=tuple('abc'))
     
   def test_valid_titles(self):
-    self.assertTrue(isinstance(optivis.scene.Scene(title=None), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(title=unicode('Title')), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(title=str('Title')), optivis.scene.Scene))
+    self.assertIsInstance(optivis.scene.Scene(title=None), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(title=unicode('Title')), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(title=str('Title')), optivis.scene.Scene)
     
   def test_invalid_azimuth(self):
     self.assertRaises(ValueError, optivis.scene.Scene, azimuth=str('invalid'))
@@ -31,14 +31,14 @@ class TestSceneInstantiation(TestCase):
     self.assertRaises(TypeError, optivis.scene.Scene, azimuth=tuple('abc'))
 
   def test_valid_azimuth(self):
-    self.assertTrue(isinstance(optivis.scene.Scene(azimuth=0), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(azimuth=int('45')), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(azimuth=float('720')), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(azimuth=float('inf')), optivis.scene.Scene))
+    self.assertIsInstance(optivis.scene.Scene(azimuth=0), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(azimuth=int('45')), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(azimuth=float('720')), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(azimuth=float('inf')), optivis.scene.Scene)
 
   def test_valid_init(self):
-    self.assertTrue(isinstance(optivis.scene.Scene(), optivis.scene.Scene))
-    self.assertTrue(isinstance(optivis.scene.Scene(title=None, azimuth=0), optivis.scene.Scene))
+    self.assertIsInstance(optivis.scene.Scene(), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(title=None, azimuth=0), optivis.scene.Scene)
 
 class TestSceneAddComponent(TestCase):
   def setUp(self):
