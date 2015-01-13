@@ -48,7 +48,7 @@ class TestSceneAddComponent(TestCase):
     component = components.Laser()
     
     # can add a component of type laser
-    self.assertTrue(self.scene.addComponent(component) is None)
+    self.assertIsNone(self.scene.addComponent(component))
   
   def test_add_invalid_component(self):
     componentA = components.Laser()
@@ -73,7 +73,7 @@ class TestSceneAddLink(TestCase):
     link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
     
     # can add a link of type Link
-    self.assertTrue(self.scene.addLink(link) is None)
+    self.assertIsNone(self.scene.addLink(link))
   
   def test_add_invalid_link(self):    
     # can't add a link of type Laser

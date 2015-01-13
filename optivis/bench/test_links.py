@@ -19,7 +19,7 @@ class TestLinkInstantiation(TestCase):
     self.scene.addComponent(self.componentB)
     
     # can create link with components in scene
-    self.assertTrue(self.scene.addLink(link) is None)
+    self.assertIsNone(self.scene.addLink(link))
   
   def test_invalid_components(self):
     link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
