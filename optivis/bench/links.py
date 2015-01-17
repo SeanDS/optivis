@@ -38,6 +38,12 @@ class Link(AbstractLink):
 
   @length.setter
   def length(self, length):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    length = float(length)
+    
+    if length < 0:
+      raise Exception('Length must be greater than or equal to 0')
+    
     self.__length = length
     
   @property
