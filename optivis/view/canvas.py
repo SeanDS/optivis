@@ -176,7 +176,7 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
     super(CanvasLink, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
-    pen = PyQt4.QtGui.QPen(PyQt4.QtCore.Qt.red, self.link.width, PyQt4.QtCore.Qt.SolidLine)
+    pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.colour), self.link.width, PyQt4.QtCore.Qt.SolidLine)
     line = PyQt4.QtGui.QGraphicsLineItem(self.link.start.x, self.link.start.y, self.link.end.x, self.link.end.y)
     line.setPen(pen)
     
