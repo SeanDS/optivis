@@ -28,8 +28,8 @@ The SVG file should be given an appropriate filename and placed in the `assets` 
 ## Planned Features ##
 At some undetermined time in the future, I hope to have added the following features:
  * More components from Alexander Franzen's graphics set
- * Link colours validated properly (right now you speicify a Qt colour class, but it would be nice to specify e.g. 'red' instead)
- * Export to SVG pays attention to link colours
+ * Option to add beam dumps to open ports
+ * Validate link colours (make sure they're compatible with Svg export or Qt display)
  * PDF export
  * Electronics (e.g. local oscillator), with sensible routing
  * Patterned links, e.g. dashed links to represent squeezed light
