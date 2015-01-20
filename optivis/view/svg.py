@@ -66,7 +66,7 @@ class Svg(optivis.view.AbstractDrawable):
       svgComponent.draw(document, offset)
     
     f = open(path, 'w')
-    f.write('<?xml version=\"1.0\" standalone=\"no\"?>\n')
+    f.write('<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n')
     f.write('<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n')
     f.write('\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n')
     f.write(et.tostring(document))
@@ -180,4 +180,4 @@ class SvgLink(optivis.bench.links.AbstractDrawableLink):
     if offset is None:
       offset = optivis.geometry.Coordinates(0, 0)
     
-    line = et.SubElement(document, 'line', x1=str(self.link.start.x + offset.x), x2=str(self.link.end.x + offset.x), y1=str(self.link.start.y + offset.y), y2=str(self.link.end.y + offset.y), style='stroke: #ff0000')
+    line = et.SubElement(document, 'line', x1=str(self.link.start.x + offset.x), x2=str(self.link.end.x + offset.x), y1=str(self.link.start.y + offset.y), y2=str(self.link.end.y + offset.y), style='stroke: {0}'.format(self.link.colour))
