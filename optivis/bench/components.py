@@ -168,7 +168,7 @@ class Mirror(AbstractComponent):
 
 class CavityMirror(Mirror):
   def __init__(self, aoi=0, *args, **kwargs):
-    filename = "b-mir.svg"
+    filename = "b-cav-mir.svg"
     size = optivis.geometry.Coordinates(11, 29)
     
     inputNodes = [
@@ -184,6 +184,23 @@ class CavityMirror(Mirror):
     ]
     
     super(CavityMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class SteeringMirror(Mirror):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "b-mir.svg"
+    size = optivis.geometry.Coordinates(11, 29)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi)
+    ]
+    
+    super(SteeringMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitter(Mirror):
   def __init__(self, aoi=-45, *args, **kwargs):

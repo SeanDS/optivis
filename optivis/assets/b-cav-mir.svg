@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg width="10.671" height="29.096">
+  <g id="b-cav-mir">
+    <linearGradient id="b-cav-mir-grad" gradientUnits="userSpaceOnUse" x1="350.0874" y1="43.0298" x2="350.0874" y2="14.6831" gradientTransform="matrix(0.35 0 0 1 -117.1952 -14.3086)">
+      <stop  offset="0.0056" style="stop-color:#89A4B6"/>
+      <stop  offset="0.5" style="stop-color:#FFFFFF"/>
+      <stop  offset="1" style="stop-color:#89A4B6"/>
+    </linearGradient>
+    <rect x="0.375" y="0.375" fill="url(#b-cav-mir-grad)" stroke="#000000" stroke-width="0.75" width="9.921" height="28.346"/>
+  </g>
+</svg>
