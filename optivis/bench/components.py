@@ -225,7 +225,7 @@ class BeamSplitterCube(Mirror):
       nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitterCube, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class Lens(AbstractComponent):
   __metaclass__ = abc.ABCMeta
@@ -339,6 +339,25 @@ class ElectroopticModulator(Modulator):
     ]
     
     super(ElectroopticModulator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+
+class AcoustoopticModulator(Modulator):
+  def __init__(self, aoi=0, *args, **kwargs):
+    filename = "c-aom.svg"
+    size = optivis.geometry.Coordinates(43, 27)
+    
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0.1), azimuth=aoi+0),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0.1), azimuth=aoi+180)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0.1), azimuth=180-aoi),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0.1), azimuth=0-aoi)
+    ]
+    
+    super(AcoustoopticModulator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class FaradayIsolator(AbstractComponent):
   def __init__(self, aoi=0, *args, **kwargs):
