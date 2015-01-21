@@ -19,18 +19,22 @@ class AbstractDrawableLink(object):
     return
 
 class Link(AbstractLink):
-  def __init__(self, outputNode, inputNode, length, width=1.0, colour="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):    
+  def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):    
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
     self.width = width
-    self.colour = colour
+    self.color = color
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
     self.endMarkerRadius = endMarkerRadius
     self.startMarkerColor = startMarkerColor
     self.endMarkerColor = endMarkerColor
+    
+    # check we've not linked one component to itself
+    if self.outputNode.component == self.inputNode.component:
+      raise Exception('Cannot link component directly to itself')
     
   @property
   def length(self):
@@ -74,19 +78,25 @@ class Link(AbstractLink):
 
   @width.setter
   def width(self, width):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    width = float(width)
+    
     if width < 0:
-      raise Exception('Specified width is invalid')
+      raise Exception('Width must be >= 0')
     
     self.__width = width
   
   @property
-  def colour(self):
-    return self.__colour
+  def color(self):
+    return self.__color
   
-  @colour.setter
-  def colour(self, colour):
-    #FIXME: check for valid colours here
-    self.__colour = colour
+  @color.setter
+  def color(self, color):
+    if not isinstance(color, basestring):
+      raise Exception('Specified color is not of type basestring')
+    
+    #FIXME: check for valid colors here
+    self.__color = color
     
   @property
   def startMarker(self):
@@ -94,7 +104,7 @@ class Link(AbstractLink):
   
   @startMarker.setter
   def startMarker(self, startMarker):
-    self.__startMarker = startMarker
+    self.__startMarker = bool(startMarker)
     
   @property
   def endMarker(self):
@@ -102,7 +112,7 @@ class Link(AbstractLink):
   
   @endMarker.setter
   def endMarker(self, endMarker):
-    self.__endMarker = endMarker
+    self.__endMarker = bool(endMarker)
     
   @property
   def startMarkerRadius(self):
@@ -110,6 +120,12 @@ class Link(AbstractLink):
   
   @startMarkerRadius.setter
   def startMarkerRadius(self, startMarkerRadius):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    startMarkerRadius = float(startMarkerRadius)
+    
+    if startMarkerRadius < 0:
+      raise Exception('Start marker radius must be >= 0')
+    
     self.__startMarkerRadius = startMarkerRadius
     
   @property
@@ -118,6 +134,12 @@ class Link(AbstractLink):
   
   @endMarkerRadius.setter
   def endMarkerRadius(self, endMarkerRadius):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    endMarkerRadius = float(endMarkerRadius)
+    
+    if endMarkerRadius < 0:
+      raise Exception('Start marker radius must be >= 0')
+    
     self.__endMarkerRadius = endMarkerRadius
     
   @property
@@ -126,7 +148,10 @@ class Link(AbstractLink):
   
   @startMarkerColor.setter
   def startMarkerColor(self, startMarkerColor):
-    #FIXME: check for valid colours here
+    if not isinstance(startMarkerColor, basestring):
+      raise Exception('Specified start marker color is not of type basestring')
+    
+    #FIXME: check for valid colors here
     self.__startMarkerColor = startMarkerColor
     
   @property
@@ -135,5 +160,8 @@ class Link(AbstractLink):
   
   @endMarkerColor.setter
   def endMarkerColor(self, endMarkerColor):
-    #FIXME: check for valid colours here
+    if not isinstance(endMarkerColor, basestring):
+      raise Exception('Specified end marker color is not of type basestring')
+    
+    #FIXME: check for valid colors here
     self.__endMarkerColor = endMarkerColor
