@@ -28,5 +28,8 @@ The SVG file should be given an appropriate filename and placed in the `assets` 
 ## Planned Features ##
 There are a number of features planned for future releases. See the [issue tracker](https://github.com/SeanDS/optivis/labels/enhancement) for more information.
 
+## Tests ##
+Optivis contains some basic tests to validate and verify inputs to its various objects. You can check that the tests pass or fail by running 'optivis test' with Python from the root directory.
+
 Sean Leavey  
 https://github.com/SeanDS/
