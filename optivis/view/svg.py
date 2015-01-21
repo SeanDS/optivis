@@ -180,4 +180,4 @@ class SvgLink(optivis.bench.links.AbstractDrawableLink):
     if offset is None:
       offset = optivis.geometry.Coordinates(0, 0)
     
-    line = et.SubElement(document, 'line', x1=str(self.link.start.x + offset.x), x2=str(self.link.end.x + offset.x), y1=str(self.link.start.y + offset.y), y2=str(self.link.end.y + offset.y), style='stroke: {0}; stroke-width: {1}'.format(self.link.colour, self.link.width))
+    line = et.SubElement(document, 'line', x1=str(self.link.start.x + offset.x), x2=str(self.link.end.x + offset.x), y1=str(self.link.start.y + offset.y), y2=str(self.link.end.y + offset.y), style='stroke: {0}; stroke-width: {1}'.format(self.link.color, self.link.width))
