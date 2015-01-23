@@ -59,6 +59,38 @@ class Node(object):
   @abc.abstractmethod
   def __str__(self):
     return
+  
+  def getRelativePosition(self):
+    """
+    Get position of node with respect to component's center
+    """
+    
+    return (self.position * self.component.size).rotate(self.component.azimuth)
+  
+  def getAbsolutePosition(self):
+    """
+    Return position of node taking account of node's component's position
+    """
+    
+    return self.component.position.translate(self.getRelativePosition())
+  
+  def getAbsoluteAzimuth(self):
+    return self.component.azimuth + self.azimuth
+  
+  def setAbsolutePosition(self, nodeAbsolutePosition):
+    """
+    Set position of component based on position of node
+    """
+    
+    # component position
+    self.component.position = nodeAbsolutePosition.translate(self.getRelativePosition().flip())
+  
+  def setAbsoluteAzimuth(self, absoluteAzimuth):
+    """
+    Set azimuth of component based on azimuth of node
+    """
+    
+    self.component.azimuth = absoluteAzimuth - self.azimuth
 
 class InputNode(Node):
   def __init__(self, *args, **kwargs):
