@@ -148,6 +148,8 @@ class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):
     super(CanvasComponent, self).__init__(*args, **kwargs)
   
   def draw(self, qScene):
+    print "[GUI] Drawing component {0} at {1}".format(self.component, self.component.position)
+    
     # Create full system path from filename and SVG directory.
     path = os.path.join(self.component.svgDir, self.component.filename)
     
@@ -176,6 +178,8 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
     super(CanvasLink, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
+    print "[GUI] Drawing link {0}".format(self.link)
+    
     pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.color), self.link.width, PyQt4.QtCore.Qt.SolidLine)
     line = PyQt4.QtGui.QGraphicsLineItem(self.link.start.x, self.link.start.y, self.link.end.x, self.link.end.y)
     line.setPen(pen)

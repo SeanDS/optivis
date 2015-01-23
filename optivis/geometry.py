@@ -22,6 +22,9 @@ class Coordinates(object):
   @y.setter
   def y(self, y):
     self.__y = y
+  
+  def __str__(self):
+    return "({0}, {1})".format(self.x, self.y)
     
   def translate(self, *args):
     translation = Coordinates(0, 0)

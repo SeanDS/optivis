@@ -52,6 +52,9 @@ class Node(object):
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
 
+  def __str__(self):
+    return "{0}->{1}".format(self.component, self.name)
+
 class InputNode(Node):
   def __init__(self, *args, **kwargs):
     super(InputNode, self).__init__(*args, **kwargs)
