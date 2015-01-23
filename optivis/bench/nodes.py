@@ -1,9 +1,13 @@
 from __future__ import unicode_literals, division
 
+import abc
+
 import optivis.geometry
 import components
 
-class Node(object):  
+class Node(object):
+  __metaclass__ = abc.ABCMeta
+  
   def __init__(self, name, component, position, azimuth):
     """
     position is normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
@@ -52,13 +56,20 @@ class Node(object):
   def azimuth(self, azimuth):
     self.__azimuth = azimuth
 
+  @abc.abstractmethod
   def __str__(self):
-    return "{0}->{1}".format(self.component, self.name)
+    return
 
 class InputNode(Node):
   def __init__(self, *args, **kwargs):
     super(InputNode, self).__init__(*args, **kwargs)
 
+  def __str__(self):
+    return "{0}<-{1}".format(self.component, self.name)
+
 class OutputNode(Node):
   def __init__(self, *args, **kwargs):
     super(OutputNode, self).__init__(*args, **kwargs)
+
+  def __str__(self):
+    return "{0}->{1}".format(self.component, self.name)

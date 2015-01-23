@@ -22,7 +22,7 @@ class AbstractDrawableLink(object):
     return
 
 class Link(AbstractLink):
-  def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):    
+  def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
