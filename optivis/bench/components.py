@@ -156,7 +156,7 @@ class Laser(Source):
     filename = "c-laser1.svg"
     size = optivis.geometry.Coordinates(62, 46)
     
-    outputNode = nodes.OutputNode(name="out", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180)
+    outputNode = nodes.OutputNode(name="out", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0)
     
     super(Laser, self).__init__(filename=filename, size=size, outputNode=outputNode, *args, **kwargs)
 

@@ -12,7 +12,7 @@ import optivis.bench.components as components
 import optivis.view.canvas as canvas
 import optivis.geometry as geometry
 
-scene = scene.Scene(title="Example 5", azimuth=180)
+scene = scene.Scene(title="Example 5")
 
 l1 = components.Laser(name="L1")
 m1 = components.CavityMirror(name="M1")

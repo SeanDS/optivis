@@ -19,26 +19,29 @@ class TestSceneInstantiation(TestCase):
     self.assertIsInstance(optivis.scene.Scene(title=None), optivis.scene.Scene)
     self.assertIsInstance(optivis.scene.Scene(title=unicode('Title')), optivis.scene.Scene)
     self.assertIsInstance(optivis.scene.Scene(title=str('Title')), optivis.scene.Scene)
-    
-  def test_invalid_azimuth(self):
-    self.assertRaises(ValueError, optivis.scene.Scene, azimuth=str('invalid'))
-    self.assertRaises(ValueError, optivis.scene.Scene, azimuth=unicode('invalid'))
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=None)
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=dict(one=1, two=2, three=3))
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=list('abc'))
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=set('abc'))
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=frozenset('abc'))
-    self.assertRaises(TypeError, optivis.scene.Scene, azimuth=tuple('abc'))
-
-  def test_valid_azimuth(self):
-    self.assertIsInstance(optivis.scene.Scene(azimuth=0), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(azimuth=int('45')), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(azimuth=float('720')), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(azimuth=float('inf')), optivis.scene.Scene)
 
   def test_valid_init(self):
     self.assertIsInstance(optivis.scene.Scene(), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(title=None, azimuth=0), optivis.scene.Scene)
+    self.assertIsInstance(optivis.scene.Scene(title=None), optivis.scene.Scene)
+
+class TestSceneSetReference(TestCase):
+  def setUp(self):
+    self.scene = optivis.scene.Scene()
+    
+  def test_set_valid_reference(self):
+    component = components.Laser()
+    
+    # can set reference component of type laser
+    self.assertIsNone(setattr(self.scene, 'reference', component))
+  
+  def test_set_invalid_reference(self):
+    componentA = components.Laser()
+    componentB = components.CavityMirror()
+
+    link = links.Link(componentA.getOutputNode('out'), componentB.getInputNode('fr'), 10)
+    
+    # can't add a component of type link
+    self.assertRaises(Exception, setattr, self.scene, 'reference', link)
 
 class TestSceneAddComponent(TestCase):
   def setUp(self):

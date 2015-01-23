@@ -11,7 +11,7 @@ import optivis.bench.links as links
 import optivis.bench.components as components
 import optivis.view.svg as svg
 
-scene = scene.Scene(title="Example 2", azimuth=180)
+scene = scene.Scene(title="Example 2b")
 
 laser = components.Laser(name="Laser")
 wp1 = components.QuarterWavePlate(name="Quarter Wave Plate")

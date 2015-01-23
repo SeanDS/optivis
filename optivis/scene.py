@@ -10,12 +10,12 @@ class Scene(object):
   components = []
   links = []
   
-  def __init__(self, title=None, azimuth=0):
+  def __init__(self, title=None, reference=None):
     if title is None:
       title = datetime.datetime.now().strftime('%Y-%M-%d %H:%M')
     
     self.title = title
-    self.azimuth = azimuth
+    self.reference = reference
   
   @property
   def title(self):
@@ -27,15 +27,22 @@ class Scene(object):
       raise Exception('Specified title is not of type basestring')
     
     self.__title = title
-    
-  @property
-  def azimuth(self):
-    return self.__azimuth
   
-  @azimuth.setter
-  def azimuth(self, azimuth):
-    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-    self.__azimuth = float(azimuth)
+  @property
+  def reference(self):
+    """
+    Reference component for layout. The azimuth of this component
+    is used as the absolute reference when laying out scenes.
+    """
+    
+    return self.__reference
+  
+  @reference.setter
+  def reference(self, component):    
+    if component is not None and not isinstance(component, bench.components.AbstractComponent):
+      raise Exception('Specified component is not of type AbstractComponent')
+    
+    self.__reference = component
     
   def addComponent(self, component):
     if not isinstance(component, bench.components.AbstractComponent):

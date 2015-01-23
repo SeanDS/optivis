@@ -9,7 +9,13 @@ class AbstractLink(object):
   __metaclass__ = abc.ABCMeta
   
   def __str__(self):
-    return "{0} --> {1} ({2} --> {3})".format(self.outputNode, self.inputNode, self.start, self.end)
+    return "{0} --> {1}".format(self.outputNode, self.inputNode)
+  
+  def hasComponent(self, component):
+    if self.outputNode.component is component or self.inputNode.component is component:
+      return True
+    
+    return False
   
 class AbstractDrawableLink(object):
   __metaclass__ = abc.ABCMeta

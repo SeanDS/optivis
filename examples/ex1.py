@@ -21,5 +21,7 @@ scene.addComponent(m1)
 
 scene.addLink(links.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 50))
 
+scene.reference = l1
+
 gui = canvas.Simple(scene=scene)
 gui.show()

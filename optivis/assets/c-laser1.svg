@@ -2,8 +2,8 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
 <svg width="61.695" height="46.104">
   <g id="c-laser1">
-    <rect x="0.375" y="0.375" fill="#302B33" width="56.693" height="12.756"/>
-    <rect x="0.375" y="32.973" fill="#302B33" width="56.693" height="12.756"/>
+    <rect x="5" y="0.375" fill="#302B33" width="56.695" height="12.756"/>
+    <rect x="5" y="32.973" fill="#302B33" width="56.695" height="12.756"/>
     <linearGradient id="c-laser1-grad" gradientUnits="userSpaceOnUse" x1="28.7217" y1="32.9727" x2="28.7217" y2="13.1309">
       <stop  offset="0" style="stop-color:#FFFFFF"/>
       <stop  offset="0.0051" style="stop-color:#FEFCFC"/>
@@ -16,8 +16,8 @@
       <stop  offset="0.9099" style="stop-color:#F4D6D6"/>
       <stop  offset="1" style="stop-color:#FFFFFF"/>
     </linearGradient>
-    <rect x="0.375" y="13.131" fill="url(#c-laser1-grad)" stroke="#000000" stroke-width="0.75" width="56.693" height="19.842"/>
-    <rect x="57.068" y="3.209" stroke="#000000" stroke-width="0.75" width="4.252" height="39.686"/>
-    <rect x="0.375" y="0.375" fill="none" stroke="#000000" stroke-width="0.75" width="56.693" height="45.354"/>
+    <rect x="5" y="13.131" fill="url(#c-laser1-grad)" stroke="#000000" stroke-width="0.75" width="56.695" height="19.842"/>
+    <rect x="0.75" y="3.209" stroke="#000000" stroke-width="0.75" width="4.252" height="39.686"/>
+    <rect x="5" y="0.375" fill="none" stroke="#000000" stroke-width="0.75" width="56.695" height="45.354"/>
   </g>
 </svg>
