@@ -15,7 +15,7 @@ On Ubuntu/Debian you should be able to install all of these with the following c
 `$ sudo apt-get install python python-qt4 python-cairosvg`
 
 ## How To ##
-Optivis is pretty straightforward to use. You start off with importing a bunch of Optivis modules:
+Optivis is pretty straightforward to use. You start off by importing a bunch of Optivis modules:
 
 ```python
 import sys
@@ -81,7 +81,7 @@ gui = canvas.Simple(scene)
 gui.show()
 ```
 
-Take a look at the examples directory for a set of scripts demonstrating the abilities of Optivis.
+Take a look at the `examples` directory for a set of scripts demonstrating the abilities of Optivis.
 
 ## Coordinate System ##
 Optivis uses a left-handed coordinate system in line with almost all computer graphics applications. Positive angle rotations are clockwise. All geometrical transforms are performed with the coordinate class contained in `optivis.geometry`.
