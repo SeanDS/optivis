@@ -5,14 +5,14 @@
 Script to visualise optical environments. Uses the fantastic SVG optical components created by Alexander Franzen (http://www.gwoptics.org/ComponentLibrary/).  
 
 ## Requirements ##
-Optivis requires the following components:
+Optivis requires Python 2.7+ or higher. For extra functionality, you must also install additional packages:
 
-* Python 2.7+
-* python-qt4
+* `python-qt4` for the GUI
+* `python-cairosvg` for PDF, PostScript and PNG export capability
 
-On Ubuntu/Debian you should be able to install these with the following command:
+On Ubuntu/Debian you should be able to install all of these with the following command:
 
-`~$ sudo apt-get install python python-qt4`
+`$ sudo apt-get install python python-qt4 python-cairosvg`
 
 ## Coordinate System ##
 Optivis uses a left-handed coordinate system in line with almost all computer graphics applications. Positive angle rotations are clockwise. All geometrical transforms are performed with the coordinate class contained in `optivis.geometry`.
@@ -29,7 +29,11 @@ The SVG file should be given an appropriate filename and placed in the `assets` 
 There are a number of features planned for future releases. See the [issue tracker](https://github.com/SeanDS/optivis/labels/enhancement) for more information.
 
 ## Tests ##
-Optivis contains some basic tests to validate and verify inputs to its various objects. You can check that the tests pass or fail by running 'optivis test' with Python from the root directory.
+Optivis contains some basic tests to validate and verify inputs to its various objects. You can check that the tests pass or fail by running
+
+`python optivis test`
+
+from the root Optivis directory (the same directory as this readme).
 
 Sean Leavey  
 https://github.com/SeanDS/

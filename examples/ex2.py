@@ -11,7 +11,7 @@ import optivis.bench.links as links
 import optivis.bench.components as components
 import optivis.view.canvas as canvas
 
-scene = scene.Scene(title="Example 2a")
+scene = scene.Scene(title="Example 2")
 
 laser = components.Laser(name="Laser")
 wp1 = components.QuarterWavePlate(name="Quarter Wave Plate")

@@ -135,24 +135,40 @@ class SimpleLayout(AbstractLayout):
     super(SimpleLayout, self).__init__(*args, **kwargs)
   
   def arrange(self):
-    linkedComponents = []
+    linkedComponents = set([])
+
+    # make copy of links list
+    links = self.scene.links
     
-    # explicitly set first component's azimuth as per user instruction
-    self.scene.links[0].outputNode.component.azimuth = self.scene.azimuth
+    # make sure there is a reference component
+    if self.scene.reference is None:
+      self.scene.reference = self.scene.components[0]
+      
+    # add reference component to linked components set, so it is automatically constrained
+    linkedComponents.add(self.scene.reference)
+    
+    # find link with reference, and move it to start of list
+    for i in range(len(self.scene.links)):
+      link = self.scene.links[i]
+      
+      if link.hasComponent(self.scene.reference):
+	del(links[i])
+	links.insert(0, link)
+	
+	break
     
     ###
     # Layout and link everything
     
-    for link in self.scene.links:
-      print "Linking {0} to {1}".format(link.outputNode, link.inputNode)
+    for link in links:
+      print "[Layout] Linking {0}".format(link)
       
       outputComponent = link.outputNode.component
       inputComponent = link.inputNode.component
       
       if outputComponent in linkedComponents and inputComponent in linkedComponents:
 	# both components already constrained
-	# TODO
-	print "constrained!"
+	print "[Layout] Link {0} properties ignored because both linked components are already constrained by other links.".format(link)
       elif outputComponent in linkedComponents:
 	# output component already constrained, input component not constrained
 	
@@ -160,42 +176,73 @@ class SimpleLayout(AbstractLayout):
 	link.inputNode.setAbsoluteAzimuth(link.outputNode.getAbsoluteAzimuth())
 	
 	# set the position of the input component
-	link.inputNode.setAbsolutePosition(self.positionNodeRelativeToAnother(link.inputNode, link.outputNode, link.length))
+	link.inputNode.setAbsolutePosition(self.getInputNodePositionRelativeToOutputNode(link))
       elif inputComponent in linkedComponents:
 	# input component already constrained, output component not constrained
 	
-	# set azimuth first
+	# set azimuth first	
 	link.outputNode.setAbsoluteAzimuth(link.inputNode.getAbsoluteAzimuth())
 	
 	# set the position of the output component
-	link.outputNode.setAbsolutePosition(self.positionNodeRelativeToAnother(link.outputNode, link.inputNode, link.length))
+	link.outputNode.setAbsolutePosition(self.getOutputNodePositionRelativeToInputNode(link))
       else:
-	# neither component already constrained, so just artificially constrain the first to (0, 0)
+	# neither component already constrained, so just artificially constrain the first to (0, 0) FIXME: this should check to see if these components are linked later...
 	link.outputNode.setAbsolutePosition(optivis.geometry.Coordinates(0, 0))
 	
 	# set azimuth first
 	link.inputNode.setAbsoluteAzimuth(link.outputNode.getAbsoluteAzimuth())
 	
 	# set the position of the input component
-	link.inputNode.setAbsolutePosition(self.positionNodeRelativeToAnother(link.inputNode, link.outputNode, link.length))
-      
+	link.inputNode.setAbsolutePosition(self.getInputNodePositionRelativeToOutputNode(link))
+	
       link.start = link.outputNode.getAbsolutePosition()
       link.end = link.inputNode.getAbsolutePosition()
       
-      # add components to list of components
-      # FIXME: don't add same component twice
-      linkedComponents.append(outputComponent)
-      linkedComponents.append(inputComponent)
+      # add components to set of constrained components
+      linkedComponents.add(outputComponent)
+      linkedComponents.add(inputComponent)
+    
+    # move scene positions so that left most, topmost object is at the origin
+    self.normalisePositions()
       
-  def positionNodeRelativeToAnother(self, nodeToMove, nodeWithRespectTo, length):
+  def getInputNodePositionRelativeToOutputNode(self, link):    
     # absolute position of pivot point
-    pivotPosition = nodeWithRespectTo.getAbsolutePosition()
+    pivotPosition = link.outputNode.getAbsolutePosition()
     
     # angle
-    pivotAngle = nodeWithRespectTo.getAbsoluteAzimuth()
+    pivotAngle = link.outputNode.getAbsoluteAzimuth()
     
     # position of component with respect to pivot
-    relativePosition = optivis.geometry.Coordinates(length, 0).rotate(pivotAngle)
+    relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle)
     
     # absolute position of component
     return pivotPosition.translate(relativePosition)
+  
+  def getOutputNodePositionRelativeToInputNode(self, link):    
+    # absolute position of pivot point
+    pivotPosition = link.inputNode.getAbsolutePosition()
+    
+    # angle
+    pivotAngle = link.inputNode.getAbsoluteAzimuth()
+    
+    # position of component with respect to pivot, flipped because we're going 'backwards' from input to output
+    relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle).flip()
+    
+    # absolute position of component
+    return pivotPosition.translate(relativePosition)
+
+  def normalisePositions(self):
+    """
+    Move the position of all components such that the topmost, leftmost position is the origin
+    """
+    
+    # get offset to apply to all components
+    (lowerBounds, upperBounds) = self.scene.getBoundingBox()
+    offset = lowerBounds.flip()
+    
+    for link in self.scene.links:
+      link.start = link.start.translate(offset)
+      link.end = link.end.translate(offset)
+    
+    for component in self.scene.components:
+      component.position = component.position.translate(offset)

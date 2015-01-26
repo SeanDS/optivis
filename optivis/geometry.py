@@ -75,7 +75,14 @@ class Coordinates(object):
     assert xTests
     assert yTests
     
-    return (abs(self.x - otherCoordinates.x) <= max(xTests)) and (abs(self.y - otherCoordinates.y) <= max(yTests))
+    if not isinstance(otherCoordinates, Coordinates):
+      if not isinstance(otherCoordinates, float) or isinstance(otherCoordinates, int):
+	raise Exception('Specified equality target is not of type Coordinates, float or int')
+      
+      return (abs(self.x - otherCoordinates) <= max(xTests)) and (abs(self.y - otherCoordinates) <= max(yTests))
+      
+    else:
+      return (abs(self.x - otherCoordinates.x) <= max(xTests)) and (abs(self.y - otherCoordinates.y) <= max(yTests))
   
   def __ne__(self, otherCoordinates):
     return not self.__eq__(otherCoordinates)

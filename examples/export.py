@@ -6,12 +6,13 @@ import sys
 
 sys.path.append('..')
 
+import optivis.geometry as geometry
 import optivis.scene as scene
 import optivis.bench.links as links
 import optivis.bench.components as components
 import optivis.view.svg as svg
 
-scene = scene.Scene(title="Example 2b")
+scene = scene.Scene(title="Export Example")
 
 laser = components.Laser(name="Laser")
 wp1 = components.QuarterWavePlate(name="Quarter Wave Plate")
@@ -50,15 +51,29 @@ scene.addLink(links.Link(mirror3.getOutputNode('fr'), pd.getInputNode('in'), 65)
 
 view = svg.Svg(scene=scene)
 
+kwargs = {}
+
+# get a valid format
+formats = svg.Svg._Svg__formats
+
+while True:
+  print 'Valid formats are: ' + ', '.join(formats)
+  fileFormat = raw_input('Enter a format: ')
+  
+  if fileFormat in formats:
+    break
+  else:
+    print 'Invalid format: {0}'.format(fileFormat)
+
 # get a valid filename
 while True:
   try:
     path = raw_input('Enter a filename: ')
     
-    view.export(path)
-    
     break
   except Exception, e:
     print('Invalid path: {0}'.format(e))
+    
+view.export(path, fileFormat=fileFormat)
 
 print('Exported scene to {0}'.format(path))

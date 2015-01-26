@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division
 import os
 import os.path
 import sys
+import cairosvg
 from xml.etree import ElementTree as et
 
 import optivis.geometry
@@ -11,6 +12,9 @@ import optivis.bench.links
 import optivis.layout
 
 class Svg(optivis.view.AbstractDrawable):
+  # supported file formats
+  __formats = ['svg', 'png', 'pdf', 'ps']
+  
   def __init__(self, *args, **kwargs):
     super(Svg, self).__init__(*args, **kwargs)
   
@@ -38,7 +42,23 @@ class Svg(optivis.view.AbstractDrawable):
     
     return
   
-  def export(self, path):
+  def export(self, path, fileFormat="svg", size=None, dpi=96):
+    """
+    Export scene to file. Supports various formats, but ultimately
+    everything is converted into its final format from a SVG.
+    
+    Note on size:
+      * If size is provided for SVG format, it is ignored.
+      * If size is provided for PNG format, it is in pixels
+      * If size is provided for any other format, it is scaled into
+        millimetres by the specified dots per inch (dpi, default 96)
+        divided by the number of millimetres per inch (25.4)
+    
+    Optional arguments:
+      dpi - dots per inch for PDF and PS output
+    
+    """
+    
     # check path is valid
     try:
       open(path, 'w').close()
@@ -48,33 +68,81 @@ class Svg(optivis.view.AbstractDrawable):
     except IOError:
       raise Exception('You do not have permission to save the file to the specified location.')
     
+    # check file format is valid
+    if fileFormat not in Svg.__formats:
+      raise Exception('The specified file format is invalid.')
+    
+    # check size is valid, if specified
+    if size is not None:
+      if not isinstance(size, optivis.geometry.Coordinates):
+	raise Exception('Specified size is not of type Coordinates.')
+    
+    # raise exception if SVG format specified along with a size
+    if fileFormat == 'svg' and isinstance(size, optivis.geometry.Coordinates):
+      raise Exception('Size is ignored for SVG exports.')
+    
     # lay things out before doing anything else
     self.layout()
     
-    # get scene size
-    (lowerBounds, upperBounds) = self.scene.getBoundingBox()
-    size = upperBounds.translate(lowerBounds.flip())
-    offset = lowerBounds.flip()
+    # initial export data
+    exportContent = None
     
-    document = et.Element('svg', width='{0}'.format(size.x), height='{0}'.format(size.y), version='1.1', xmlns='http://www.w3.org/2000/svg')
-    
-    for svgLink in self.getDrawableLinks():
-      svgLink.draw(document, offset)
-    
-    for svgComponent in self.getDrawableComponents():
-      # draw component with offset applied to centre everything in the SVG canvas
-      svgComponent.draw(document, offset)
-    
+    # convert format, if necessary
+    if fileFormat != 'svg':
+      # get SVG document
+      svgByteString = unicode.encode(self.getSvgString(size=size))
+      
+      if fileFormat == 'png':
+	exportContent = cairosvg.surface.PNGSurface.convert(bytestring=svgByteString)
+      elif fileFormat == 'pdf':
+	exportContent = cairosvg.surface.PDFSurface.convert(bytestring=svgByteString, dpi=dpi)
+      elif fileFormat == 'ps':
+	exportContent = cairosvg.surface.PSSurface.convert(bytestring=svgByteString, dpi=dpi)
+    else:
+      # get SVG document
+      exportContent = self.getSvgString()
+
     f = open(path, 'w')
-    f.write('<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n')
-    f.write('<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n')
-    f.write('\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n')
-    f.write(et.tostring(document))
+    f.write(exportContent)
     f.close()
     
     return
 
-class SvgComponent(optivis.bench.components.AbstractDrawableComponent):  
+  def getSvgString(self, size=None):
+    sceneSize = self.scene.getSize()
+    
+    if size is None:
+      size = sceneSize
+    
+    if not isinstance(size, optivis.geometry.Coordinates):
+      raise Exception('Specified size is not of type Coordinates.')
+    
+    # scaling factor
+    scaling = size / sceneSize
+    
+    rootElement = et.Element('svg', width='{0}'.format(size.x), height='{0}'.format(size.y), version='1.1', xmlns='http://www.w3.org/2000/svg')
+    
+    # by default, we attach drawables to root
+    drawElement = rootElement
+    
+    if scaling != 1.0:
+      # make the draw element a scale group
+      drawElement = et.Element('g', transform='scale({0})'.format(scaling))
+      
+      rootElement.append(drawElement)
+    
+    for svgLink in self.getDrawableLinks():
+      svgLink.draw(drawElement)
+    
+    for svgComponent in self.getDrawableComponents():
+      # draw component with offset applied to centre everything in the SVG canvas
+      svgComponent.draw(drawElement)
+    
+    docStr = '<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n' + et.tostring(rootElement)
+    
+    return docStr
+
+class SvgComponent(optivis.bench.components.AbstractDrawableComponent):
   def __init__(self, component, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
@@ -83,12 +151,9 @@ class SvgComponent(optivis.bench.components.AbstractDrawableComponent):
     
     super(SvgComponent, self).__init__(*args, **kwargs)
   
-  def draw(self, document, offset=None):
+  def draw(self, document):
     if not isinstance(document, et.Element):
       raise Exception('Specified document is not of type ElementTree')
-    
-    if offset is None:
-      offset = optivis.geometry.Coordinates(0, 0)
     
     # create full path to SVG file
     path = os.path.join(self.component.svgDir, self.component.filename)
@@ -147,7 +212,7 @@ class SvgComponent(optivis.bench.components.AbstractDrawableComponent):
 
     # now graphicGroup contains content with unique IDs, ready to be combined with other SVG markup.
     # create a new group to control this SVG image's global position (accounting for centre of rotation)
-    group1 = et.Element('g', transform='translate({0} {1})'.format(self.component.position.x - self.component.size.x / 2 + offset.x, self.component.position.y - self.component.size.y / 2 + offset.y))
+    group1 = et.Element('g', transform='translate({0} {1})'.format(self.component.position.x - self.component.size.x / 2, self.component.position.y - self.component.size.y / 2))
 
     # check if we also need to rotate the component
     if self.component.azimuth != 0:
@@ -173,11 +238,8 @@ class SvgLink(optivis.bench.links.AbstractDrawableLink):
     
     super(SvgLink, self).__init__(*args, **kwargs)
 
-  def draw(self, document, offset=None):
+  def draw(self, document):
     if not isinstance(document, et.Element):
       raise Exception('Specified document is not of type ElementTree')
     
-    if offset is None:
-      offset = optivis.geometry.Coordinates(0, 0)
-    
-    line = et.SubElement(document, 'line', x1=str(self.link.start.x + offset.x), x2=str(self.link.end.x + offset.x), y1=str(self.link.start.y + offset.y), y2=str(self.link.end.y + offset.y), style='stroke: {0}; stroke-width: {1}'.format(self.link.color, self.link.width))
+    line = et.SubElement(document, 'line', x1=str(self.link.start.x), x2=str(self.link.end.x), y1=str(self.link.start.y), y2=str(self.link.end.y), style='stroke: {0}; stroke-width: {1}'.format(self.link.color, self.link.width))

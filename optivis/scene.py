@@ -82,3 +82,8 @@ class Scene(object):
       if thisUpperBound.y > upperBound.y: upperBound.y = thisUpperBound.y
     
     return (lowerBound, upperBound)
+  
+  def getSize(self):
+    (lowerBound, upperBound) = self.getBoundingBox()
+    
+    return upperBound.translate(lowerBound.flip())
