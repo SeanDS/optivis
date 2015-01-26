@@ -14,6 +14,75 @@ On Ubuntu/Debian you should be able to install all of these with the following c
 
 `$ sudo apt-get install python python-qt4 python-cairosvg`
 
+## How To ##
+Optivis is pretty straightforward to use. You start off with importing a bunch of Optivis modules:
+
+```python
+import sys
+
+sys.path.append('path/to/optivis')
+
+import optivis.scene as scene
+import optivis.bench.links as links
+import optivis.bench.components as components
+import optivis.view.canvas as canvas
+import optivis.view.svg as svg
+```
+
+Make sure you replace `/path/to/optivis` with the location of Optivis so that Python knows where to look.
+
+Next, define your scene:
+
+```python
+scene = scene.Scene(title="My Scene")
+```
+
+The title is optional. Next, you can add a bunch of components to your scene:
+
+```python
+l1 = components.Laser(name="L1")
+bs1 = components.BeamSplitter(name="BS", aoi=45)
+m1 = components.CavityMirror(name="M1", aoi=45)
+m2 = components.CavityMirror(name="M2", aoi=45)
+m3 = components.CavityMirror(name="M3", aoi=45)
+
+scene.addComponent(l1)
+scene.addComponent(bs1)
+scene.addComponent(m1)
+scene.addComponent(m2)
+scene.addComponent(m3)
+```
+
+Note that the beam splitter and mirrors have an `aoi` parameter - this specifies the angle of incidence of the component relative to its primary input.
+
+Next, link your components to each other:
+
+```python
+scene.addLink(l1.getOutputNode('out'), bs1.getInputNode('frA'), 100)
+scene.addLink(bs1.getOutputNode('bkA'), m1.getInputNode('fr'), 50)
+scene.addLink(m1.getOutputNode('fr'), m2.getInputNode('fr'), 50)
+scene.addLink(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58)
+scene.addLink(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5)
+```
+
+Note that the components have outputs and inputs with different names. These are names specific to each component - look up the component syntax to learn which inputs/outputs correspond to which ports.
+
+Finally, draw the scene! You can either write the scene into a file...
+
+```python
+view = svg.Svg(scene)
+view.export('scene.svg', fileFormat='svg')
+```
+
+...or open the GUI:
+
+```python
+gui = canvas.Simple(scene)
+gui.show()
+```
+
+Take a look at the examples directory for a set of scripts demonstrating the abilities of Optivis.
+
 ## Coordinate System ##
 Optivis uses a left-handed coordinate system in line with almost all computer graphics applications. Positive angle rotations are clockwise. All geometrical transforms are performed with the coordinate class contained in `optivis.geometry`.
 
