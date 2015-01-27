@@ -54,7 +54,7 @@ view = svg.Svg(scene=scene)
 kwargs = {}
 
 # get a valid format
-formats = svg.Svg._Svg__formats
+formats = svg.Svg._Svg__formats.keys()
 
 while True:
   print 'Valid formats are: ' + ', '.join(formats)

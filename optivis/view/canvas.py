@@ -107,7 +107,7 @@ class Simple(optivis.view.AbstractDrawable):
     
     # get path to file to export to
     while True:    
-      dialog = PyQt4.Qt.QFileDialog(parent=self.qMainWindow, caption='Export SVG', directory=directory, filter='SVG files (*.svg)')
+      dialog = PyQt4.Qt.QFileDialog(parent=self.qMainWindow, caption='Export SVG', directory=directory, filter=';;'.join(optivis.view.svg.Svg._Svg__formats.values()))
       dialog.setAcceptMode(PyQt4.Qt.QFileDialog.AcceptSave)
       dialog.setFileMode(PyQt4.Qt.QFileDialog.AnyFile)
 
