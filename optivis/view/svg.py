@@ -12,8 +12,10 @@ import optivis.bench.links
 import optivis.layout
 
 class Svg(optivis.view.AbstractDrawable):
-  # supported file formats and their associated file filters
-  __formats = {'svg': 'SVG image (*.svg)', 'png': 'PNG image (*.png)', 'pdf': 'Portable Document Format (*.pdf)', 'ps': 'PostScript document (*.ps)'}
+  # supported file formats, extensions and file select filters
+  __formats = ['svg', 'png', 'pdf', 'ps']
+  __extensions = ['.svg', '.png', '.pdf', '.ps']
+  __filters = ['SVG image (*.svg)', 'PNG image (*.png)', 'Portable Document Format (*.pdf)', 'PostScript document (*.ps)']
   
   def __init__(self, *args, **kwargs):
     super(Svg, self).__init__(*args, **kwargs)
@@ -69,7 +71,9 @@ class Svg(optivis.view.AbstractDrawable):
       raise Exception('You do not have permission to save the file to the specified location.')
     
     # check file format is valid
-    if fileFormat not in Svg.__formats.keys():
+    print fileFormat
+    
+    if fileFormat not in self.__formats:
       raise Exception('The specified file format is invalid.')
     
     # check size is valid, if specified

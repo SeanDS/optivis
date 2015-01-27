@@ -105,9 +105,13 @@ class Simple(optivis.view.AbstractDrawable):
     # generate file path
     directory = os.path.join(os.path.expanduser('~'), 'export.svg')
     
+    # default path and file format
+    path = None
+    fileFormat = None
+    
     # get path to file to export to
     while True:    
-      dialog = PyQt4.Qt.QFileDialog(parent=self.qMainWindow, caption='Export SVG', directory=directory, filter=';;'.join(optivis.view.svg.Svg._Svg__formats.values()))
+      dialog = PyQt4.Qt.QFileDialog(parent=self.qMainWindow, caption='Export SVG', directory=directory, filter=';;'.join(optivis.view.svg.Svg._Svg__filters))
       dialog.setAcceptMode(PyQt4.Qt.QFileDialog.AcceptSave)
       dialog.setFileMode(PyQt4.Qt.QFileDialog.AnyFile)
 
@@ -118,25 +122,34 @@ class Simple(optivis.view.AbstractDrawable):
 	# no filename specified
 	return
 
-      # get path
-      path = dialog.selectedFiles()[0]
+      # get file path and format
+      path, extension = os.path.splitext(str(dialog.selectedFiles()[0]))
       
       try:
+	# check if we can write to the path
 	open(path, 'w').close()
 	os.unlink(path)
 	
-	break;
+	# get valid format
+	fileFormat = extension[1:]
+
+	if extension not in optivis.view.svg.Svg._Svg__extensions:
+	  PyQt4.Qt.QMessageBox.critical(self.qMainWindow, 'File extension invalid', 'The specified file extension, \'{0}\', is invalid'.format(extension))
+	  
+	  continue
+	
+	break
       except OSError:
 	PyQt4.Qt.QMessageBox.critical(self.qMainWindow, 'Filename invalid', 'The specified filename is invalid')
       except IOError:
 	PyQt4.Qt.QMessageBox.critical(self.qMainWindow, 'Permission denied', 'You do not have permission to save the file to the specified location.')
 
-    # export SVG
-    return self.exportSvg(path)
+    # export
+    return self.exportSvg(path=path + extension, fileFormat=fileFormat)
   
-  def exportSvg(self, path):
+  def exportSvg(self, *args, **kwargs):
     svgView = optivis.view.svg.Svg(self.scene)
-    svgView.export(path)
+    svgView.export(*args, **kwargs)
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
   def __init__(self, component, *args, **kwargs):
