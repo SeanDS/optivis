@@ -13,6 +13,10 @@ class AbstractComponent(object):
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
   def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None):
+    if name is None:
+      # empty name
+      name = ''
+    
     if position is None:
       position = optivis.geometry.Coordinates(0, 0)
     
@@ -59,6 +63,9 @@ class AbstractComponent(object):
   
   @name.setter
   def name(self, name):
+    if not isinstance(name, basestring):
+      raise Exception('Specified name is not of type basestring')
+    
     self.__name = name
   
   @property
@@ -67,6 +74,9 @@ class AbstractComponent(object):
   
   @filename.setter
   def filename(self, filename):
+    if not isinstance(filename, basestring):
+      raise Exception('Specified filename is not of type basestring')
+    
     self.__filename = filename
     
   @property
