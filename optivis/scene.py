@@ -61,7 +61,7 @@ class Scene(object):
     
     self.addLink(link)
   
-  def addLink(self, link):
+  def addLink(self, link):    
     if not isinstance(link, bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
     

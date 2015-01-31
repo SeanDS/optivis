@@ -7,22 +7,11 @@ import links
 
 class TestLinkInstantiation(TestCase):
   def setUp(self):
-    self.scene = optivis.scene.Scene()
     self.componentA = components.Laser()
     self.componentB = components.CavityMirror()
     self.componentC = components.CavityMirror()
   
-  def test_invalid_components(self):
-    link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
-    
-    # can't create link with components not yet added to scene
-    self.assertRaises(Exception, self.scene.addLink, link)
-  
-  def test_invalid_node(self):
-    # add components
-    self.scene.addComponent(self.componentB)
-    self.scene.addComponent(self.componentC)
-    
+  def test_invalid_node(self):    
     # can't link input node to input node
     self.assertRaises(Exception, links.Link, self.componentB.getInputNode('fr'), self.componentC.getInputNode('fr'), 10)
     
@@ -35,11 +24,7 @@ class TestLinkInstantiation(TestCase):
     # can't link component to self
     self.assertRaises(Exception, links.Link, self.componentB.getOutputNode('fr'), self.componentB.getInputNode('fr'), 10)
   
-  def test_invalid_length(self):
-    # add components
-    self.scene.addComponent(self.componentA)
-    self.scene.addComponent(self.componentB)
-    
+  def test_invalid_length(self):    
     # negative number
     self.assertRaises(Exception, links.Link, self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), -10)
     
@@ -53,17 +38,11 @@ class TestLinkInstantiation(TestCase):
     self.assertRaises(TypeError, links.Link, self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), None)
 
 class TestLinkAttributes(TestCase):
-  def setUp(self):
-    self.scene = optivis.scene.Scene()
-    
+  def setUp(self):    
     self.componentA = components.Laser()
     self.componentB = components.CavityMirror()
     
-    self.scene.addComponent(self.componentA)
-    self.scene.addComponent(self.componentB)
-    
     self.link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
-    self.scene.addLink(self.link)
     
   def test_invalid_width(self):
     # negative number

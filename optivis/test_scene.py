@@ -1,6 +1,8 @@
 from __future__ import unicode_literals, division
 
 from unittest import TestCase
+import copy
+
 import optivis.scene
 import optivis.bench.components as components
 import optivis.bench.links as links
@@ -63,17 +65,31 @@ class TestSceneAddLink(TestCase):
     self.scene = optivis.scene.Scene()
     self.componentA = components.Laser()
     self.componentB = components.CavityMirror()
-    
-  def test_add_valid_link(self):
-    # add components to scene
-    self.scene.addComponent(self.componentA)
-    self.scene.addComponent(self.componentB)
-    
-    link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
-    
-    # can add a link of type Link
-    self.assertIsNone(self.scene.addLink(link))
   
   def test_add_invalid_link(self):    
     # can't add a link of type Laser
     self.assertRaises(Exception, self.scene.addLink, self.componentA)
+  
+  def test_add_link_components_not_in_scene_A(self):
+    link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
+    
+    # can't create link with components not yet added to scene
+    self.assertRaises(Exception, self.scene.addLink, link)
+    
+  def test_add_link_components_not_in_scene_B(self):
+    # add only one of the two linked components
+    self.scene.addComponent(self.componentA)
+    
+    link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
+    
+    # can't create link with other component not in scene
+    self.assertRaises(Exception, self.scene.addLink, link)
+    
+  def test_add_link_components_not_in_scene_C(self):
+    # add only one of the two linked components
+    self.scene.addComponent(self.componentB)
+    
+    link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
+    
+    # can't create link with other component not in scene
+    self.assertRaises(Exception, self.scene.addLink, link)
