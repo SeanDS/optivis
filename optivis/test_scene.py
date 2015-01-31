@@ -5,43 +5,39 @@ import optivis.scene
 import optivis.bench.components as components
 import optivis.bench.links as links
 
-class TestSceneInstantiation(TestCase):
+class TestSceneSetTitle(TestCase):
+  def setUp(self):
+    self.scene = optivis.scene.Scene()
+  
   def test_invalid_titles(self):
-    self.assertRaises(Exception, optivis.scene.Scene, title=int(1))
-    self.assertRaises(Exception, optivis.scene.Scene, title=float(1))
-    self.assertRaises(Exception, optivis.scene.Scene, title=dict(one=1, two=2, three=3))
-    self.assertRaises(Exception, optivis.scene.Scene, title=list('abc'))
-    self.assertRaises(Exception, optivis.scene.Scene, title=set('abc'))
-    self.assertRaises(Exception, optivis.scene.Scene, title=frozenset('abc'))
-    self.assertRaises(Exception, optivis.scene.Scene, title=tuple('abc'))
-    
-  def test_valid_titles(self):
-    self.assertIsInstance(optivis.scene.Scene(title=None), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(title=unicode('Title')), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(title=str('Title')), optivis.scene.Scene)
-
-  def test_valid_init(self):
-    self.assertIsInstance(optivis.scene.Scene(), optivis.scene.Scene)
-    self.assertIsInstance(optivis.scene.Scene(title=None), optivis.scene.Scene)
+    self.assertRaises(Exception, setattr, self.scene, 'title', int(10))
+    self.assertRaises(Exception, setattr, self.scene, 'title', float(1))
+    self.assertRaises(Exception, setattr, self.scene, 'title', dict(one=1, two=2, three=3))
+    self.assertRaises(Exception, setattr, self.scene, 'title', list('abc'))
+    self.assertRaises(Exception, setattr, self.scene, 'title', set('abc'))
+    self.assertRaises(Exception, setattr, self.scene, 'title', frozenset('abc'))
+    self.assertRaises(Exception, setattr, self.scene, 'title', tuple('abc'))
 
 class TestSceneSetReference(TestCase):
   def setUp(self):
     self.scene = optivis.scene.Scene()
     
-  def test_set_valid_reference(self):
-    component = components.Laser()
-    
-    # can set reference component of type laser
-    self.assertIsNone(setattr(self.scene, 'reference', component))
-  
-  def test_set_invalid_reference(self):
-    componentA = components.Laser()
-    componentB = components.CavityMirror()
+    self.componentA = components.Laser()
+    self.componentB = components.CavityMirror()
 
-    link = links.Link(componentA.getOutputNode('out'), componentB.getInputNode('fr'), 10)
+    self.link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
+  
+  def test_set_invalid_reference_link(self):
+    self.scene.addComponent(self.componentA)
+    self.scene.addComponent(self.componentB)
+    self.scene.addLink(self.link)
     
     # can't add a component of type link
-    self.assertRaises(Exception, setattr, self.scene, 'reference', link)
+    self.assertRaises(Exception, setattr, self.scene, 'reference', self.link)
+    
+  def test_set_invalid_reference_component(self):    
+    # can't add a component reference if it is not in the scene
+    self.assertRaises(Exception, setattr, self.scene, 'reference', self.componentA)
 
 class TestSceneAddComponent(TestCase):
   def setUp(self):

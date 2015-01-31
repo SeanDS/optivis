@@ -39,8 +39,14 @@ class Scene(object):
   
   @reference.setter
   def reference(self, component):    
-    if component is not None and not isinstance(component, bench.components.AbstractComponent):
-      raise Exception('Specified component is not of type AbstractComponent')
+    if component is not None:
+      # check component is valid object
+      if not isinstance(component, bench.components.AbstractComponent):
+	raise Exception('Specified component is not of type AbstractComponent')
+    
+      # check component is in the scene
+      if component not in self.components:
+	raise Exception('Specified component is not part of the scene')
     
     self.__reference = component
     
