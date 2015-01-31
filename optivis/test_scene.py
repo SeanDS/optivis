@@ -1,7 +1,6 @@
 from __future__ import unicode_literals, division
 
 from unittest import TestCase
-import copy
 
 import optivis.scene
 import optivis.bench.components as components

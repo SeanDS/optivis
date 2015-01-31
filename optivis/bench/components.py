@@ -85,8 +85,13 @@ class AbstractComponent(object):
   
   @size.setter
   def size(self, size):
+    # check size is valid object
     if not isinstance(size, optivis.geometry.Coordinates):
       raise Exception('Specified size is not of type optivis.geometry.Coordinates')
+    
+    # check size coordinates are positive
+    if size.x < 0 or size.y < 0:
+      raise Exception('Size dimensions must be positive')
     
     self.__size = size
   
@@ -112,6 +117,9 @@ class AbstractComponent(object):
   
   @azimuth.setter
   def azimuth(self, azimuth):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    azimuth = float(azimuth)
+    
     self.__azimuth = azimuth
     
   @property
