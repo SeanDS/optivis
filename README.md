@@ -104,8 +104,8 @@ There are a number of conventions that Optivis follows in order to avoid chaos w
 * The position of the component's input and output nodes are defined with respect to the component. The position is defined using an `optivis.geometry.Coordinates` object which represents the *normalised* position of the node with respect to the centre of the component. That means that if you wish to place a node on the middle-right edge of a component, you would give it coordinates `(0.5, 0)`.
 
 * The azimuth of the node is defined with respect to the component's normal.
-  * For output nodes, the azimuth should represent the direction light leaves the component
-  * For input nodes, the azimuth should represent the direction light enters the component
+  * For output nodes, the azimuth should represent the direction light **leaves** the component
+  * For input nodes, the azimuth should represent the direction light **enters** the component
 
 ### Angles of Incidence Convention ###
 For the purposes of defining angles of incidence, it is necessary to designate a particular input and output as the primary input or output. This is done implicitly by defining the azimuth of each input or output node with respect to an `aoi` parameter (representing the user-defined angle of incidence of that component). Nodes in Optivis follow these conventions:
