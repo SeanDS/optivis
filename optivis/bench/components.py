@@ -226,17 +226,17 @@ class BeamSplitter(Mirror):
     size = optivis.geometry.Coordinates(11, 29)
     
     inputNodes = [
-      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi),
-      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi),
-      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180+aoi)
+      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
+      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180+aoi),
+      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi),
+      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
     ]
     
     outputNodes = [
-      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi),
-      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=-aoi)
+      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
+      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=-aoi),
+      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
+      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
     ]
     
     super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)

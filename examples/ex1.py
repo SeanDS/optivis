@@ -14,7 +14,7 @@ import optivis.view.canvas as canvas
 scene = scene.Scene(title="Example 1")
 
 l1 = components.Laser(name="L1")
-m1 = components.CavityMirror(name="M1")
+m1 = components.SteeringMirror(name="M1")
 
 scene.addComponent(l1)
 scene.addComponent(m1)
