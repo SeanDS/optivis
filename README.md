@@ -110,8 +110,10 @@ There are a number of conventions that Optivis follows in order to avoid chaos w
 ### Angles of Incidence Convention ###
 For the purposes of defining angles of incidence, it is necessary to designate a particular input and output as the primary input or output. This is done implicitly by defining the azimuth of each input or output node with respect to an `aoi` parameter (representing the user-defined angle of incidence of that component). Nodes in Optivis follow these conventions:
 
-* For output nodes, the angle between the normal and the primary output is **positive** (for clockwise rotations): ![bs-outputs](https://cloud.githubusercontent.com/assets/5225190/6199972/aab69baa-b459-11e4-9a5f-f9ed437e538c.png)
-* For input nodes, the angle between the normal and the primary input is **negative** (for clockwise rotations): ![bs-inputs](https://cloud.githubusercontent.com/assets/5225190/6199973/b2b8a474-b459-11e4-9362-5df434d5425e.png)
+* For output nodes, the angle between the normal and the primary output is **positive** (for clockwise rotations):
+![bs-outputs](https://cloud.githubusercontent.com/assets/5225190/6199972/aab69baa-b459-11e4-9a5f-f9ed437e538c.png)
+* For input nodes, the angle between the normal and the primary input is **negative** (for clockwise rotations):
+![bs-inputs](https://cloud.githubusercontent.com/assets/5225190/6199973/b2b8a474-b459-11e4-9362-5df434d5425e.png)
 
 For example, the beam splitter's `frA` output is its primary output (by design). Defining an angle of incidence `aoi` during the instantiation of a beam splitter will make light leave `frA` at angle `aoi` with respect to the component's normal. The beam splitter's `frB` output, on the other hand, is defined, by design, to output light at angle `-aoi` with respect to the normal.
 
