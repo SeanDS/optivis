@@ -58,11 +58,11 @@ Note that the beam splitter and mirrors have an `aoi` parameter - this specifies
 Next, link your components to each other:
 
 ```python
-scene.addLink(l1.getOutputNode('out'), bs1.getInputNode('frA'), 100)
-scene.addLink(bs1.getOutputNode('bkA'), m1.getInputNode('fr'), 50)
-scene.addLink(m1.getOutputNode('fr'), m2.getInputNode('fr'), 50)
-scene.addLink(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58)
-scene.addLink(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5)
+scene.link(l1.getOutputNode('out'), bs1.getInputNode('frA'), 100)
+scene.link(bs1.getOutputNode('bkA'), m1.getInputNode('fr'), 50)
+scene.link(m1.getOutputNode('fr'), m2.getInputNode('fr'), 50)
+scene.link(m2.getOutputNode('fr'), m3.getInputNode('fr'), 58)
+scene.link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5)
 ```
 
 Note that the components have outputs and inputs with different names. These are names specific to each component - look up the component syntax to learn which inputs/outputs correspond to which ports.
