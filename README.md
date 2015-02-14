@@ -84,15 +84,39 @@ gui.show()
 Take a look at the `examples` directory for a set of scripts demonstrating the abilities of Optivis.
 
 ## Coordinate System ##
-Optivis uses a left-handed coordinate system in line with almost all computer graphics applications. Positive angle rotations are clockwise. All geometrical transforms are performed with the coordinate class contained in `optivis.geometry`.
+Optivis uses a left-handed coordinate system in line with almost all computer graphics applications. Positive angle rotations are **clockwise**. All geometrical transforms are performed with the coordinate class contained in `optivis.geometry`.
 
 ## Adding New Components ##
+
+### Graphic Format ###
 Optivis uses scalable vector graphics (SVGs) as a basis for its optical components. To add a new component, you must provide an SVG file describing the component's looks. Please use one of the existing files as a basis for your design - Optivis expects SVG files to have a specific format:
  * The root element should be an `<svg>` item (this is standard for the SVG file format anyway).
  * Elements and element attributes should not use namespaces (such as `i:midPoint="value"`), because namespaces are not defined in the header. This is to keep the files clean of program-specific crud, and ensure that generated SVG files are [valid](http://validator.w3.org/).
  * The use of ID attributes should be restricted to definitions of IDs in elements (such as `<g id="this-id">`) and URLs (such as `fill="url(#gradient-id)"`). This is because Optivis replaces IDs in SVG files with unique strings, to allow multiple versions of the same component to be grouped together in a generated scene. The use of IDs in any other form may result in display issues.
 
 The SVG file should be given an appropriate filename and placed in the `assets` directory within the `optivis` package. Then, in `optivis.bench.components` you should subclass the `AbstractComponent` class and write a constructor - see the existing components for details of how to do this. You will have to define nodes for your component's inputs and outputs. Nodes are places where links can originate or terminate, and must be positioned on the component's normalised coordinate system, where the origin is in the centre of the component. Again, see existing components for details.
+
+### Input/Output Node Conventions ###
+Take a look at existing components for an idea of how input/output nodes work. The beam splitter is a good example, because it has four inputs and four outputs.
+
+There are a number of conventions that Optivis follows in order to avoid chaos when it comes to figuring out how to link components together. In general, Optivis follows the same form as [Optickle2](https://github.com/Optickle/Optickle/tree/Optickle2).
+
+* The position of the component's input and output nodes are defined with respect to the component. The position is defined using an `optivis.geometry.Coordinates` object which represents the *normalised* position of the node with respect to the centre of the component. That means that if you wish to place a node on the middle-right edge of a component, you would give it coordinates `(0.5, 0)`.
+
+* The azimuth of the node is defined with respect to the component's normal.
+  * For output nodes, the azimuth should represent the direction light leaves the component
+  * For input nodes, the azimuth should represent the direction light enters the component
+
+### Angles of Incidence Convention ###
+For the purposes of defining angles of incidence, it is necessary to designate a particular input and output as the primary input or output. This is done implicitly by defining the azimuth of each input or output node with respect to an `aoi` parameter (representing the user-defined angle of incidence of that component). Nodes in Optivis follow these conventions:
+
+* For output nodes, the angle between the normal and the primary output is **positive** (for clockwise rotations): ![bs-outputs](https://cloud.githubusercontent.com/assets/5225190/6199972/aab69baa-b459-11e4-9a5f-f9ed437e538c.png)
+* For input nodes, the angle between the normal and the primary input is **negative** (for clockwise rotations): ![bs-inputs](https://cloud.githubusercontent.com/assets/5225190/6199973/b2b8a474-b459-11e4-9362-5df434d5425e.png)
+The above graphic shows the convention used for beam splitter inputs. Four mirrors' outputs are connected to the beam splitter's inputs.
+
+For example, the beam splitter's `frA` output is its primary output (by design). Defining an angle of incidence `aoi` during the instantiation of a beam splitter will make light leave `frA` at angle `aoi` with respect to the component's normal. The beam splitter's `frB` output, on the other hand, is defined, by design, to output light at angle `-aoi` with respect to the normal.
+
+This is a design choice, not a rule, so you are free to define new components using whatever convention you like. However, for the sake of clarity, consider following this convention.
 
 ## Planned Features ##
 There are a number of features planned for future releases. See the [issue tracker](https://github.com/SeanDS/optivis/labels/enhancement) for more information.
