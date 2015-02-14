@@ -112,7 +112,6 @@ For the purposes of defining angles of incidence, it is necessary to designate a
 
 * For output nodes, the angle between the normal and the primary output is **positive** (for clockwise rotations): ![bs-outputs](https://cloud.githubusercontent.com/assets/5225190/6199972/aab69baa-b459-11e4-9a5f-f9ed437e538c.png)
 * For input nodes, the angle between the normal and the primary input is **negative** (for clockwise rotations): ![bs-inputs](https://cloud.githubusercontent.com/assets/5225190/6199973/b2b8a474-b459-11e4-9362-5df434d5425e.png)
-The above graphic shows the convention used for beam splitter inputs. Four mirrors' outputs are connected to the beam splitter's inputs.
 
 For example, the beam splitter's `frA` output is its primary output (by design). Defining an angle of incidence `aoi` during the instantiation of a beam splitter will make light leave `frA` at angle `aoi` with respect to the component's normal. The beam splitter's `frB` output, on the other hand, is defined, by design, to output light at angle `-aoi` with respect to the normal.
 
