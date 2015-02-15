@@ -280,6 +280,8 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     sliderLayout.addWidget(self.zoomSlider)
     sliderLayout.addWidget(self.zoomSpinBox)
     
+    sliderLayout.setAlignment(PyQt4.QtCore.Qt.AlignHCenter)
+    
     zoomSliderGroupBox.setLayout(sliderLayout)
     
     # add zoom group box to control box
@@ -301,8 +303,11 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     # add marker controls to marker group box
     markerLayout = PyQt4.QtGui.QHBoxLayout()
+    
     markerLayout.addWidget(startMarkersCheckBox)
     markerLayout.addWidget(endMarkersCheckBox)
+    
+    markerLayout.setAlignment(PyQt4.QtCore.Qt.AlignHCenter)
     
     markerCheckBoxGroupBox.setLayout(markerLayout)
     
