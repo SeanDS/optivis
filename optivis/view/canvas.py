@@ -26,10 +26,49 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   def __init__(self, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
 
+    self.create()
     self.initialise()
+    
+  def create(self):
+    # create application
+    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
+    self.qMainWindow = PyQt4.Qt.QMainWindow()
+    
+    # create drawing area
+    self.qScene = PyQt4.QtGui.QGraphicsScene()
+    self.qView = GraphicsView(self.qScene, self.qMainWindow)
+    self.qView.setScale(self.zoom)
+    
+    # set view antialiasing
+    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
+    
+    # set window title
+    self.qMainWindow.setWindowTitle(self.title)
+    
+    ### add menu and menu items
+    menubar = self.qMainWindow.menuBar()
+    fileMenu = menubar.addMenu('&File')
+    
+    exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
+    exportAction.setShortcut('Ctrl+E')
+    exportAction.triggered.connect(self.export)
+    fileMenu.addAction(exportAction)
+    
+    exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
+    exitAction.setShortcut('Ctrl+Q')
+    exitAction.triggered.connect(self.qApplication.quit)
+    fileMenu.addAction(exitAction)
   
   @abc.abstractmethod
   def initialise(self):
+    """
+    Lays out the GUI after all of the main widgets have been created by create()
+    """
+    
+    pass
+  
+  @abc.abstractmethod
+  def show(self):
     pass
   
   def getDrawableComponents(self):
@@ -99,48 +138,33 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   def exportSvg(self, *args, **kwargs):
     svgView = optivis.view.svg.Svg(self.scene)
     svgView.export(*args, **kwargs)
+
+class GraphicsView(PyQt4.QtGui.QGraphicsView):
+  def __init__(self, *args, **kwargs):
+    super(GraphicsView, self).__init__(*args, **kwargs)
   
+  def setScale(self, scale):
+    """
+    Set scale of graphics view.
+    
+    There is no native setScale() method for a QGraphicsView, so this must be achieved via setTransform().
+    """
+    
+    transform = PyQt4.QtGui.QTransform()
+    transform.scale(scale, scale)
+    
+    self.setTransform(transform)
+
 class Simple(AbstractCanvas):
   def __init__(self, *args, **kwargs):
     super(Simple, self).__init__(*args, **kwargs)
   
   def initialise(self):
-    # create application
-    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
-    self.qMainWindow = PyQt4.Qt.QMainWindow()
-    
-    # create drawing area
-    self.qScene = PyQt4.QtGui.QGraphicsScene()
-    self.qView = PyQt4.QtGui.QGraphicsView(self.qScene, self.qMainWindow)
-    
-    # set view antialiasing
-    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
-    
-    # scale view by zoom level
-    self.qView.scale(self.zoom, self.zoom)
-    
-    # set application's central widget
+    # set central widget to be the view
     self.qMainWindow.setCentralWidget(self.qView)
     
-    # set window title
-    self.qMainWindow.setWindowTitle(self.title)
-    
-    # resize to fit content
+    # resize main window to fit content
     self.qMainWindow.resize(self.size.x, self.size.y)
-    
-    # add menu and menu items
-    menubar = self.qMainWindow.menuBar()
-    fileMenu = menubar.addMenu('&File')
-    
-    exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
-    exportAction.setShortcut('Ctrl+E')
-    exportAction.triggered.connect(self.export)
-    fileMenu.addAction(exportAction)
-    
-    exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
-    exitAction.setShortcut('Ctrl+Q')
-    exitAction.triggered.connect(self.qApplication.quit)
-    fileMenu.addAction(exitAction)
 
     return
 
@@ -160,6 +184,137 @@ class Simple(AbstractCanvas):
     self.qMainWindow.show()
     
     sys.exit(self.qApplication.exec_())
+    
+class Full(AbstractCanvas):
+  def __init__(self, *args, **kwargs):
+    super(Full, self).__init__(*args, **kwargs)
+  
+  def initialise(self):
+    ### create controls
+    
+    # add control widgets
+    self.controls = ControlPanel(qView=self.qView, zoom=self.zoom)
+    self.controls.setFixedWidth(200)
+    
+    ### create container for view and controls
+    self.container = PyQt4.QtGui.QWidget()
+    
+    ### create and populate layout
+    self.hBox = PyQt4.QtGui.QHBoxLayout()
+    
+    # add qView to layout
+    self.hBox.addWidget(self.qView, stretch=3)
+    
+    # add controls to layout
+    self.hBox.addWidget(self.controls, stretch=1)
+    
+    ### finish up
+    
+    # set container's layout
+    self.container.setLayout(self.hBox)
+    
+    # add container to main window and set as central element
+    self.qMainWindow.setCentralWidget(self.container)
+    
+    # set fixed size for view
+    self.qView.setMinimumSize(self.size.x, self.size.y)
+    
+    #self.qMainWindow.repaint()
+
+    return
+
+  def show(self):
+    # instantiate layout manager and arrange objects
+    layout = optivis.layout.SimpleLayout(self.scene)
+    layout.arrange()
+    
+    # draw objects
+    for canvasLink in self.getDrawableLinks():
+      canvasLink.draw(self.qScene)
+    
+    for canvasComponent in self.getDrawableComponents():
+      canvasComponent.draw(self.qScene)
+
+    # show on screen
+    self.qMainWindow.show()
+    
+    sys.exit(self.qApplication.exec_())
+
+class ControlPanel(PyQt4.QtGui.QWidget):
+  zoomRange = (0.1, 10)
+  zoomStep = 0.1
+  
+  def __init__(self, qView, zoom, *args, **kwargs):
+    super(ControlPanel, self).__init__(*args, **kwargs)
+  
+    self.qView = qView
+    self.zoom = zoom
+    
+    self.addControls()
+  
+  @property
+  def qView(self):
+    return self.__qView
+  
+  @qView.setter
+  def qView(self, qView):
+    self.__qView = qView
+  
+  @property
+  def zoom(self):
+    return self.__zoom
+  
+  @zoom.setter
+  def zoom(self, zoom):
+    self.__zoom = zoom
+  
+  def addControls(self):
+    # group box for slider
+    self.zoomSliderGroupBox = PyQt4.QtGui.QGroupBox(title="Zoom", parent=self)
+    self.zoomSliderGroupBox.setMinimumWidth(200)
+    
+    # zoom slider
+    self.zoomSlider = PyQt4.QtGui.QSlider(PyQt4.QtCore.Qt.Horizontal)
+    self.zoomSlider.setFocusPolicy(PyQt4.QtCore.Qt.NoFocus)
+    self.zoomSlider.setRange(self.zoomRange[0] / self.zoomStep, self.zoomRange[1] / self.zoomStep)
+    self.zoomSlider.setSingleStep(1)
+    self.zoomSlider.setSliderPosition(self.zoom / self.zoomStep)
+    self.zoomSlider.valueChanged[int].connect(self.zoomSliderChanged)
+    
+    # zoom spin box
+    self.zoomSpinBox = PyQt4.QtGui.QDoubleSpinBox()
+    self.zoomSpinBox.setDecimals(1)
+    self.zoomSpinBox.setRange(*self.zoomRange)
+    self.zoomSpinBox.setSingleStep(self.zoomStep)
+    self.zoomSpinBox.setValue(self.zoom) # TODO: check this is a valid step
+    self.zoomSpinBox.valueChanged[float].connect(self.zoomSpinBoxChanged)
+    
+    # layout slider group box contents
+    sliderLayout = PyQt4.QtGui.QHBoxLayout()
+    
+    sliderLayout.addWidget(self.zoomSlider)
+    sliderLayout.addWidget(self.zoomSpinBox)
+    
+    self.zoomSliderGroupBox.setLayout(sliderLayout)
+  
+  def zoomSliderChanged(self, value):
+    # scale value by zoom step (sliders only support int increments)
+    self.setZoom(float(value * self.zoomStep))
+  
+  def zoomSpinBoxChanged(self, value):
+    self.setZoom(float(value))
+  
+  def setZoom(self, zoom):
+    zoom = round(zoom / self.zoomStep) * self.zoomStep
+    
+    self.zoom = zoom
+    self.qView.setScale(zoom)
+    
+    # update zoom slider
+    self.zoomSlider.setSliderPosition(self.zoom / self.zoomStep)
+    
+    # update zoom spin box
+    self.zoomSpinBox.setValue(self.zoom)
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
   def __init__(self, component, *args, **kwargs):
