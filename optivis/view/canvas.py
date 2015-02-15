@@ -66,10 +66,34 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
     """
     
     pass
+
+  def draw(self):
+    # empty the qScene
+    self.qScene.clear()
+    
+    # draw objects
+    for canvasLink in self.getDrawableLinks():
+      canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+    
+    for canvasComponent in self.getDrawableComponents():
+      canvasComponent.draw(self.qScene)
   
-  @abc.abstractmethod
+  def layout(self):
+    # instantiate layout manager and arrange objects
+    layout = optivis.layout.SimpleLayout(self.scene)
+    layout.arrange()
+  
   def show(self):
-    pass
+    # layout scene
+    self.layout()
+    
+    # draw scene
+    self.draw()
+
+    # show on screen
+    self.qMainWindow.show()
+    
+    sys.exit(self.qApplication.exec_())
   
   def getDrawableComponents(self):
     drawableComponents = []
@@ -167,23 +191,6 @@ class Simple(AbstractCanvas):
     self.qMainWindow.resize(self.size.x, self.size.y)
 
     return
-
-  def show(self):
-    # instantiate layout manager and arrange objects
-    layout = optivis.layout.SimpleLayout(self.scene)
-    layout.arrange()
-    
-    # draw objects
-    for canvasLink in self.getDrawableLinks():
-      canvasLink.draw(self.qScene)
-    
-    for canvasComponent in self.getDrawableComponents():
-      canvasComponent.draw(self.qScene)
-
-    # show on screen
-    self.qMainWindow.show()
-    
-    sys.exit(self.qApplication.exec_())
     
 class Full(AbstractCanvas):
   def __init__(self, *args, **kwargs):
@@ -193,7 +200,7 @@ class Full(AbstractCanvas):
     ### create controls
     
     # add control widgets
-    self.controls = ControlPanel(qView=self.qView, zoom=self.zoom)
+    self.controls = ControlPanel(self)
     self.controls.setFixedWidth(200)
     
     ### create container for view and controls
@@ -223,62 +230,40 @@ class Full(AbstractCanvas):
 
     return
 
-  def show(self):
-    # instantiate layout manager and arrange objects
-    layout = optivis.layout.SimpleLayout(self.scene)
-    layout.arrange()
-    
-    # draw objects
-    for canvasLink in self.getDrawableLinks():
-      canvasLink.draw(self.qScene)
-    
-    for canvasComponent in self.getDrawableComponents():
-      canvasComponent.draw(self.qScene)
-
-    # show on screen
-    self.qMainWindow.show()
-    
-    sys.exit(self.qApplication.exec_())
-
 class ControlPanel(PyQt4.QtGui.QWidget):
   zoomRange = (0.1, 10)
   zoomStep = 0.1
   
-  def __init__(self, qView, zoom, *args, **kwargs):
+  def __init__(self, canvas, *args, **kwargs):
     super(ControlPanel, self).__init__(*args, **kwargs)
   
-    self.qView = qView
-    self.zoom = zoom
+    self.canvas = canvas
     
     self.addControls()
   
   @property
-  def qView(self):
-    return self.__qView
+  def canvas(self):
+    return self.__canvas
   
-  @qView.setter
-  def qView(self, qView):
-    self.__qView = qView
-  
-  @property
-  def zoom(self):
-    return self.__zoom
-  
-  @zoom.setter
-  def zoom(self, zoom):
-    self.__zoom = zoom
+  @canvas.setter
+  def canvas(self, canvas):
+    self.__canvas = canvas
   
   def addControls(self):
+    ### master layout
+    controlLayout = PyQt4.QtGui.QVBoxLayout()
+    
+    ### zoom controls
+    
     # group box for slider
-    self.zoomSliderGroupBox = PyQt4.QtGui.QGroupBox(title="Zoom", parent=self)
-    self.zoomSliderGroupBox.setMinimumWidth(200)
+    zoomSliderGroupBox = PyQt4.QtGui.QGroupBox(title="Zoom")
     
     # zoom slider
     self.zoomSlider = PyQt4.QtGui.QSlider(PyQt4.QtCore.Qt.Horizontal)
     self.zoomSlider.setFocusPolicy(PyQt4.QtCore.Qt.NoFocus)
     self.zoomSlider.setRange(self.zoomRange[0] / self.zoomStep, self.zoomRange[1] / self.zoomStep)
     self.zoomSlider.setSingleStep(1)
-    self.zoomSlider.setSliderPosition(self.zoom / self.zoomStep)
+    self.zoomSlider.setSliderPosition(self.canvas.zoom / self.zoomStep)
     self.zoomSlider.valueChanged[int].connect(self.zoomSliderChanged)
     
     # zoom spin box
@@ -286,16 +271,46 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.zoomSpinBox.setDecimals(1)
     self.zoomSpinBox.setRange(*self.zoomRange)
     self.zoomSpinBox.setSingleStep(self.zoomStep)
-    self.zoomSpinBox.setValue(self.zoom) # TODO: check this is a valid step
+    self.zoomSpinBox.setValue(self.canvas.zoom) # TODO: check this is a valid step
     self.zoomSpinBox.valueChanged[float].connect(self.zoomSpinBoxChanged)
     
-    # layout slider group box contents
+    # add zoom controls to zoom group box
     sliderLayout = PyQt4.QtGui.QHBoxLayout()
     
     sliderLayout.addWidget(self.zoomSlider)
     sliderLayout.addWidget(self.zoomSpinBox)
     
-    self.zoomSliderGroupBox.setLayout(sliderLayout)
+    zoomSliderGroupBox.setLayout(sliderLayout)
+    
+    # add zoom group box to control box
+    controlLayout.addWidget(zoomSliderGroupBox)
+    
+    ### marker controls
+    
+    # group box for marker controls
+    markerCheckBoxGroupBox = PyQt4.QtGui.QGroupBox(title="Markers")
+    
+    # start marker checkbox
+    startMarkersCheckBox = PyQt4.QtGui.QCheckBox("Start")
+    startMarkersCheckBox.setChecked(self.canvas.startMarkers)
+    startMarkersCheckBox.stateChanged.connect(self.startMarkersChanged)
+    
+    endMarkersCheckBox = PyQt4.QtGui.QCheckBox("End")
+    endMarkersCheckBox.setChecked(self.canvas.endMarkers)
+    endMarkersCheckBox.stateChanged.connect(self.endMarkersChanged)
+    
+    # add marker controls to marker group box
+    markerLayout = PyQt4.QtGui.QHBoxLayout()
+    markerLayout.addWidget(startMarkersCheckBox)
+    markerLayout.addWidget(endMarkersCheckBox)
+    
+    markerCheckBoxGroupBox.setLayout(markerLayout)
+    
+    # add marker check box group box to control box
+    controlLayout.addWidget(markerCheckBoxGroupBox)
+    
+    ### add layout to control widget
+    self.setLayout(controlLayout)
   
   def zoomSliderChanged(self, value):
     # scale value by zoom step (sliders only support int increments)
@@ -307,14 +322,34 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   def setZoom(self, zoom):
     zoom = round(zoom / self.zoomStep) * self.zoomStep
     
-    self.zoom = zoom
-    self.qView.setScale(zoom)
+    self.canvas.zoom = zoom
+    self.canvas.qView.setScale(zoom)
     
     # update zoom slider
-    self.zoomSlider.setSliderPosition(self.zoom / self.zoomStep)
+    self.zoomSlider.setSliderPosition(self.canvas.zoom / self.zoomStep)
     
     # update zoom spin box
-    self.zoomSpinBox.setValue(self.zoom)
+    self.zoomSpinBox.setValue(self.canvas.zoom)
+  
+  def startMarkersChanged(self, value):
+    if value == PyQt4.QtCore.Qt.Checked:
+      self.setStartMarkers(True)
+    else:
+      self.setStartMarkers(False)
+      
+  def endMarkersChanged(self, value):
+    if value == PyQt4.QtCore.Qt.Checked:
+      self.setEndMarkers(True)
+    else:
+      self.setEndMarkers(False)
+  
+  def setStartMarkers(self, value):
+    self.canvas.startMarkers = value
+    self.canvas.draw()
+    
+  def setEndMarkers(self, value):
+    self.canvas.endMarkers = value
+    self.canvas.draw()
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
   def __init__(self, component, *args, **kwargs):
@@ -355,7 +390,7 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
     
     super(CanvasLink, self).__init__(*args, **kwargs)
 
-  def draw(self, qScene):
+  def draw(self, qScene, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
     print "[GUI] Drawing link {0}".format(self.link)
     
     pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.color), self.link.width, PyQt4.QtCore.Qt.SolidLine)
@@ -366,16 +401,16 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
     qScene.addItem(line)
     
     # add markers if necessary
-    if self.link.startMarker:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.start.x - self.link.startMarkerRadius, self.link.start.y - self.link.startMarkerRadius, self.link.startMarkerRadius * 2, self.link.startMarkerRadius * 2)
-      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.startMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
+    if startMarkers:
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.start.x - startMarkerRadius, self.link.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
+      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(startMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
       circle.setPen(pen)
       
       qScene.addItem(circle)
       
-    if self.link.endMarker:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.end.x - self.link.endMarkerRadius, self.link.end.y - self.link.endMarkerRadius, self.link.endMarkerRadius * 2, self.link.endMarkerRadius * 2)
-      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.endMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
+    if endMarkers:
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.end.x - endMarkerRadius, self.link.end.y - endMarkerRadius, endMarkerRadius * 2, endMarkerRadius * 2)
+      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(endMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
       circle.setPen(pen)
       
       qScene.addItem(circle)

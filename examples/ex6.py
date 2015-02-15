@@ -32,5 +32,5 @@ scene.link(mBottomLeft.getOutputNode('fr'), bs.getInputNode('frB'), 42.5, startM
 
 scene.reference = l
 
-gui = canvas.Full(scene=scene)
+gui = canvas.Full(scene=scene, startMarkers=True, endMarkers=True)
 gui.show()
