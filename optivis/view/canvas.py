@@ -4,6 +4,8 @@ import os
 import os.path
 import sys
 
+import abc
+
 import PyQt4.Qt
 import PyQt4.QtCore
 import PyQt4.QtGui
@@ -15,57 +17,21 @@ import optivis.layout
 import optivis.bench.components
 import optivis.bench.links
 
-class Simple(optivis.view.AbstractDrawable):
+class AbstractCanvas(optivis.view.AbstractDrawable):
   qApplication = None
   qMainWindow = None
   qScene = None
   qView = None
-
+  
   def __init__(self, *args, **kwargs):
-    super(Simple, self).__init__(*args, **kwargs)
+    super(AbstractCanvas, self).__init__(*args, **kwargs)
 
     self.initialise()
   
+  @abc.abstractmethod
   def initialise(self):
-    # create application
-    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
-    self.qMainWindow = PyQt4.Qt.QMainWindow()
-    
-    # create drawing area
-    self.qScene = PyQt4.QtGui.QGraphicsScene()
-    self.qView = PyQt4.QtGui.QGraphicsView(self.qScene, self.qMainWindow)
-    
-    # set view antialiasing
-    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
-    
-    # scale view by zoom level
-    self.qView.scale(self.zoom, self.zoom)
-    
-    # set application's central widget
-    self.qMainWindow.setCentralWidget(self.qView)
-    
-    # set window title
-    self.qMainWindow.setWindowTitle(self.title)
-    
-    # resize to fit content
-    self.qMainWindow.resize(self.size.x, self.size.y)
-    
-    # add menu and menu items
-    menubar = self.qMainWindow.menuBar()
-    fileMenu = menubar.addMenu('&File')
-    
-    exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
-    exportAction.setShortcut('Ctrl+E')
-    exportAction.triggered.connect(self.export)
-    fileMenu.addAction(exportAction)
-    
-    exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
-    exitAction.setShortcut('Ctrl+Q')
-    exitAction.triggered.connect(self.qApplication.quit)
-    fileMenu.addAction(exitAction)
-
-    return
-
+    pass
+  
   def getDrawableComponents(self):
     drawableComponents = []
     
@@ -83,23 +49,6 @@ class Simple(optivis.view.AbstractDrawable):
       drawableLinks.append(CanvasLink(link))
     
     return drawableLinks
-
-  def show(self):
-    # instantiate layout manager and arrange objects
-    layout = optivis.layout.SimpleLayout(self.scene)
-    layout.arrange()
-    
-    # draw objects
-    for canvasLink in self.getDrawableLinks():
-      canvasLink.draw(self.qScene)
-    
-    for canvasComponent in self.getDrawableComponents():
-      canvasComponent.draw(self.qScene)
-
-    # show on screen
-    self.qMainWindow.show()
-    
-    sys.exit(self.qApplication.exec_())
   
   def export(self):
     # generate file path
@@ -150,6 +99,67 @@ class Simple(optivis.view.AbstractDrawable):
   def exportSvg(self, *args, **kwargs):
     svgView = optivis.view.svg.Svg(self.scene)
     svgView.export(*args, **kwargs)
+  
+class Simple(AbstractCanvas):
+  def __init__(self, *args, **kwargs):
+    super(Simple, self).__init__(*args, **kwargs)
+  
+  def initialise(self):
+    # create application
+    self.qApplication = PyQt4.Qt.QApplication(sys.argv)
+    self.qMainWindow = PyQt4.Qt.QMainWindow()
+    
+    # create drawing area
+    self.qScene = PyQt4.QtGui.QGraphicsScene()
+    self.qView = PyQt4.QtGui.QGraphicsView(self.qScene, self.qMainWindow)
+    
+    # set view antialiasing
+    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
+    
+    # scale view by zoom level
+    self.qView.scale(self.zoom, self.zoom)
+    
+    # set application's central widget
+    self.qMainWindow.setCentralWidget(self.qView)
+    
+    # set window title
+    self.qMainWindow.setWindowTitle(self.title)
+    
+    # resize to fit content
+    self.qMainWindow.resize(self.size.x, self.size.y)
+    
+    # add menu and menu items
+    menubar = self.qMainWindow.menuBar()
+    fileMenu = menubar.addMenu('&File')
+    
+    exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
+    exportAction.setShortcut('Ctrl+E')
+    exportAction.triggered.connect(self.export)
+    fileMenu.addAction(exportAction)
+    
+    exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
+    exitAction.setShortcut('Ctrl+Q')
+    exitAction.triggered.connect(self.qApplication.quit)
+    fileMenu.addAction(exitAction)
+
+    return
+
+  def show(self):
+    # instantiate layout manager and arrange objects
+    layout = optivis.layout.SimpleLayout(self.scene)
+    layout.arrange()
+    
+    # draw objects
+    for canvasLink in self.getDrawableLinks():
+      canvasLink.draw(self.qScene)
+    
+    for canvasComponent in self.getDrawableComponents():
+      canvasComponent.draw(self.qScene)
+
+    # show on screen
+    self.qMainWindow.show()
+    
+    sys.exit(self.qApplication.exec_())
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
   def __init__(self, component, *args, **kwargs):
