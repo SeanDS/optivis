@@ -81,7 +81,9 @@ gui = canvas.Simple(scene)
 gui.show()
 ```
 
+This is what you'll see:
 
+![scene](https://cloud.githubusercontent.com/assets/5225190/6220519/3e1e10b8-b62f-11e4-982a-c8941c1d1168.png)
 
 Take a look at the `examples` directory for a set of scripts demonstrating the abilities of Optivis.
 
