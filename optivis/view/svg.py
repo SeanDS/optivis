@@ -70,9 +70,6 @@ class Svg(optivis.view.AbstractDrawable):
     except IOError:
       raise Exception('You do not have permission to save the file to the specified location.')
     
-    # check file format is valid
-    print fileFormat
-    
     if fileFormat not in self.__formats:
       raise Exception('The specified file format is invalid.')
     
