@@ -221,7 +221,7 @@ class SteeringMirror(Mirror):
     super(SteeringMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class BeamSplitter(Mirror):
-  def __init__(self, aoi=-45, *args, **kwargs):
+  def __init__(self, aoi=45, *args, **kwargs):
     filename = "b-bsp.svg"
     size = optivis.geometry.Coordinates(11, 29)
     
