@@ -20,7 +20,7 @@ Optivis is pretty straightforward to use. You start off by importing a bunch of 
 ```python
 import sys
 
-sys.path.append('path/to/optivis')
+sys.path.append('/path/to/optivis')
 
 import optivis.scene as scene
 import optivis.bench.links as links
@@ -37,7 +37,7 @@ Next, define your scene:
 scene = scene.Scene(title="My Scene")
 ```
 
-The title is optional. Next, you can add a bunch of components to your scene:
+The title is optional. Next, create a bunch of components:
 
 ```python
 l1 = components.Laser(name="L1")
@@ -45,12 +45,6 @@ bs1 = components.BeamSplitter(name="BS", aoi=45)
 m1 = components.CavityMirror(name="M1", aoi=45)
 m2 = components.CavityMirror(name="M2", aoi=45)
 m3 = components.CavityMirror(name="M3", aoi=45)
-
-scene.addComponent(l1)
-scene.addComponent(bs1)
-scene.addComponent(m1)
-scene.addComponent(m2)
-scene.addComponent(m3)
 ```
 
 Note that the beam splitter and mirrors have an `aoi` parameter - this specifies the angle of incidence of the component relative to its primary input.
