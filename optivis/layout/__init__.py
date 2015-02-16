@@ -29,11 +29,14 @@ class AbstractLayout(object):
     self.__scene = scene
     
 class SimpleLayout(AbstractLayout):
+  linkedComponents = set([])
+  
   def __init__(self, *args, **kwargs):
     super(SimpleLayout, self).__init__(*args, **kwargs)
   
   def arrange(self):
-    linkedComponents = set([])
+    # empty linked components list
+    self.linkedComponents = set([])
 
     # make copy of links list
     links = self.scene.links
@@ -42,89 +45,113 @@ class SimpleLayout(AbstractLayout):
     if self.scene.reference is None:
       self.scene.reference = self.scene.components[0]
       
-    # add reference component to linked components set, so it is automatically constrained
-    linkedComponents.add(self.scene.reference)
+    ## add reference component to linked components set, so it is automatically constrained
+    #self.linkedComponents.add(self.scene.reference)
     
-    # find link with reference, and move it to start of list
-    for i in range(len(self.scene.links)):
-      link = self.scene.links[i]
+    ## find link with reference, and move it to start of list
+    #for i in range(len(self.scene.links)):
+      #link = self.scene.links[i]
       
-      if link.hasComponent(self.scene.reference):
-	del(links[i])
-	links.insert(0, link)
+      #if link.hasComponent(self.scene.reference):
+	#del(links[i])
+	#links.insert(0, link)
 	
-	break
+	#break
     
     ###
     # Layout and link everything
     
+    # get links attached to reference component
+    links = self.getComponentLinks(self.scene.reference)
+    
     for link in links:
-      print "[Layout] Linking {0}".format(link)
-      
-      outputComponent = link.outputNode.component
-      inputComponent = link.inputNode.component
-      
-      if outputComponent in linkedComponents and inputComponent in linkedComponents:
-	# both components already constrained
-	print "[Layout] Link {0} properties ignored because both linked components are already constrained by other links.".format(link)
-      elif outputComponent in linkedComponents:
-	# output component already constrained, input component not constrained
-	
-	# set azimuth first
-	link.inputNode.setAbsoluteAzimuth(link.outputNode.getAbsoluteAzimuth())
-	
-	# set the position of the input component
-	link.inputNode.setAbsolutePosition(self.getInputNodePositionRelativeToOutputNode(link))
-      elif inputComponent in linkedComponents:
-	# input component already constrained, output component not constrained
-	
-	# set azimuth first	
-	link.outputNode.setAbsoluteAzimuth(link.inputNode.getAbsoluteAzimuth())
-	
-	# set the position of the output component
-	link.outputNode.setAbsolutePosition(self.getOutputNodePositionRelativeToInputNode(link))
-      else:
-	# neither component already constrained, so just artificially constrain the first to (0, 0) FIXME: this should check to see if these components are linked later...
-	link.outputNode.setAbsolutePosition(optivis.geometry.Coordinates(0, 0))
-	
-	# set azimuth first
-	link.inputNode.setAbsoluteAzimuth(link.outputNode.getAbsoluteAzimuth())
-	
-	# set the position of the input component
-	link.inputNode.setAbsolutePosition(self.getInputNodePositionRelativeToOutputNode(link))
-	
-      link.start = link.outputNode.getAbsolutePosition()
-      link.end = link.inputNode.getAbsolutePosition()
-      
-      # add components to set of constrained components
-      linkedComponents.add(outputComponent)
-      linkedComponents.add(inputComponent)
+      self.layoutLink(link, self.scene.reference)
     
     # move scene positions so that left most, topmost object is at the origin
     self.normalisePositions()
+    
+  def getComponentLinks(self, component, avoid=None):
+    links = []
+    
+    for link in self.scene.links:
+      if link == avoid:
+	# skip this link, because it has been requested to be avoided
+	continue
       
-  def getInputNodePositionRelativeToOutputNode(self, link):    
+      if link.hasComponent(component):
+	links.append(link)
+
+    return links
+
+  def removeLinkFromList(self, link, links):
+    for i in range(0, len(links)):
+      if links[i] == link:
+	del(links[i])
+	
+	return links
+    
+    raise Exception('Link {0} was not found in the list provided'.format(link))
+  
+  def layoutLink(self, link, referenceComponent):    
+    print "[Layout] Linking {0} with respect to {1}".format(link, referenceComponent)
+    
+    referenceNode = None
+    targetNode = None
+    
+    if link.inputNode.component == referenceComponent:
+      referenceNode = link.inputNode
+      targetNode = link.outputNode
+    elif link.outputNode.component == referenceComponent:
+      referenceNode = link.outputNode
+      targetNode = link.inputNode
+    else:
+      raise Exception('Specified reference component, {0}, is not part of the specified link, {1}'.format(referenceComponent, link))
+    
+    targetComponent = targetNode.component
+    
+    # check if target is already laid out
+    if targetComponent in self.linkedComponents:
+      print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
+      
+      # set link start and end positions
+      link.start = link.outputNode.getAbsolutePosition()
+      link.end = link.inputNode.getAbsolutePosition()
+      
+      return
+    
+    # set other node azimuth first
+    targetNode.setAbsoluteAzimuth(referenceNode.getAbsoluteAzimuth())
+    
+    # then set the position of the input component
+    targetNode.setAbsolutePosition(self.getTargetNodePositionRelativeToReferenceNode(link, referenceNode))
+    
+    # set link start and end positions
+    link.start = link.outputNode.getAbsolutePosition()
+    link.end = link.inputNode.getAbsolutePosition()
+    
+    # add components to set of constrained components
+    self.linkedComponents.add(referenceComponent)
+    self.linkedComponents.add(targetComponent)
+    
+    # get links to/from the target component, avoiding this one
+    subLinks = self.getComponentLinks(targetComponent, avoid=link)
+    
+    # layout any components linked to target component
+    for subLink in subLinks:
+      self.layoutLink(subLink, targetComponent)
+  
+  def getTargetNodePositionRelativeToReferenceNode(self, link, referenceNode):    
+    if link.inputNode != referenceNode and link.outputNode != referenceNode:
+      raise Exception('Specified reference node, {0}, is not a node in the specified link, {1}'.format(referenceNode, link))
+    
     # absolute position of pivot point
-    pivotPosition = link.outputNode.getAbsolutePosition()
+    pivotPosition = referenceNode.getAbsolutePosition()
     
     # angle
-    pivotAngle = link.outputNode.getAbsoluteAzimuth()
+    pivotAngle = referenceNode.getAbsoluteAzimuth()
     
     # position of component with respect to pivot
     relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle)
-    
-    # absolute position of component
-    return pivotPosition.translate(relativePosition)
-  
-  def getOutputNodePositionRelativeToInputNode(self, link):    
-    # absolute position of pivot point
-    pivotPosition = link.inputNode.getAbsolutePosition()
-    
-    # angle
-    pivotAngle = link.inputNode.getAbsoluteAzimuth()
-    
-    # position of component with respect to pivot, flipped because we're going 'backwards' from input to output
-    relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle).flip()
     
     # absolute position of component
     return pivotPosition.translate(relativePosition)
