@@ -61,11 +61,17 @@ scene.link(m3.getOutputNode('fr'), bs1.getInputNode('frA'), 42.5)
 
 Note that the components have outputs and inputs with different names. These are names specific to each component - look up the component syntax to learn which inputs/outputs correspond to which ports.
 
+Next, set the reference component for your scene. This is the component which will be placed first, and all links will be drawn using this component as an absolute reference of position and azimuth. If you don't define a reference, then the component corresponding to the output node of the first link added to the scene will be used. In this example, we'll set the reference to be the laser:
+
+```python
+scene.reference = l1
+```
+
 Finally, draw the scene! You can either write the scene into a file...
 
 ```python
 view = svg.Svg(scene)
-view.export('scene.svg', fileFormat='svg')
+view.export('scene.svg')
 ```
 
 ...or open the GUI:
@@ -74,6 +80,8 @@ view.export('scene.svg', fileFormat='svg')
 gui = canvas.Simple(scene)
 gui.show()
 ```
+
+
 
 Take a look at the `examples` directory for a set of scripts demonstrating the abilities of Optivis.
 
