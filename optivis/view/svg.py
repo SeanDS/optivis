@@ -23,7 +23,7 @@ class Svg(optivis.view.AbstractDrawable):
   def getDrawableComponents(self):
     drawableComponents = []
     
-    for component in self.scene.components:
+    for component in self.scene.getComponents():
       # Add component to list of SVG components.
       drawableComponents.append(SvgComponent(component))
     

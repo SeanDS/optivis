@@ -98,7 +98,7 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   def getDrawableComponents(self):
     drawableComponents = []
     
-    for component in self.scene.components:
+    for component in self.scene.getComponents():
       # Add component to list of canvas components.
       drawableComponents.append(CanvasComponent(component))
     

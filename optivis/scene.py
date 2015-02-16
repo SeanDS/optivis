@@ -7,7 +7,6 @@ import bench.components
 import bench.links
 
 class Scene(object):
-  components = []
   links = []
   
   def __init__(self, title=None, reference=None):
@@ -44,17 +43,7 @@ class Scene(object):
       if not isinstance(component, bench.components.AbstractComponent):
 	raise Exception('Specified component is not of type AbstractComponent')
     
-      # check component is in the scene
-      if component not in self.components:
-	raise Exception('Specified component is not part of the scene')
-    
     self.__reference = component
-    
-  def addComponent(self, component):
-    if not isinstance(component, bench.components.AbstractComponent):
-      raise Exception('Specified component is not of type AbstractComponent')
-    
-    self.components.append(component)
   
   def link(self, *args, **kwargs):
     link = bench.links.Link(*args, **kwargs)
@@ -65,13 +54,19 @@ class Scene(object):
     if not isinstance(link, bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
     
-    if not link.inputNode.component in self.components:
-      raise Exception('Input node component has not been added to scene')
-    
-    if not link.outputNode.component in self.components:
-      raise Exception('Output node component has not been added to scene')
-    
     self.links.append(link)
+  
+  def getComponents(self):
+    components = []
+    
+    for link in self.links:
+      if link.inputNode.component not in components:
+	components.append(link.inputNode.component)
+      
+      if link.outputNode.component not in components:
+	components.append(link.outputNode.component)
+
+    return components
   
   def getBoundingBox(self):
     # set initial bounds to infinity
@@ -79,7 +74,7 @@ class Scene(object):
     upperBound = geometry.Coordinates(float('-inf'), float('-inf'))
     
     # loop over components to find actual bounds
-    for component in self.components:
+    for component in self.getComponents():
       (thisLowerBound, thisUpperBound) = component.getBoundingBox()
       
       if thisLowerBound.x < lowerBound.x: lowerBound.x = thisLowerBound.x

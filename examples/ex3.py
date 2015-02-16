@@ -18,12 +18,6 @@ mTopRight = components.SteeringMirror(name="Top Right", aoi=45)
 mBottomRight = components.SteeringMirror(name="Bottom Right", aoi=45)
 mBottomLeft = components.SteeringMirror(name="Bottom Left", aoi=45)
 
-scene.addComponent(l)
-scene.addComponent(bs)
-scene.addComponent(mTopRight)
-scene.addComponent(mBottomRight)
-scene.addComponent(mBottomLeft)
-
 scene.link(l.getOutputNode('out'), bs.getInputNode('bkB'), 100)
 scene.link(bs.getOutputNode('frB'), mTopRight.getInputNode('fr'), 50)
 scene.link(mTopRight.getOutputNode('fr'), mBottomRight.getInputNode('fr'), 50)

@@ -43,7 +43,8 @@ class SimpleLayout(AbstractLayout):
     
     # make sure there is a reference component
     if self.scene.reference is None:
-      self.scene.reference = self.scene.components[0]
+      # set reference to first link's output component
+      self.scene.reference = self.scene.links[0].outputNode.component
       
     ## add reference component to linked components set, so it is automatically constrained
     #self.linkedComponents.add(self.scene.reference)
@@ -153,6 +154,10 @@ class SimpleLayout(AbstractLayout):
     # position of component with respect to pivot
     relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle)
     
+    if isinstance(referenceNode, optivis.bench.nodes.InputNode):
+      # flip position because we're going 'backwards' from input to output
+      relativePosition = relativePosition.flip()
+    
     # absolute position of component
     return pivotPosition.translate(relativePosition)
 
@@ -169,5 +174,5 @@ class SimpleLayout(AbstractLayout):
       link.start = link.start.translate(offset)
       link.end = link.end.translate(offset)
     
-    for component in self.scene.components:
+    for component in self.scene.getComponents():
       component.position = component.position.translate(offset)
