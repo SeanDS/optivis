@@ -19,12 +19,6 @@ mSR = components.SteeringMirror(name="SR")
 mIX = components.SteeringMirror(name="IX")
 mIY = components.SteeringMirror(name="IY")
 
-scene.addComponent(bs)
-scene.addComponent(mPR)
-scene.addComponent(mSR)
-scene.addComponent(mIX)
-scene.addComponent(mIY)
-
 # link OUTPUTS of beam splitter to mirrors
 scene.link(bs.getOutputNode("frB"), mPR.getInputNode("fr"), 25)
 scene.link(bs.getOutputNode("bkB"), mSR.getInputNode("fr"), 50)
