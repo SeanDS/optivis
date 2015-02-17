@@ -210,12 +210,12 @@ class SteeringMirror(Mirror):
     
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi)
     ]
     
     super(SteeringMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
