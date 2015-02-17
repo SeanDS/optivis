@@ -265,136 +265,101 @@ class BeamSplitterCube(Mirror):
 class Lens(AbstractComponent):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, *args, **kwargs):
-    super(Lens, self).__init__(*args, **kwargs)
+  def __init__(self, aoi, *args, **kwargs):
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+    ]
+    
+    super(Lens, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class ConvexLens(Lens):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "b-lens2.svg"
     size = optivis.geometry.Coordinates(9, 23)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi)
-    ]
-    
-    super(ConvexLens, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(ConvexLens, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
 
 class ConcaveLens(Lens):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "b-lens3.svg"
     size = optivis.geometry.Coordinates(9, 23)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.35, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.35, 0), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.35, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.35, 0), azimuth=0-aoi)
-    ]
-    
-    super(ConcaveLens, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(ConcaveLens, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
     
 class Plate(AbstractComponent):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, *args, **kwargs):
-    super(Plate, self).__init__(*args, **kwargs)
+  def __init__(self, aoi, *args, **kwargs):
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+    ]
+    
+    super(Plate, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class QuarterWavePlate(Plate):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "b-wpred.svg" # FIXME: is this the 'standard' colour for a QWP?
     size = optivis.geometry.Coordinates(5, 23)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi)
-    ]
-    
-    super(QuarterWavePlate, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(QuarterWavePlate, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
     
 class HalfWavePlate(Plate):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "b-wpgn.svg" # FIXME: is this the 'standard' colour for a HWP?
     size = optivis.geometry.Coordinates(5, 23)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi)
-    ]
-    
-    super(HalfWavePlate, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(HalfWavePlate, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
     
 class Modulator(AbstractComponent):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, *args, **kwargs):
-    super(Modulator, self).__init__(*args, **kwargs)
+  def __init__(self, aoi, *args, **kwargs):
+    inputNodes = [
+      # input node azimuth defined WRT input light direction
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+    ]
+    
+    outputNodes = [
+      # output node azimuth defined WRT output light direction
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+    ]
+    
+    super(Modulator, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
     
 class ElectroopticModulator(Modulator):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "c-eom2.svg"
     size = optivis.geometry.Coordinates(32, 32)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi)
-    ]
-    
-    super(ElectroopticModulator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(ElectroopticModulator, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
 
 class AcoustoopticModulator(Modulator):
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "c-aom.svg"
     size = optivis.geometry.Coordinates(43, 27)
     
-    inputNodes = [
-      # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0.1), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0.1), azimuth=aoi+180)
-    ]
-    
-    outputNodes = [
-      # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0.1), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0.1), azimuth=0-aoi)
-    ]
-    
-    super(AcoustoopticModulator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(AcoustoopticModulator, self).__init__(filename=filename, size=size, aoi=aoi, *args, **kwargs)
 
 class FaradayIsolator(AbstractComponent):
+  #FIXME: flip the inputs/outputs so that the front is pointing right by default
   def __init__(self, aoi=0, *args, **kwargs):
     filename = "c-isolator.svg"
     size = optivis.geometry.Coordinates(52, 23)
@@ -431,6 +396,7 @@ class Sink(AbstractComponent):
     super(Sink, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
  
 class Photodiode(Sink):
+  # FIXME: make the input point left by default
   def __init__(self, *args, **kwargs):
     filename = "e-pd1.svg"
     size = optivis.geometry.Coordinates(16, 23)
@@ -440,6 +406,7 @@ class Photodiode(Sink):
     super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
     
 class Dump(Sink):
+  # FIXME: make the input point left by default
   def __init__(self, *args, **kwargs):
     filename = "b-dump.svg"
     size = optivis.geometry.Coordinates(22, 33)
