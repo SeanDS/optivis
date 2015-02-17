@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg width="22.316" height="33.131">
+  <g id="b-dump">
+    <linearGradient id="b-dump-grad" gradientUnits="userSpaceOnUse" x1="55.9932" y1="110.8086" x2="55.9932" y2="81.2568" gradientTransform="matrix(0.8 0 0 0.8 -33.8884 -60.2056)">
+      <stop offset="0" style="stop-color:#FFFFFF"/>
+      <stop offset="0.1314" style="stop-color:#C4C4C4"/>
+      <stop offset="0.3752" style="stop-color:#5C5C5C"/>
+      <stop offset="0.5444" style="stop-color:#1A1A1A"/>
+      <stop offset="0.6236" style="stop-color:#000000"/>
+      <stop offset="0.6657" style="stop-color:#151515"/>
+      <stop offset="0.7529" style="stop-color:#4C4C4C"/>
+      <stop offset="0.8765" style="stop-color:#A2A2A2"/>
+      <stop offset="1" style="stop-color:#FFFFFF"/>
+    </linearGradient>
+    <rect x="1.177" y="4.801" fill="url(#b-dump-grad)" stroke="#000000" stroke-width="0.75" width="19.463" height="23.642"/>
+    <rect x="0.5" y="0.5" stroke="#000000" width="2.57" height="32.131"/>
+    <rect x="6.785" y="0.5" stroke="#000000" width="3.815" height="32.131"/>
+    <rect x="14.206" y="0.5" stroke="#000000" width="7.61" height="32.131"/>
+  </g>
+</svg>

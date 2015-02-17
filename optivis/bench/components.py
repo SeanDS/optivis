@@ -438,3 +438,12 @@ class Photodiode(Sink):
     inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=0)
     
     super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
+    
+class Dump(Sink):
+  def __init__(self, *args, **kwargs):
+    filename = "b-dump.svg"
+    size = optivis.geometry.Coordinates(22, 33)
+    
+    inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=0)
+    
+    super(Dump, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
