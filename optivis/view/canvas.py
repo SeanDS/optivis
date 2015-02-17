@@ -32,10 +32,10 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   def create(self):
     # create application
     self.qApplication = PyQt4.Qt.QApplication(sys.argv)
-    self.qMainWindow = PyQt4.Qt.QMainWindow()
+    self.qMainWindow = MainWindow()
     
     # create drawing area
-    self.qScene = PyQt4.QtGui.QGraphicsScene()
+    self.qScene = GraphicsScene()
     self.qView = GraphicsView(self.qScene, self.qMainWindow)
     self.qView.setScale(self.zoom)
     
@@ -100,7 +100,7 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
     
     for component in self.scene.getComponents():
       # Add component to list of canvas components.
-      drawableComponents.append(CanvasComponent(component))
+      drawableComponents.append(CanvasComponent(component, clickedCallback=self.qMainWindow.clickHandler))
     
     return drawableComponents
   
@@ -162,6 +162,17 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   def exportSvg(self, *args, **kwargs):
     svgView = optivis.view.svg.Svg(self.scene)
     svgView.export(*args, **kwargs)
+
+class MainWindow(PyQt4.Qt.QMainWindow):
+  def __init__(self, *args, **kwargs):
+    super(MainWindow, self).__init__(*args, **kwargs)
+  
+  def clickHandler(self, *args, **kwargs):
+    print self.sender()
+
+class GraphicsScene(PyQt4.QtGui.QGraphicsScene):
+  def __init__(self, *args, **kwargs):
+    super(GraphicsScene, self).__init__(*args, **kwargs)
 
 class GraphicsView(PyQt4.QtGui.QGraphicsView):
   def __init__(self, *args, **kwargs):
@@ -353,11 +364,12 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas.draw()
 
 class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
-  def __init__(self, component, *args, **kwargs):
+  def __init__(self, component, clickedCallback=None, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
     
     self.component = component
+    self.clickedCallback = clickedCallback
     
     super(CanvasComponent, self).__init__(*args, **kwargs)
   
@@ -368,7 +380,12 @@ class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):
     path = os.path.join(self.component.svgDir, self.component.filename)
     
     # Create graphical representation of SVG image at path.
-    svgItem = PyQt4.QtSvg.QGraphicsSvgItem(path)
+    svgItem = OptivisSvgItem(path)
+    
+    # Add callback, if necessary
+    if self.clickedCallback is not None:
+      # FIXME: check clickedCallback is a valid callable
+      svgItem.connect(svgItem, PyQt4.QtCore.SIGNAL('clicked()'), self.clickedCallback)
     
     # Set position of top-left corner.
     # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
@@ -381,6 +398,28 @@ class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):
     svgItem.translate(-self.component.size.x / 2, -self.component.size.y / 2)
     
     qScene.addItem(svgItem)
+
+class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
+  def __init__(self, *args, **kwargs):
+    # initialise this as a QObject (QGraphicsSvgItem is not a descendent of QObject and so can't send signals by default)
+    PyQt4.QtCore.QObject.__init__(self)
+    
+    # call other constructor (order is important)
+    super(OptivisSvgItem, self).__init__(*args, **kwargs)
+  
+  def mousePressEvent(self, event, *args, **kwargs):
+    """
+    This method does nothing but accept the event, but this behaviour
+    is required for mouseReleaseEvent() to work below.
+    """
+    event.accept()
+  
+  def mouseReleaseEvent(self, event, *args, **kwargs):
+    # emit clicked signal with no arguments
+    self.emit(PyQt4.QtCore.SIGNAL('clicked()'))
+    
+    # this is the default, but we'll call it anyway
+    event.accept()
 
 class CanvasLink(optivis.bench.links.AbstractDrawableLink):
   def __init__(self, link, *args, **kwargs):
