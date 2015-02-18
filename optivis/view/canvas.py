@@ -5,6 +5,7 @@ import os.path
 import sys
 
 import abc
+import math
 
 import PyQt4.Qt
 import PyQt4.QtCore
@@ -16,6 +17,7 @@ import optivis.view.svg
 import optivis.layout
 import optivis.bench.components
 import optivis.bench.links
+import optivis.geometry
 
 class AbstractCanvas(optivis.view.AbstractDrawable):
   qApplication = None
@@ -436,9 +438,37 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
     pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.color), self.link.width, PyQt4.QtCore.Qt.SolidLine)
     line = PyQt4.QtGui.QGraphicsLineItem(self.link.start.x, self.link.start.y, self.link.end.x, self.link.end.y)
     line.setPen(pen)
-    
+
     # add line to graphics scene
     qScene.addItem(line)
+
+    # add label if present
+    if self.link.label is not None:
+      # create label
+      labelItem = PyQt4.QtGui.QGraphicsTextItem(self.link.label.text)
+      # calculate size
+      labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
+      
+      # get link length on GUI
+      linkLength = optivis.geometry.Coordinates(self.link.end.x - self.link.start.x, self.link.end.y - self.link.start.y)
+
+      if linkLength.y != 0:
+        linkAzimuth = math.degrees(math.atan2(linkLength.y, linkLength.x)) + 90
+      else:
+        # avoid division by zero
+        linkAzimuth = 90
+
+      linkCentralPosition = (self.link.end - self.link.start) / 2
+      offset = optivis.geometry.Coordinates(self.link.label.offset, 0).rotate(linkAzimuth)
+      labelPosition = self.link.start.translate(linkCentralPosition).translate(offset)
+
+      # position label
+      labelItem.setPos(labelPosition.x, labelPosition.y)
+
+      # rotate text
+      labelItem.setRotation(linkAzimuth)
+
+      qScene.addItem(labelItem)
     
     # add markers if necessary
     if startMarkers:

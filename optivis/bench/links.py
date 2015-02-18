@@ -4,10 +4,25 @@ import abc
 
 import optivis.geometry
 import nodes
+import labels
 
 class AbstractLink(object):
   __metaclass__ = abc.ABCMeta
+
+  def __init__(self, label=None, *args, **kwargs):
+    self.label = label
   
+  @property
+  def label(self):
+    return self.__label
+
+  @label.setter
+  def label(self, label):
+    if label is not None and not isinstance(label, labels.Label):
+      raise Exception('Specified label is not of type labels.Label')
+
+    self.__label = label
+
   def __str__(self):
     return "{0} --> {1}".format(self.outputNode, self.inputNode)
   
@@ -20,15 +35,15 @@ class AbstractLink(object):
 class AbstractDrawableLink(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self):
-    return None
+  def __init__(self, *args, **kwargs):
+    pass
 
   @abc.abstractmethod
   def draw(self, *args, **kwargs):
     return
 
 class Link(AbstractLink):
-  def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue"):
+  def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
@@ -44,6 +59,8 @@ class Link(AbstractLink):
     # check we've not linked one component to itself
     if self.outputNode.component == self.inputNode.component:
       raise Exception('Cannot link component directly to itself')
+
+    super(Link, self).__init__(*args, **kwargs)
     
   @property
   def length(self):
