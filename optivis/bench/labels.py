@@ -3,7 +3,7 @@ from __future__ import unicode_literals, division
 import optivis.geometry
 
 class Label(object):
-  def __init__(self, position, text="", offset=-10):
+  def __init__(self, position, text="", offset=10):
     self.position = position
     self.text = text
     self.offset = offset
