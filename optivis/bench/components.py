@@ -32,6 +32,15 @@ class AbstractComponent(optivis.bench.AbstractBenchItem):
     
     super(AbstractComponent, self).__init__(*args, **kwargs)
     
+  def getLabelOrigin(self):
+    return self.position
+  
+  def getLabelAzimuth(self):
+    return self.azimuth
+    
+  def getSize(self):
+    return self.size
+    
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
   

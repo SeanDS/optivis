@@ -18,8 +18,8 @@ l2 = components.Laser()
 m1 = components.CavityMirror(azimuth=0, aoi=45)
 
 # link lasers to INPUTS of mirror
-scene.link(l1.getOutputNode("out"), m1.getInputNode("fr"), 50)
-scene.link(l2.getOutputNode("out"), m1.getInputNode("bk"), 100)
+scene.link(outputNode=l1.getOutputNode("out"), inputNode=m1.getInputNode("fr"), length=50)
+scene.link(outputNode=l2.getOutputNode("out"), inputNode=m1.getInputNode("bk"), length=100)
 
 scene.reference = m1
 

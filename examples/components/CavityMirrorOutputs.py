@@ -18,8 +18,8 @@ d1 = components.Dump()
 d2 = components.Dump()
 
 # link OUTPUTS of mirror to dumps
-scene.link(m1.getOutputNode("fr"), d1.getInputNode("in"), 50)
-scene.link(m1.getOutputNode("bk"), d2.getInputNode("in"), 100)
+scene.link(outputNode=m1.getOutputNode("fr"), inputNode=d1.getInputNode("in"), length=50)
+scene.link(outputNode=m1.getOutputNode("bk"), inputNode=d2.getInputNode("in"), length=100)
 
 scene.reference = m1
 

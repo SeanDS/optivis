@@ -13,6 +13,18 @@ class AbstractBenchItem(object):
   
   def __init__(self, label=None, *args, **kwargs):
     self.label = label
+
+  @abc.abstractmethod
+  def getLabelOrigin(self):
+    pass
+  
+  @abc.abstractmethod
+  def getLabelAzimuth(self):
+    pass
+  
+  @abc.abstractmethod
+  def getSize(self):
+    pass
     
   @property
   def label(self):

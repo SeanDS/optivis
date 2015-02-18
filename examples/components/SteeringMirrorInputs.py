@@ -17,7 +17,7 @@ l1 = components.Laser()
 m1 = components.SteeringMirror(azimuth=0, aoi=45)
 
 # link laser to INPUT of mirror
-scene.link(l1.getOutputNode("out"), m1.getInputNode("fr"), 50)
+scene.link(outputNode=l1.getOutputNode("out"), inputNode=m1.getInputNode("fr"), length=50)
 
 scene.reference = m1
 

@@ -16,7 +16,7 @@ scene = scene.Scene(title="Example 1")
 l1 = components.Laser(name="L1", tooltip="This is a laser")
 m1 = components.SteeringMirror(name="M1", tooltip="This is a mirror")
 
-scene.addLink(links.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 50))
+scene.link(outputNode=l1.getOutputNode('out'), inputNode=m1.getInputNode('fr'), length=50)
 
 scene.reference = l1
 

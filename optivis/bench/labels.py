@@ -9,42 +9,62 @@ class AbstractLabel(object):
     super(AbstractLabel, self).__init__(*args, **kwargs)
 
 class Label(AbstractLabel):
-  def __init__(self, position, text="", offset=10, *args, **kwargs):
+  def __init__(self, text, position, azimuth=0, offset=None, *args, **kwargs):
+    """
+    Instantiate label.
+    
+    Azimuth denotes the rotation of the label with respect to the item it is
+    attached to's absolute azimuth, so an azimuth of zero will draw the label
+    in the same direction as the item.
+    """
+    
     super(Label, self).__init__(*args, **kwargs)
 
-    self.position = position
     self.text = text
+    self.position = position
+    self.azimuth = azimuth
+    
+    if offset is None:
+      offset = optivis.geometry.Coordinates(0, 0)
+    
     self.offset = offset
 
   def __str__(self):
     return "\"{0}\"".format(self.text)
 
   @property
-  def position(self):
-    return self.__position
-  
-  @position.setter
-  def position(self, position):
-    # check position is valid object
-    if not isinstance(position, float) and not isinstance(position, int):
-      raise Exception('Specified position is not an integer or float')
-    
-    # check position is normalised
-    if position < 0 or position > 1:
-      raise Exception('Position should be between 0 and 1')
-    
-    self.__position = position
-
-  @property
   def text(self):
     return self.__text
-
+  
   @text.setter
   def text(self, text):
     if not isinstance(text, basestring):
       raise Exception('Specified label text is not of type basestring')
 
     self.__text = text
+  
+  @property
+  def position(self):
+    return self.__position
+  
+  @position.setter
+  def position(self, position):    
+    # check position is valid object
+    if not isinstance(position, optivis.geometry.Coordinates):
+      raise Exception('Specified position is not of type Coordinates')
+    
+    self.__position = position
+    
+  @property
+  def azimuth(self):
+    return self.__azimuth
+  
+  @azimuth.setter
+  def azimuth(self, azimuth):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    azimuth = float(azimuth)
+    
+    self.__azimuth = azimuth
 
   @property
   def offset(self):
@@ -52,7 +72,7 @@ class Label(AbstractLabel):
 
   @offset.setter
   def offset(self, offset):
-    if not isinstance(offset, float) and not isinstance(offset, int):
-      raise Exception('Specified offset is not an integer or float')
+    if not isinstance(offset, optivis.geometry.Coordinates):
+      raise Exception('Specified offset is not of type Coordinates')
 
     self.__offset = offset
