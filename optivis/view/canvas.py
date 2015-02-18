@@ -116,20 +116,33 @@ class AbstractCanvas(optivis.view.AbstractView):
     # empty the qScene
     self.qScene.clear()
     
+    # get canvas links and components
+    canvasLinks = self.getCanvasLinks()
+    canvasComponents = self.getCanvasComponents()
+    canvasLabels = []
+    
     # draw links
     if self.showFlags & AbstractCanvas.SHOW_LINKS:
-      for canvasLink in self.getDrawableLinks():
+      for canvasLink in canvasLinks:
         canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+        
+	if canvasLink.item.label is not None:
+	  # Add label to list of canvas labels.
+	  canvasLabels.append(CanvasLabel(canvasLink))
 
     # draw components
     if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
-      for canvasComponent in self.getDrawableComponents():
+      for canvasComponent in canvasComponents:
         canvasComponent.draw(self.qScene)
+        
+        if canvasComponent.item.label is not None:
+	  # Add label to list
+	  canvasLabels.append(CanvasLabel(canvasComponent))
 
     # draw labels
     if self.showFlags & AbstractCanvas.SHOW_LABELS:
-      for canvasLabel in self.getDrawableLabels():
-        canvasLabel.draw(self.qScene)
+      for canvasLabel in canvasLabels:
+	canvasLabel.draw(self.qScene)
   
   def layout(self):
     # instantiate layout manager and arrange objects
@@ -148,38 +161,23 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     sys.exit(self.qApplication.exec_())
   
-  def getDrawableComponents(self):
-    drawableComponents = []
+  def getCanvasComponents(self):
+    canvasComponents = []
     
     for component in self.scene.getComponents():
       # Add component to list of canvas components.
-      drawableComponents.append(CanvasComponent(component, clickedCallback=self.qMainWindow.clickHandler))
+      canvasComponents.append(CanvasComponent(component, clickedCallback=self.qMainWindow.clickHandler))
     
-    return drawableComponents
+    return canvasComponents
   
-  def getDrawableLinks(self):
-    drawableLinks = []
+  def getCanvasLinks(self):
+    canvasLinks = []
     
     for link in self.scene.links:
       # Add link to list of canvas links.
-      drawableLinks.append(CanvasLink(link))
+      canvasLinks.append(CanvasLink(link))
     
-    return drawableLinks
-
-  def getDrawableLabels(self):
-    drawableLabels = []
-    
-    for link in self.scene.links:
-      if link.label is not None:
-        # Add label to list of canvas labels.
-        drawableLabels.append(CanvasLabel(link))
-    
-    for component in self.scene.getComponents():
-      if component.label is not None:
-	# Add label to list
-	drawableLabels.append(CanvasLabel(component))
-    
-    return drawableLabels
+    return canvasLinks
   
   def export(self):
     # generate file path
@@ -494,8 +492,8 @@ class AbstractCanvasItem(object):
   
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, *args, **kwargs):
-    pass
+  def __init__(self, item, *args, **kwargs):
+    self.item = item
   
   @abc.abstractmethod
   def draw(self, *args, **kwargs):
@@ -506,22 +504,21 @@ class CanvasComponent(AbstractCanvasItem):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
     
-    self.component = component
     self.clickedCallback = clickedCallback
     
-    super(CanvasComponent, self).__init__(*args, **kwargs)
+    super(CanvasComponent, self).__init__(item=component, *args, **kwargs)
   
   def draw(self, qScene):
-    print "[GUI] Drawing component {0} at {1}".format(self.component, self.component.position)
+    print "[GUI] Drawing component {0} at {1}".format(self.item, self.item.position)
     
     # Create full system path from filename and SVG directory.
-    path = os.path.join(self.component.svgDir, self.component.filename)
+    path = os.path.join(self.item.svgDir, self.item.filename)
     
     # Create graphical representation of SVG image at path.
     svgItem = OptivisSvgItem(path)
     
-    if self.component.tooltip is not None:
-        svgItem.setToolTip(self.component.tooltip)
+    if self.item.tooltip is not None:
+        svgItem.setToolTip(self.item.tooltip)
     
     # Add callback, if necessary
     if self.clickedCallback is not None:
@@ -530,13 +527,13 @@ class CanvasComponent(AbstractCanvasItem):
     
     # Set position of top-left corner.
     # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
-    svgItem.setPos(self.component.position.x - self.component.size.x / 2, self.component.position.y - self.component.size.y / 2)
+    svgItem.setPos(self.item.position.x - self.item.size.x / 2, self.item.position.y - self.item.size.y / 2)
     
     # Rotate clockwise.
     # Qt rotates with respect to the component's origin, i.e. top left, so to rotate around the centre we need to translate it before and after rotating it.
-    svgItem.translate(self.component.size.x / 2, self.component.size.y / 2)
-    svgItem.rotate(self.component.azimuth)
-    svgItem.translate(-self.component.size.x / 2, -self.component.size.y / 2)
+    svgItem.translate(self.item.size.x / 2, self.item.size.y / 2)
+    svgItem.rotate(self.item.azimuth)
+    svgItem.translate(-self.item.size.x / 2, -self.item.size.y / 2)
     
     qScene.addItem(svgItem)
 
@@ -567,15 +564,13 @@ class CanvasLink(AbstractCanvasItem):
     if not isinstance(link, optivis.bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
     
-    self.link = link
-    
-    super(CanvasLink, self).__init__(*args, **kwargs)
+    super(CanvasLink, self).__init__(item=link, *args, **kwargs)
 
   def draw(self, qScene, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
-    print "[GUI] Drawing link {0}".format(self.link)
+    print "[GUI] Drawing link {0}".format(self.item)
     
-    pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.link.color), self.link.width, PyQt4.QtCore.Qt.SolidLine)
-    line = PyQt4.QtGui.QGraphicsLineItem(self.link.start.x, self.link.start.y, self.link.end.x, self.link.end.y)
+    pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine)
+    line = PyQt4.QtGui.QGraphicsLineItem(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
     line.setPen(pen)
 
     # add line to graphics scene
@@ -583,33 +578,33 @@ class CanvasLink(AbstractCanvasItem):
     
     # add markers if necessary
     if startMarkers:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.start.x - startMarkerRadius, self.link.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.item.start.x - startMarkerRadius, self.item.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
       pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(startMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
       circle.setPen(pen)
       
       qScene.addItem(circle)
       
     if endMarkers:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.link.end.x - endMarkerRadius, self.link.end.y - endMarkerRadius, endMarkerRadius * 2, endMarkerRadius * 2)
+      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.item.end.x - endMarkerRadius, self.item.end.y - endMarkerRadius, endMarkerRadius * 2, endMarkerRadius * 2)
       pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(endMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
       circle.setPen(pen)
       
       qScene.addItem(circle)
 
-class CanvasLabel(AbstractCanvasItem):
-  def __init__(self, benchItem, *args, **kwargs):
-    if not isinstance(benchItem, optivis.bench.AbstractBenchItem):
-      raise Exception('Specified bench item is not of type AbstractBenchItem')
+class CanvasLabel(object):
+  def __init__(self, canvasItem, *args, **kwargs):
+    if not isinstance(canvasItem, AbstractCanvasItem):
+      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
     
-    self.benchItem = benchItem
+    self.canvasItem = canvasItem
     
     super(CanvasLabel, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
-    print "[GUI] Drawing label {0}".format(self.benchItem.label)
+    print "[GUI] Drawing label {0}".format(self.canvasItem.item.label)
 
     # create label
-    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.benchItem.label.text)
+    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.canvasItem.item.label.text)
 
     # position next to object
     labelItem.setPos(50, 50)
