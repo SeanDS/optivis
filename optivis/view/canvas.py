@@ -29,16 +29,17 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   SHOW_LINKS = 1 << 1
   SHOW_LABELS = 1 << 2
 
-  # 'show all', 2^n-1 where n is the number of bit fields above
+  # 'show all', 2^(n+1)-1 where n is the number of significant bits above
   SHOW_MAX = (1 << 3) - 1
   
-  def __init__(self, showFlags=None, *args, **kwargs):
+  def __init__(self, showFlags=None, showLabelFlags=0, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
 
     if showFlags is None:
       showFlags = AbstractCanvas.SHOW_MAX
 
     self.showFlags = showFlags
+    self.showLabelFlags = showLabelFlags
 
     self.create()
     self.initialise()
@@ -53,9 +54,23 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
     showFlags = int(showFlags)
 
     if showFlags < 0 or showFlags > AbstractCanvas.SHOW_MAX:
-      raise Exception('Specified show flags are not valid. Draw flags must be between 0 and {0}'.format(AbstractCanvas.SHOW_MAX))
+      raise Exception('Specified show flags are not valid. Show flags value must be between 0 and {0}'.format(AbstractCanvas.SHOW_MAX))
 
     self.__showFlags = showFlags
+
+  @property
+  def showLabelFlags(self):
+    return self.__showLabelFlags
+
+  @showLabelFlags.setter
+  def showLabelFlags(self, showLabelFlags):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    showLabelFlags = int(showLabelFlags)
+
+    if showLabelFlags < 0:
+      raise Exception('Specified show label flags are not valid. Show flags value must be > 0 and {0}')
+
+    self.__showLabelFlags = showLabelFlags
     
   def create(self):
     # create application
@@ -108,6 +123,11 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
     if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
       for canvasComponent in self.getDrawableComponents():
         canvasComponent.draw(self.qScene)
+
+    # draw labels
+    if self.showFlags & AbstractCanvas.SHOW_LABELS:
+      for canvasLabel in self.getDrawableLabels():
+        canvasLabel.draw(self.qScene)
   
   def layout(self):
     # instantiate layout manager and arrange objects
@@ -143,6 +163,16 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
       drawableLinks.append(CanvasLink(link))
     
     return drawableLinks
+
+  def getDrawableLabels(self):
+    drawableLabels = []
+    
+    for link in self.scene.links:
+      if link.label is not None:
+        # Add label to list of canvas labels.
+        drawableLabels.append(CanvasLabel(link.label, link))
+    
+    return drawableLabels
   
   def export(self):
     # generate file path
@@ -526,34 +556,6 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
 
     # add line to graphics scene
     qScene.addItem(line)
-
-    # add label if present
-    if self.link.label is not None:
-      # create label
-      labelItem = PyQt4.QtGui.QGraphicsTextItem(self.link.label.text)
-      # calculate size
-      labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
-      
-      # get link length on GUI
-      linkLength = optivis.geometry.Coordinates(self.link.end.x - self.link.start.x, self.link.end.y - self.link.start.y)
-
-      if linkLength.y != 0:
-        linkAzimuth = math.degrees(math.atan2(linkLength.y, linkLength.x)) + 90
-      else:
-        # avoid division by zero
-        linkAzimuth = 90
-
-      linkCentralPosition = (self.link.end - self.link.start) / 2
-      offset = optivis.geometry.Coordinates(self.link.label.offset, 0).rotate(linkAzimuth)
-      labelPosition = self.link.start.translate(linkCentralPosition).translate(offset)
-
-      # position label
-      labelItem.setPos(labelPosition.x, labelPosition.y)
-
-      # rotate text
-      labelItem.setRotation(linkAzimuth)
-
-      qScene.addItem(labelItem)
     
     # add markers if necessary
     if startMarkers:
@@ -569,3 +571,49 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
       circle.setPen(pen)
       
       qScene.addItem(circle)
+
+class CanvasLabel(optivis.bench.labels.AbstractDrawableLabel):
+  def __init__(self, label, drawableThing, *args, **kwargs):
+    if not isinstance(label, optivis.bench.labels.AbstractLabel):
+      raise Exception('Specified label is not of type AbstractLink')
+
+    #if not isinstance(drawableThing, optivis.view.AbstractDrawable):
+    #  raise Exception('Specified drawableThing is not of type AbstractDrawable')
+    
+    self.label = label
+    self.drawableThing = drawableThing
+    
+    super(CanvasLabel, self).__init__(*args, **kwargs)
+
+  def draw(self, qScene):
+    print "[GUI] Drawing label {0}".format(self.label)
+
+    # create label
+    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.drawableThing.label.text)
+
+    # position next to object
+    labelItem.setPos(50, 50)
+
+    ## calculate size
+    #labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
+    #  
+    # get link length on GUI
+    #linkLength = optivis.geometry.Coordinates(self.drawable.end.x - self.drawable.start.x, self.drawable.end.y - self.drawable.start.y)
+    #
+    #if linkLength.y != 0:
+    #  linkAzimuth = math.degrees(math.atan2(linkLength.y, linkLength.x)) + 90
+    #else:
+    #  # avoid division by zero
+    #  linkAzimuth = 90
+    #
+    #linkCentralPosition = (self.link.end - self.link.start) / 2
+    #offset = optivis.geometry.Coordinates(self.link.label.offset, 0).rotate(linkAzimuth)
+    #labelPosition = self.link.start.translate(linkCentralPosition).translate(offset)
+    #
+    ## position label
+    #labelItem.setPos(labelPosition.x, labelPosition.y)
+    #
+    ## rotate text
+    #labelItem.setRotation(linkAzimuth)
+
+    qScene.addItem(labelItem)

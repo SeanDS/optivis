@@ -38,5 +38,5 @@ scene.link(mirror1.getOutputNode('fr'), mirror2.getInputNode('fr'), 100, label=l
 scene.link(mirror2.getOutputNode('fr'), mirror3.getInputNode('fr'), 150, label=labels.Label(0.5, text="mirror2->mirror3", offset=10))
 scene.link(mirror3.getOutputNode('fr'), pd.getInputNode('in'), 65)
 
-gui = canvas.Full(scene)
+gui = canvas.Full(scene=scene)
 gui.show()
