@@ -499,6 +499,9 @@ class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):
     # Create graphical representation of SVG image at path.
     svgItem = OptivisSvgItem(path)
     
+    if self.component.tooltip is not None:
+        svgItem.setToolTip(self.component.tooltip)
+    
     # Add callback, if necessary
     if self.clickedCallback is not None:
       # FIXME: check clickedCallback is a valid callable

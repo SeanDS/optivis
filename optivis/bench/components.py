@@ -12,7 +12,7 @@ class AbstractComponent(object):
   
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
-  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None):
+  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None, tooltip=None):
     if name is None:
       # empty name
       name = ''
@@ -27,6 +27,7 @@ class AbstractComponent(object):
     self.outputNodes = outputNodes
     self.azimuth = azimuth
     self.position = position
+    self.tooltip = tooltip
     
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
