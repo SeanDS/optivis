@@ -470,7 +470,10 @@ class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):
     svgItem = OptivisSvgItem(path)
     
     if self.component.tooltip is not None:
-        svgItem.setToolTip(self.component.tooltip)
+        if hasattr(self.component.tooltip, "__call__"):
+            svgItem.setToolTip(str(self.component.tooltip()))
+        else:
+            svgItem.setToolTip(str(self.component.tooltip))
     
     # Add callback, if necessary
     if self.clickedCallback is not None:
