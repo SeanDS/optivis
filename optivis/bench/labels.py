@@ -8,16 +8,6 @@ class AbstractLabel(object):
   def __init__(self, *args, **kwargs):
     pass
 
-class AbstractDrawableLabel(object):
-  __metaclass__ = abc.ABCMeta
-  
-  def __init__(self, *args, **kwargs):
-    pass
-
-  @abc.abstractmethod
-  def draw(self, *args, **kwargs):
-    return
-
 class Label(AbstractLabel):
   def __init__(self, position, text="", offset=10, *args, **kwargs):
     super(Label, self).__init__(*args, **kwargs)

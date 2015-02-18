@@ -31,16 +31,6 @@ class AbstractLink(object):
       return True
     
     return False
-  
-class AbstractDrawableLink(object):
-  __metaclass__ = abc.ABCMeta
-  
-  def __init__(self, *args, **kwargs):
-    pass
-
-  @abc.abstractmethod
-  def draw(self, *args, **kwargs):
-    return
 
 class Link(AbstractLink):
   def __init__(self, outputNode, inputNode, length, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):

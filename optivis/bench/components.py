@@ -150,16 +150,6 @@ class AbstractComponent(object):
   
   def __str__(self):
     return self.name
-  
-class AbstractDrawableComponent(object):
-  __metaclass__ = abc.ABCMeta
-  
-  def __init__(self):
-    return None
-
-  @abc.abstractmethod
-  def draw(self, *args, **kwargs):
-    return
 
 class Source(AbstractComponent):
   __metaclass__ = abc.ABCMeta

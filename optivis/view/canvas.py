@@ -19,7 +19,9 @@ import optivis.bench.components
 import optivis.bench.links
 import optivis.geometry
 
-class AbstractCanvas(optivis.view.AbstractDrawable):
+class AbstractCanvas(optivis.view.AbstractView):
+  __metaclass__ = abc.ABCMeta
+  
   qApplication = None
   qMainWindow = None
   qScene = None
@@ -480,7 +482,21 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas.endMarkers = value
     self.canvas.draw()
 
-class CanvasComponent(optivis.bench.components.AbstractDrawableComponent):  
+class AbstractCanvasItem(object):
+  """
+  Class to represent an item that can be drawn on the canvas (e.g. component, link, label).
+  """
+  
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, *args, **kwargs):
+    pass
+  
+  @abc.abstractmethod
+  def draw(self, *args, **kwargs):
+    return
+
+class CanvasComponent(AbstractCanvasItem):  
   def __init__(self, component, clickedCallback=None, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
@@ -541,7 +557,7 @@ class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
     # this is the default, but we'll call it anyway
     event.accept()
 
-class CanvasLink(optivis.bench.links.AbstractDrawableLink):
+class CanvasLink(AbstractCanvasItem):
   def __init__(self, link, *args, **kwargs):
     if not isinstance(link, optivis.bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
@@ -575,7 +591,7 @@ class CanvasLink(optivis.bench.links.AbstractDrawableLink):
       
       qScene.addItem(circle)
 
-class CanvasLabel(optivis.bench.labels.AbstractDrawableLabel):
+class CanvasLabel(AbstractCanvasItem):
   def __init__(self, label, drawableThing, *args, **kwargs):
     if not isinstance(label, optivis.bench.labels.AbstractLabel):
       raise Exception('Specified label is not of type AbstractLink')
