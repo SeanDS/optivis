@@ -24,12 +24,38 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
   qMainWindow = None
   qScene = None
   qView = None
+
+  SHOW_COMPONENTS = 1 << 0
+  SHOW_LINKS = 1 << 1
+  SHOW_LABELS = 1 << 2
+
+  # 'show all', 2^n-1 where n is the number of bit fields above
+  SHOW_MAX = (1 << 3) - 1
   
-  def __init__(self, *args, **kwargs):
+  def __init__(self, showFlags=None, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
+
+    if showFlags is None:
+      showFlags = AbstractCanvas.SHOW_MAX
+
+    self.showFlags = showFlags
 
     self.create()
     self.initialise()
+
+  @property
+  def showFlags(self):
+    return self.__showFlags
+
+  @showFlags.setter
+  def showFlags(self, showFlags):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    showFlags = int(showFlags)
+
+    if showFlags < 0 or showFlags > AbstractCanvas.SHOW_MAX:
+      raise Exception('Specified show flags are not valid. Draw flags must be between 0 and {0}'.format(AbstractCanvas.SHOW_MAX))
+
+    self.__showFlags = showFlags
     
   def create(self):
     # create application
@@ -73,12 +99,15 @@ class AbstractCanvas(optivis.view.AbstractDrawable):
     # empty the qScene
     self.qScene.clear()
     
-    # draw objects
-    for canvasLink in self.getDrawableLinks():
-      canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
-    
-    for canvasComponent in self.getDrawableComponents():
-      canvasComponent.draw(self.qScene)
+    # draw links
+    if self.showFlags & AbstractCanvas.SHOW_LINKS:
+      for canvasLink in self.getDrawableLinks():
+        canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+
+    # draw components
+    if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
+      for canvasComponent in self.getDrawableComponents():
+        canvasComponent.draw(self.qScene)
   
   def layout(self):
     # instantiate layout manager and arrange objects
@@ -216,14 +245,27 @@ class Full(AbstractCanvas):
     self.controls = ControlPanel(self)
     self.controls.setFixedWidth(200)
     
-    ### create container for view and controls
+    ### create container for view + layer buttons and controls
     self.container = PyQt4.QtGui.QWidget()
+
+    ### create container for view + layer buttons
+    self.viewWidget = PyQt4.QtGui.QWidget()
+    self.viewWidgetVBox = PyQt4.QtGui.QVBoxLayout()
+
+    # add checkbox panel to view widget
+    self.viewWidgetVBox.addWidget(ViewCheckboxPanel(self))
+
+    # add graphics view to view widget
+    self.viewWidgetVBox.addWidget(self.qView)
+
+    # set layout of view widget to the layout manager
+    self.viewWidget.setLayout(self.viewWidgetVBox)
     
     ### create and populate layout
     self.hBox = PyQt4.QtGui.QHBoxLayout()
     
     # add qView to layout
-    self.hBox.addWidget(self.qView, stretch=3)
+    self.hBox.addWidget(self.viewWidget, stretch=3)
     
     # add controls to layout
     self.hBox.addWidget(self.controls, stretch=1)
@@ -238,10 +280,53 @@ class Full(AbstractCanvas):
     
     # set fixed size for view
     self.qView.setMinimumSize(self.size.x, self.size.y)
-    
-    #self.qMainWindow.repaint()
 
     return
+
+class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
+  def __init__(self, canvas, *args, **kwargs):
+    super(ViewCheckboxPanel, self).__init__(*args, **kwargs)
+
+    self.canvas = canvas
+
+    self.setTitle('Layers')
+
+    # create horizontal layout
+    self.hBox = PyQt4.QtGui.QHBoxLayout()
+
+    # create buttons
+    self.button1 = PyQt4.QtGui.QCheckBox("Components")
+    self.button1.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_COMPONENTS)
+    self.button1.stateChanged.connect(self.showCheckBoxChanged)
+    self.button2 = PyQt4.QtGui.QCheckBox("Links")
+    self.button2.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_LINKS)
+    self.button2.stateChanged.connect(self.showCheckBoxChanged)
+    self.button3 = PyQt4.QtGui.QCheckBox("Labels")
+    self.button3.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_LABELS)
+    self.button3.stateChanged.connect(self.showCheckBoxChanged)
+
+    # add buttons to layout
+    self.hBox.addWidget(self.button1)
+    self.hBox.addWidget(self.button2)
+    self.hBox.addWidget(self.button3)
+
+    # set layout of widget
+    self.setLayout(self.hBox)
+
+  def showCheckBoxChanged(self, *args, **kwargs):
+    # just rebuild the show bitfield using all checkboxes
+    self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2)
+
+    # redraw canvas
+    self.canvas.draw()
+
+  @property
+  def canvas(self):
+    return self.__canvas
+  
+  @canvas.setter
+  def canvas(self, canvas):
+    self.__canvas = canvas
 
 class ControlPanel(PyQt4.QtGui.QWidget):
   zoomRange = (0.1, 10)
