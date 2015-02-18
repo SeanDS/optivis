@@ -13,8 +13,8 @@ import optivis.view.canvas as canvas
 
 scene = scene.Scene(title="Example 1")
 
-l1 = components.Laser(name="L1")
-m1 = components.SteeringMirror(name="M1")
+l1 = components.Laser(name="L1", tooltip="This is a laser")
+m1 = components.SteeringMirror(name="M1", tooltip="This is a mirror")
 
 scene.addLink(links.Link(l1.getOutputNode('out'), m1.getInputNode('fr'), 50))
 
