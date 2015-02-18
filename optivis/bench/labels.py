@@ -6,7 +6,7 @@ import optivis.geometry
 
 class AbstractLabel(object):
   def __init__(self, *args, **kwargs):
-    pass
+    super(AbstractLabel, self).__init__(*args, **kwargs)
 
 class Label(AbstractLabel):
   def __init__(self, position, text="", offset=10, *args, **kwargs):
@@ -15,6 +15,9 @@ class Label(AbstractLabel):
     self.position = position
     self.text = text
     self.offset = offset
+
+  def __str__(self):
+    return "\"{0}\"".format(self.text)
 
   @property
   def position(self):

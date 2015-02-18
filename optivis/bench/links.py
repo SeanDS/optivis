@@ -2,26 +2,17 @@ from __future__ import unicode_literals, division
 
 import abc
 
+import optivis.bench
 import optivis.geometry
 import nodes
 import labels
 
-class AbstractLink(object):
+class AbstractLink(optivis.bench.AbstractBenchItem):
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, label=None, *args, **kwargs):
-    self.label = label
-  
-  @property
-  def label(self):
-    return self.__label
-
-  @label.setter
-  def label(self, label):
-    if label is not None and not isinstance(label, labels.Label):
-      raise Exception('Specified label is not of type labels.Label')
-
-    self.__label = label
+  def __init__(self, *args, **kwargs):
+    
+    super(AbstractLink, self).__init__(*args, **kwargs)
 
   def __str__(self):
     return "{0} --> {1}".format(self.outputNode, self.inputNode)

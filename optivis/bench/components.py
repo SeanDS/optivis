@@ -4,15 +4,16 @@ import os
 import math
 import abc
 
+import optivis.bench
 import optivis.geometry
 import nodes
 
-class AbstractComponent(object):
+class AbstractComponent(optivis.bench.AbstractBenchItem):
   __metaclass__ = abc.ABCMeta
   
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
-  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None, tooltip=None):
+  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None, tooltip=None, *args, **kwargs):
     if name is None:
       # empty name
       name = ''
@@ -28,6 +29,8 @@ class AbstractComponent(object):
     self.azimuth = azimuth
     self.position = position
     self.tooltip = tooltip
+    
+    super(AbstractComponent, self).__init__(*args, **kwargs)
     
   def __eq__(self, other):
     return self.__dict__ == other.__dict__

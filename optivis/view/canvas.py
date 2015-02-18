@@ -172,7 +172,12 @@ class AbstractCanvas(optivis.view.AbstractView):
     for link in self.scene.links:
       if link.label is not None:
         # Add label to list of canvas labels.
-        drawableLabels.append(CanvasLabel(link.label, link))
+        drawableLabels.append(CanvasLabel(link))
+    
+    for component in self.scene.getComponents():
+      if component.label is not None:
+	# Add label to list
+	drawableLabels.append(CanvasLabel(component))
     
     return drawableLabels
   
@@ -592,23 +597,19 @@ class CanvasLink(AbstractCanvasItem):
       qScene.addItem(circle)
 
 class CanvasLabel(AbstractCanvasItem):
-  def __init__(self, label, drawableThing, *args, **kwargs):
-    if not isinstance(label, optivis.bench.labels.AbstractLabel):
-      raise Exception('Specified label is not of type AbstractLink')
-
-    #if not isinstance(drawableThing, optivis.view.AbstractDrawable):
-    #  raise Exception('Specified drawableThing is not of type AbstractDrawable')
+  def __init__(self, benchItem, *args, **kwargs):
+    if not isinstance(benchItem, optivis.bench.AbstractBenchItem):
+      raise Exception('Specified bench item is not of type AbstractBenchItem')
     
-    self.label = label
-    self.drawableThing = drawableThing
+    self.benchItem = benchItem
     
     super(CanvasLabel, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
-    print "[GUI] Drawing label {0}".format(self.label)
+    print "[GUI] Drawing label {0}".format(self.benchItem.label)
 
     # create label
-    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.drawableThing.label.text)
+    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.benchItem.label.text)
 
     # position next to object
     labelItem.setPos(50, 50)
