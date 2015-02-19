@@ -720,3 +720,18 @@ class CanvasLabel(object):
 
     # add to scene
     qScene.addItem(labelItem)
+
+class OptivisItemDataType(object):
+  TEXTBOX = 1
+  CHECKBOX = 2
+
+class OptivisCanvasItemDataType(OptivisType):
+  def getCanvasWidget(itemDataType, canvasItem):
+    if not isinstance(canvasItem, AbstractCanvasItem):
+      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
+
+    if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
+      return PyQt4.QtGui.QLineEdit()
+
+    if itemDataType == OptivisCanvasItemDataType.CHECKBOX:
+      return PyQt4.QtGui.QCheckBox()
