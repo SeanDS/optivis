@@ -773,6 +773,7 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
   Factory class for Qt objects associated with data types defined in OptivisItemDataType.
   """
 
+  @staticmethod
   def getCanvasWidget(itemDataType, canvasItem):
     if not isinstance(canvasItem, AbstractCanvasItem):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
