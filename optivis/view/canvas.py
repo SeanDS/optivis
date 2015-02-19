@@ -394,6 +394,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   
   def clickHandler(self, canvasItem, event):
     print canvasItem.item
+    self.itemEditGroupBox.setContentFromCanvasItem(canvasItem)
 
   @property
   def canvas(self):
@@ -469,10 +470,10 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     ### item edit controls
 
     # group box for item edit controls
-    itemEditGroupBox = PyQt4.QtGui.QGroupBox(title="Edit")
+    self.itemEditGroupBox = OptivisItemEditGroupBox()
 
     # add group box to layout
-    controlLayout.addWidget(itemEditGroupBox)
+    controlLayout.addWidget(self.itemEditGroupBox)
     
     ### add layout to control widget
     self.setLayout(controlLayout)
@@ -515,6 +516,44 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   def setEndMarkers(self, value):
     self.canvas.endMarkers = value
     self.canvas.draw()
+
+class OptivisItemEditGroupBox(PyQt4.QtGui.QGroupBox):
+  title = "Edit"
+
+  def __init__(self, *args, **kwargs):
+    super(OptivisItemEditGroupBox, self).__init__(*args, **kwargs)
+
+    self.setTitle(OptivisItemEditGroupBox.title)
+
+    # create layout to use for edit controls (empty by default)
+    self.vBox = PyQt4.QtGui.QVBoxLayout()
+
+    # set layout
+    self.setLayout(self.vBox)
+
+  def setContentFromCanvasItem(self, canvasItem):
+    # empty current contents
+    # from http://stackoverflow.com/questions/4528347/clear-all-widgets-in-a-layout-in-pyqt
+    for i in reversed(range(layout.count())): 
+      self.vBox.itemAt(i).widget().setParent(None)
+
+    if canvasItem.paramList is None:
+      # no edit controls provided
+      return
+
+    # get attributes and external item
+    attributes = canvasItem.paramList
+    pykatObject = canvasItem.pykatObject
+
+    # references to external items should be made using weakref, so if they are deleted after the reference is made, the reference will be None
+    if pykatObject is None:
+      raise Exception('External item is deleted')
+
+    # loop over attributes from external object and create
+    for paramName in attributes:
+      dataType = attributes[paramName]
+
+      self.vBox.addWidget(OptivisCanvasItemDataType.getCanvasWidget(dataType, canvasItem))
 
 class AbstractCanvasItem(object):
   """
@@ -722,10 +761,18 @@ class CanvasLabel(object):
     qScene.addItem(labelItem)
 
 class OptivisItemDataType(object):
+  """
+  Class to define data types for editable parameters of bench items.
+  """
+
   TEXTBOX = 1
   CHECKBOX = 2
 
 class OptivisCanvasItemDataType(OptivisItemDataType):
+  """
+  Factory class for Qt objects associated with data types defined in OptivisItemDataType.
+  """
+
   def getCanvasWidget(itemDataType, canvasItem):
     if not isinstance(canvasItem, AbstractCanvasItem):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
