@@ -537,13 +537,13 @@ class OptivisItemEditGroupBox(PyQt4.QtGui.QGroupBox):
     for i in reversed(range(self.vBox.count())): 
       self.vBox.itemAt(i).widget().setParent(None)
 
-    if canvasItem.paramList is None:
+    if canvasItem.item.paramList is None:
       # no edit controls provided
       return
 
     # get attributes and external item
-    attributes = canvasItem.paramList
-    pykatObject = canvasItem.pykatObject
+    attributes = canvasItem.item.paramList
+    pykatObject = canvasItem.item.pykatObject
 
     # references to external items should be made using weakref, so if they are deleted after the reference is made, the reference will be None
     if pykatObject is None:
