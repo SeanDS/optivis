@@ -2,6 +2,7 @@ from __future__ import unicode_literals, division
 
 import abc
 
+import optivis.bench
 import optivis.geometry
 
 class AbstractLabel(object):
@@ -9,7 +10,7 @@ class AbstractLabel(object):
     super(AbstractLabel, self).__init__(*args, **kwargs)
 
 class Label(AbstractLabel):
-  def __init__(self, text, position, azimuth=0, offset=None, *args, **kwargs):
+  def __init__(self, text, position, item=None, azimuth=0, offset=None, *args, **kwargs):
     """
     Instantiate label.
     
@@ -23,6 +24,7 @@ class Label(AbstractLabel):
     self.text = text
     self.position = position
     self.azimuth = azimuth
+    self.item = item
     
     if offset is None:
       offset = optivis.geometry.Coordinates(0, 0)
@@ -65,6 +67,17 @@ class Label(AbstractLabel):
     azimuth = float(azimuth)
     
     self.__azimuth = azimuth
+
+  @property
+  def item(self):
+    return self.__item
+
+  @item.setter
+  def item(self, item):
+    if item is not None and not isinstance(item, optivis.bench.AbstractBenchItem):
+      raise Exception('Specified item is not of type AbstractBenchItem')
+
+    self.__item = item
 
   @property
   def offset(self):
