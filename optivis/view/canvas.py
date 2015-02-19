@@ -534,7 +534,7 @@ class OptivisItemEditGroupBox(PyQt4.QtGui.QGroupBox):
   def setContentFromCanvasItem(self, canvasItem):
     # empty current contents
     # from http://stackoverflow.com/questions/4528347/clear-all-widgets-in-a-layout-in-pyqt
-    for i in reversed(range(layout.count())): 
+    for i in reversed(range(self.vBox.count())): 
       self.vBox.itemAt(i).widget().setParent(None)
 
     if canvasItem.paramList is None:
