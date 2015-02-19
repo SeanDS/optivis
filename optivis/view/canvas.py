@@ -6,6 +6,7 @@ import sys
 
 import abc
 import math
+import weakref
 
 import PyQt4.Qt
 import PyQt4.QtCore
@@ -413,7 +414,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   
   def clickHandler(self, canvasItem, event):
     print canvasItem.item
-    self.itemEditGroupBox.setContentFromCanvasItem(canvasItem)
+    self.itemEditPanel.setContentFromCanvasItem(canvasItem)
 
   @property
   def canvas(self):
@@ -489,7 +490,16 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     ### item edit controls
 
     # group box for item edit controls
-    self.itemEditGroupBox = OptivisItemEditGroupBox()
+    self.itemEditGroupBox = PyQt4.QtGui.QGroupBox(title="Attributes")
+
+    # edit panel within scroll area within group box
+    self.itemEditScrollArea = PyQt4.QtGui.QScrollArea()
+    self.itemEditPanel = OptivisItemEditPanel()
+    self.itemEditScrollArea.setWidget(self.itemEditPanel)
+    self.itemEditScrollArea.setWidgetResizable(True)
+    itemEditGroupBoxLayout = PyQt4.QtGui.QVBoxLayout()
+    itemEditGroupBoxLayout.addWidget(self.itemEditScrollArea)
+    self.itemEditGroupBox.setLayout(itemEditGroupBoxLayout)
 
     # add group box to layout
     controlLayout.addWidget(self.itemEditGroupBox)
@@ -536,16 +546,13 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas.endMarkers = value
     self.canvas.draw()
 
-class OptivisItemEditGroupBox(PyQt4.QtGui.QGroupBox):
-  title = "Edit"
-
+class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
   def __init__(self, *args, **kwargs):
-    super(OptivisItemEditGroupBox, self).__init__(*args, **kwargs)
-
-    self.setTitle(OptivisItemEditGroupBox.title)
+    super(OptivisItemEditPanel, self).__init__(*args, **kwargs)
 
     # create layout to use for edit controls (empty by default)
     self.vBox = PyQt4.QtGui.QVBoxLayout()
+    self.vBox.setAlignment(PyQt4.QtCore.Qt.AlignTop)
 
     # set layout
     self.setLayout(self.vBox)
@@ -568,11 +575,49 @@ class OptivisItemEditGroupBox(PyQt4.QtGui.QGroupBox):
     if pykatObject is None:
       raise Exception('External item is deleted')
 
+    # handle weak references
+    if isinstance(pykatObject, weakref.ReferenceType):
+      pykatObject = pykatObject()
+
     # loop over attributes from external object and create
     for paramName in attributes:
       dataType = attributes[paramName]
 
-      self.vBox.addWidget(OptivisCanvasItemDataType.getCanvasWidget(dataType, canvasItem))
+      # get attribute value
+      try:
+        paramValue = getattr(pykatObject, paramName)
+      except AttributeError, e:
+        print "[GUI] WARNING: the value of a parameter specified in the parameter list with this object is not available. Skipping."
+        continue
+
+      # get widget for this parameter
+      paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(dataType, canvasItem)
+
+      # set its value
+      OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
+
+      # create a container for this edit widget
+      container = PyQt4.QtGui.QWidget()
+      containerLayout = PyQt4.QtGui.QHBoxLayout()
+
+      # remove padding between widgets
+      containerLayout.setContentsMargins(0, 0, 0, 0)
+
+      # create label
+      label = PyQt4.QtGui.QLabel(text=paramName)
+
+      # add label and edit widget to layout
+      containerLayout.addWidget(label)
+      containerLayout.addWidget(paramEditWidget)
+
+      # set layout of container
+      container.setLayout(containerLayout)
+
+      # set container height
+      #container.setFixedHeight(50)
+
+      # add container to edit panel
+      self.vBox.addWidget(container)
 
 class AbstractCanvasItem(object):
   """
@@ -814,7 +859,20 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
 
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
-      return PyQt4.QtGui.QLineEdit()
+      widget = PyQt4.QtGui.QLineEdit()
+
+      return widget
 
     if itemDataType == OptivisCanvasItemDataType.CHECKBOX:
-      return PyQt4.QtGui.QCheckBox()
+      widget = PyQt4.QtGui.QCheckBox()
+
+      return widget
+
+  @staticmethod
+  def setCanvasWidgetValue(widget, itemDataType, value):
+    if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
+      widget.setText(str(value))
+    elif itemDataType == OptivisCanvasItemDataType.CHECKBOX:
+      widget.setChecked(value)
+    else:
+      raise Exception('Specified item data type is invalid')
