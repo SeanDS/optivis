@@ -19,6 +19,8 @@ import optivis.bench.components
 import optivis.bench.links
 import optivis.geometry
 
+from collections import OrderedDict
+
 class AbstractCanvas(optivis.view.AbstractView):
   __metaclass__ = abc.ABCMeta
   
@@ -30,6 +32,8 @@ class AbstractCanvas(optivis.view.AbstractView):
   SHOW_COMPONENTS = 1 << 0
   SHOW_LINKS = 1 << 1
   SHOW_LABELS = 1 << 2
+
+  canvasLabelFlags = OrderedDict()
 
   # 'show all', 2^(n+1)-1 where n is the number of significant bits above
   SHOW_MAX = (1 << 3) - 1
@@ -107,6 +111,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     ### add menu and menu items
     menubar = self.qMainWindow.menuBar()
     fileMenu = menubar.addMenu('&File')
+    self.labelMenu = menubar.addMenu('&Labels')
     
     exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
     exportAction.setShortcut('Ctrl+E')
@@ -117,7 +122,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     exitAction.setShortcut('Ctrl+Q')
     exitAction.triggered.connect(self.qApplication.quit)
     fileMenu.addAction(exitAction)
-  
+    
   @abc.abstractmethod
   def initialise(self):
     """
@@ -151,17 +156,31 @@ class AbstractCanvas(optivis.view.AbstractView):
 	if canvasLink.item.labels is not None:
 	  # Add labels to list of canvas labels.
           for label in canvasLink.item.labels:
-            canvasLabels.append(CanvasLabel(label))
+            canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
 	  
       for canvasComponent in canvasComponents:
         if canvasComponent.item.labels is not None:
 	  # Add labels to list of canvas labels.
           for label in canvasComponent.item.labels:
-            canvasLabels.append(CanvasLabel(label))
+            canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
 	  
       for canvasLabel in canvasLabels:
 	canvasLabel.draw(self.qScene)
-  
+    
+    # Now that all labels have been created the dictionary of
+    # label content options should be available.
+    self.labelMenu.clear()
+    
+    for kv in self.canvasLabelFlags.items():
+        checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
+        checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
+        checkableAction.setDefaultWidget(checkBox)
+        
+        #self.labelMenu.addAction(checkableAction)
+    
+    self.labelMenu.addSeparator()
+    self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
+      
   def layout(self):
     # instantiate layout manager and arrange objects
     layout = optivis.layout.SimpleLayout(self.scene)
@@ -724,12 +743,18 @@ class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
     event.accept()
 
 class CanvasLabel(object):
-  def __init__(self, label, *args, **kwargs):
+  def __init__(self, label, canvasLabelFlags=None, *args, **kwargs):
     if not isinstance(label, optivis.bench.labels.AbstractLabel):
       raise Exception('Specified label is not of type AbstractLabel')
     
     self.label = label
+    self._canvasLabelFlags = canvasLabelFlags
     
+    if canvasLabelFlags is not None:
+        for kv in self.label.content.items():
+            if kv[0] not in self._canvasLabelFlags:
+                self._canvasLabelFlags[kv[0]] = False
+                    
     super(CanvasLabel, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
@@ -738,9 +763,11 @@ class CanvasLabel(object):
     # create label
     text = self.label.text
     
-    for kv in self.label.content.items():
-        text += "\n%s: %2.2g" % kv
-    
+    if self._canvasLabelFlags is not None:
+        for kv in self.label.content.items():
+            if self._canvasLabelFlags[kv[0]] == True:
+                text += "\n%s: %2.2g" % kv
+
     labelItem = PyQt4.QtGui.QGraphicsTextItem(text)
     
     # calculate label size

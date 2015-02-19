@@ -10,7 +10,7 @@ class AbstractLabel(object):
     super(AbstractLabel, self).__init__(*args, **kwargs)
 
 class Label(AbstractLabel):
-  def __init__(self, text, position, item=None, azimuth=0, offset=None, *args, **kwargs):
+  def __init__(self, text, position, item=None, azimuth=0, offset=None, content={}, *args, **kwargs):
     """
     Instantiate label.
     
@@ -25,6 +25,7 @@ class Label(AbstractLabel):
     self.position = position
     self.azimuth = azimuth
     self.item = item
+    self.content = content
     
     if offset is None:
       offset = optivis.geometry.Coordinates(0, 0)
