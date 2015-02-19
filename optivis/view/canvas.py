@@ -85,7 +85,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.qView.setScale(self.zoom)
     
     # set view antialiasing
-    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing)
+    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
     
     # set window title
     self.qMainWindow.setWindowTitle(self.title)
@@ -612,7 +612,7 @@ class CanvasLabel(object):
 
     # create label
     labelItem = PyQt4.QtGui.QGraphicsTextItem(self.label.text)
-
+    
     # calculate label size
     labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
     
