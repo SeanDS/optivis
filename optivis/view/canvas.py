@@ -237,8 +237,8 @@ class MainWindow(PyQt4.Qt.QMainWindow):
   def __init__(self, *args, **kwargs):
     super(MainWindow, self).__init__(*args, **kwargs)
   
-  def clickHandler(self, *args, **kwargs):
-    print self.sender()
+  def clickHandler(self, item, event, *args, **kwargs):
+    print item
 
 class GraphicsScene(PyQt4.QtGui.QGraphicsScene):
   def __init__(self, *args, **kwargs):
@@ -520,14 +520,12 @@ class CanvasComponent(AbstractCanvasItem):
     
     # Create graphical representation of SVG image at path.
     svgItem = OptivisSvgItem(path)
+
+    # set callback
+    svgItem.clickedCallback = self.svgItemClicked
     
     if self.item.tooltip is not None:
         svgItem.setToolTip(self.item.tooltip)
-    
-    # Add callback, if necessary
-    if self.clickedCallback is not None:
-      # FIXME: check clickedCallback is a valid callable
-      svgItem.connect(svgItem, PyQt4.QtCore.SIGNAL('clicked()'), self.clickedCallback)
     
     # Set position of top-left corner.
     # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
@@ -541,14 +539,24 @@ class CanvasComponent(AbstractCanvasItem):
     
     qScene.addItem(svgItem)
 
+  def svgItemClicked(self, event, *args, **kwargs):
+    if self.clickedCallback is not None:
+      self.clickedCallback(self, event, *args, **kwargs)
+
 class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
   def __init__(self, *args, **kwargs):
-    # initialise this as a QObject (QGraphicsSvgItem is not a descendent of QObject and so can't send signals by default)
-    PyQt4.QtCore.QObject.__init__(self)
-    
-    # call other constructor (order is important)
+    # TODO: is there a way to send the clickCallback into this consturctor without screwing up Qt? (Right now any extra arguments in the __init__ above seems to make the SvgItem silently fail to draw...)
     super(OptivisSvgItem, self).__init__(*args, **kwargs)
   
+  @property
+  def clickedCallback(self):
+    return self.__clickedCallback
+
+  @clickedCallback.setter
+  def clickedCallback(self, clickedCallback):
+    # FIXME: check that clickedCallback is a valid callable
+    self.__clickedCallback = clickedCallback
+
   def mousePressEvent(self, event, *args, **kwargs):
     """
     This method does nothing but accept the event, but this behaviour
@@ -557,8 +565,9 @@ class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
     event.accept()
   
   def mouseReleaseEvent(self, event, *args, **kwargs):
-    # emit clicked signal with no arguments
-    self.emit(PyQt4.QtCore.SIGNAL('clicked()'))
+    if self.clickedCallback is not None:
+      # call callback
+      self.clickedCallback(event, *args, **kwargs)
     
     # this is the default, but we'll call it anyway
     event.accept()
