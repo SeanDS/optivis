@@ -725,7 +725,7 @@ class OptivisItemDataType(object):
   TEXTBOX = 1
   CHECKBOX = 2
 
-class OptivisCanvasItemDataType(OptivisType):
+class OptivisCanvasItemDataType(OptivisItemDataType):
   def getCanvasWidget(itemDataType, canvasItem):
     if not isinstance(canvasItem, AbstractCanvasItem):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
