@@ -132,7 +132,13 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     pass
 
-  def draw(self):
+  def toggleLabelContent(self, checked):
+      sender = self.qMainWindow.sender()
+      label = sender.data
+      self.canvasLabelFlags[label] = checked
+      self.draw(refreshMenu=False)
+      
+  def draw(self, refreshMenu=True):
     # empty the qScene
     self.qScene.clear()
     
@@ -168,20 +174,26 @@ class AbstractCanvas(optivis.view.AbstractView):
       for canvasLabel in canvasLabels:
 	canvasLabel.draw(self.qScene)
     
-    # Now that all labels have been created the dictionary of
-    # label content options should be available.
-    self.labelMenu.clear()
+    if refreshMenu:
+        # Now that all labels have been created the dictionary of
+        # label content options should be available.
+        self.labelMenu.clear()
     
-    for kv in self.canvasLabelFlags.items():
-        checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
-        checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
-        checkableAction.setDefaultWidget(checkBox)
+        for kv in self.canvasLabelFlags.items():
+            a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
+            a.data = kv[0]
+            a.toggled.connect(self.toggleLabelContent)
+            self.labelMenu.addAction(a)
+            # This doesn't work!
+            # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
+            # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
+            # checkableAction.setDefaultWidget(checkBox)
+            # self.labelMenu.addAction(checkableAction)
         
-        #self.labelMenu.addAction(checkableAction)
+        self.labelMenu.addSeparator()
+        self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
+        
     
-    self.labelMenu.addSeparator()
-    self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
-      
   def layout(self):
     # instantiate layout manager and arrange objects
     layout = optivis.layout.SimpleLayout(self.scene)
