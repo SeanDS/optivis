@@ -7,7 +7,7 @@ import optivis.scene
 import optivis.bench.components
 import optivis.bench.links
 
-class AbstractDrawable(object):
+class AbstractView(object):
   __metaclass__ = abc.ABCMeta
   
   def __init__(self, scene, size=None, zoom=1.0, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):

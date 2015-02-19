@@ -20,10 +20,10 @@ mIX = components.SteeringMirror(name="IX")
 mIY = components.SteeringMirror(name="IY")
 
 # link OUTPUTS of beam splitter to mirrors
-scene.link(bs.getOutputNode("frB"), mPR.getInputNode("fr"), 25)
-scene.link(bs.getOutputNode("bkB"), mSR.getInputNode("fr"), 50)
-scene.link(bs.getOutputNode("bkA"), mIX.getInputNode("fr"), 75)
-scene.link(bs.getOutputNode("frA"), mIY.getInputNode("fr"), 100)
+scene.link(outputNode=bs.getOutputNode("frB"), inputNode=mPR.getInputNode("fr"), length=25)
+scene.link(outputNode=bs.getOutputNode("bkB"), inputNode=mSR.getInputNode("fr"), length=50)
+scene.link(outputNode=bs.getOutputNode("bkA"), inputNode=mIX.getInputNode("fr"), length=75)
+scene.link(outputNode=bs.getOutputNode("frA"), inputNode=mIY.getInputNode("fr"), length=100)
 
 gui = canvas.Simple(scene=scene)
 gui.show()

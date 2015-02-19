@@ -3,6 +3,8 @@ from __future__ import unicode_literals, division
 import os
 import os.path
 import sys
+
+import abc
 import cairosvg
 from xml.etree import ElementTree as et
 
@@ -11,7 +13,7 @@ import optivis.bench.components
 import optivis.bench.links
 import optivis.layout
 
-class Svg(optivis.view.AbstractDrawable):
+class Svg(optivis.view.AbstractView):
   # supported file formats, extensions and file select filters
   __formats = ['svg', 'png', 'pdf', 'ps']
   __extensions = ['.svg', '.png', '.pdf', '.ps']
@@ -143,7 +145,21 @@ class Svg(optivis.view.AbstractDrawable):
     
     return docStr
 
-class SvgComponent(optivis.bench.components.AbstractDrawableComponent):
+class AbstractSvgItem(object):
+  """
+  Class to represent an item that can be drawn onto an SVG image (e.g. component, link, label).
+  """
+  
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, *args, **kwargs):
+    pass
+  
+  @abc.abstractmethod
+  def draw(self, *args, **kwargs):
+    return
+
+class SvgComponent(AbstractSvgItem):
   def __init__(self, component, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
@@ -230,7 +246,7 @@ class SvgComponent(optivis.bench.components.AbstractDrawableComponent):
     
     return
 
-class SvgLink(optivis.bench.links.AbstractDrawableLink):
+class SvgLink(AbstractSvgItem):
   def __init__(self, link, *args, **kwargs):
     if not isinstance(link, optivis.bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')

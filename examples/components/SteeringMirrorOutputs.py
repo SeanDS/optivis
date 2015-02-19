@@ -17,7 +17,7 @@ m1 = components.SteeringMirror(azimuth=0, aoi=45)
 d1 = components.Dump()
 
 # link OUTPUT of mirror to dump
-scene.link(m1.getOutputNode("fr"), d1.getInputNode("in"), 50)
+scene.link(outputNode=m1.getOutputNode("fr"), inputNode=d1.getInputNode("in"), length=50)
 
 scene.reference = m1
 
