@@ -697,7 +697,12 @@ class CanvasLabel(object):
     print "[GUI] Drawing label {0}".format(self.label)
 
     # create label
-    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.label.text)
+    text = self.label.text
+    
+    for kv in self.label.content.items():
+        text += "\n%s: %2.2g" % kv
+    
+    labelItem = PyQt4.QtGui.QGraphicsTextItem(text)
     
     # calculate label size
     labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
