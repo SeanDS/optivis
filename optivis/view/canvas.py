@@ -134,14 +134,16 @@ class AbstractCanvas(optivis.view.AbstractView):
     # draw labels
     if self.showFlags & AbstractCanvas.SHOW_LABELS:
       for canvasLink in canvasLinks:
-	if canvasLink.item.label is not None:
-	  # Add label to list of canvas labels.
-	  canvasLabels.append(CanvasLabel(canvasLink))
+	if canvasLink.item.labels is not None:
+	  # Add labels to list of canvas labels.
+          for label in canvasLink.item.labels:
+            canvasLabels.append(CanvasLabel(label))
 	  
       for canvasComponent in canvasComponents:
-        if canvasComponent.item.label is not None:
-	  # Add label to list
-	  canvasLabels.append(CanvasLabel(canvasComponent))
+        if canvasComponent.item.labels is not None:
+	  # Add labels to list of canvas labels.
+          for label in canvasComponent.item.labels:
+            canvasLabels.append(CanvasLabel(label))
 	  
       for canvasLabel in canvasLabels:
 	canvasLabel.draw(self.qScene)
@@ -594,37 +596,37 @@ class CanvasLink(AbstractCanvasItem):
       qScene.addItem(circle)
 
 class CanvasLabel(object):
-  def __init__(self, canvasItem, *args, **kwargs):
-    if not isinstance(canvasItem, AbstractCanvasItem):
-      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
+  def __init__(self, label, *args, **kwargs):
+    if not isinstance(label, optivis.bench.labels.AbstractLabel):
+      raise Exception('Specified label is not of type AbstractLabel')
     
-    self.canvasItem = canvasItem
+    self.label = label
     
     super(CanvasLabel, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
-    print "[GUI] Drawing label {0}".format(self.canvasItem.item.label)
+    print "[GUI] Drawing label {0}".format(self.label)
 
     # create label
-    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.canvasItem.item.label.text)
+    labelItem = PyQt4.QtGui.QGraphicsTextItem(self.label.text)
 
     # calculate label size
     labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
     
-    labelAzimuth = self.canvasItem.item.getLabelAzimuth() + self.canvasItem.item.label.azimuth
+    labelAzimuth = self.label.item.getLabelAzimuth() + self.label.azimuth
     
     ### calculate label position
     # get nominal position
-    labelPosition = self.canvasItem.item.getLabelOrigin()
+    labelPosition = self.label.item.getLabelOrigin()
     
     # translate to user-defined position
-    labelPosition = labelPosition.translate((self.canvasItem.item.label.position * self.canvasItem.item.getSize()).rotate(self.canvasItem.item.getLabelAzimuth()))
+    labelPosition = labelPosition.translate((self.label.position * self.label.item.getSize()).rotate(self.label.item.getLabelAzimuth()))
     
     # move label such that the text is y-centered
     labelPosition = labelPosition.translate(optivis.geometry.Coordinates(0, labelSize.y / 2).flip().rotate(labelAzimuth))
     
     # add user-defined offset
-    labelPosition = labelPosition.translate(self.canvasItem.item.label.offset.rotate(self.canvasItem.item.getLabelAzimuth()))
+    labelPosition = labelPosition.translate(self.label.offset.rotate(self.label.item.getLabelAzimuth()))
     
     # set position and angle
     labelItem.setPos(labelPosition.x, labelPosition.y)

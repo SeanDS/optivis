@@ -11,8 +11,8 @@ class AbstractBenchItem(object):
   
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, label=None, *args, **kwargs):
-    self.label = label
+  def __init__(self, labels=None, *args, **kwargs):
+    self.labels = labels
 
   @abc.abstractmethod
   def getLabelOrigin(self):
@@ -27,12 +27,21 @@ class AbstractBenchItem(object):
     pass
     
   @property
-  def label(self):
-    return self.__label
+  def labels(self):
+    return self.__labels
 
-  @label.setter
-  def label(self, label):
-    if label is not None and not isinstance(label, labels.Label):
-      raise Exception('Specified label is not of type Label')
+  @labels.setter
+  def labels(self, theseLabels):
+    processedLabels = []
 
-    self.__label = label
+    if theseLabels is not None:
+      for label in theseLabels:
+        if not isinstance(label, labels.Label):
+          raise Exception('Specified label is not of type Label')
+
+        # tell label what its attached item is
+        label.item = self
+
+        processedLabels.append(label)
+
+    self.__labels = processedLabels
