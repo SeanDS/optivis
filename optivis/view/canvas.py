@@ -116,10 +116,6 @@ class AbstractCanvas(optivis.view.AbstractView):
     # create drawing area
     self.qScene = GraphicsScene()
     self.qView = GraphicsView(self.qScene, self.qMainWindow)
-    self.qView.setScale(self.zoom)
-    
-    # set view antialiasing
-    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
     
     # set window title
     self.qMainWindow.setWindowTitle(self.title)
@@ -139,24 +135,27 @@ class AbstractCanvas(optivis.view.AbstractView):
     exitAction.triggered.connect(self.qApplication.quit)
     fileMenu.addAction(exitAction)
     
-  @abc.abstractmethod
   def initialise(self):
     """
     Lays out the GUI after all of the main widgets have been created by create()
     """
-    
-    pass
+
+    self.initialiseView()
+
+  def initialiseView(self):
+    # set zoom
+    self.qView.setScale(self.zoom)
+
+    # set view antialiasing
+    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
 
   def toggleLabelContent(self, checked):
       sender = self.qMainWindow.sender()
       label = sender.data
       self.canvasLabelFlags[label] = checked
-      self.draw(refreshMenu=False)
+      self.redraw(refreshMenu=False)
       
-  def draw(self, refreshMenu=True):
-    # empty the qScene
-    self.qScene.clear()
-    
+  def draw(self):
     # get canvas links and components
     canvasLinks = self.getCanvasLinks()
     canvasComponents = self.getCanvasComponents()
@@ -188,27 +187,36 @@ class AbstractCanvas(optivis.view.AbstractView):
 	  
       for canvasLabel in canvasLabels:
 	canvasLabel.draw(self.qScene)
-    
+
+  def redraw(self, refreshMenu=True, *args, **kwargs):
+    # empty the qScene
+    self.qScene.clear()
+
+    # draw the scene again
+    self.draw(*args, **kwargs)
+
     if refreshMenu:
-        # Now that all labels have been created the dictionary of
-        # label content options should be available.
-        self.labelMenu.clear()
+      # Now that all labels have been created the dictionary of
+      # label content options should be available.
+      self.labelMenu.clear()
     
-        for kv in self.canvasLabelFlags.items():
-            a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
-            a.data = kv[0]
-            a.toggled.connect(self.toggleLabelContent)
-            self.labelMenu.addAction(a)
-            # This doesn't work!
-            # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
-            # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
-            # checkableAction.setDefaultWidget(checkBox)
-            # self.labelMenu.addAction(checkableAction)
+      for kv in self.canvasLabelFlags.items():
+        a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
+        a.data = kv[0]
+        a.toggled.connect(self.toggleLabelContent)
+        self.labelMenu.addAction(a)
+        # This doesn't work!
+        # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
+        # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
+        # checkableAction.setDefaultWidget(checkBox)
+        # self.labelMenu.addAction(checkableAction)
         
-        self.labelMenu.addSeparator()
-        self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
-        
-    
+      self.labelMenu.addSeparator()
+      self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
+
+    # reset the view
+    self.initialiseView()
+
   def layout(self):
     # instantiate layout manager and arrange objects
     layout = self.layoutManagerClass(self.scene)
@@ -224,6 +232,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     # show on screen
     self.qMainWindow.show()
     
+    # if IPython is being used, don't block the terminal
     try:
         if __IPYTHON__:
             from IPython.lib.inputhook import enable_gui
@@ -347,6 +356,8 @@ class Simple(AbstractCanvas):
     super(Simple, self).__init__(*args, **kwargs)
   
   def initialise(self):
+    super(Simple, self).initialise()
+
     # set central widget to be the view
     self.qMainWindow.setCentralWidget(self.qView)
     
@@ -360,6 +371,8 @@ class Full(AbstractCanvas):
     super(Full, self).__init__(*args, **kwargs)
   
   def initialise(self):
+    super(Full, self).initialise()
+
     ### create controls
     
     # add control widgets
@@ -439,7 +452,7 @@ class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
     self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2)
 
     # redraw canvas
-    self.canvas.draw()
+    self.canvas.redraw()
 
   @property
   def canvas(self):
@@ -610,7 +623,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas.layout()
 
     # redraw
-    self.canvas.draw()
+    self.canvas.redraw()
 
   def zoomSliderChanged(self, value):
     # scale value by zoom step (sliders only support int increments)
@@ -645,11 +658,11 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   
   def setStartMarkers(self, value):
     self.canvas.startMarkers = value
-    self.canvas.draw()
+    self.canvas.redraw()
     
   def setEndMarkers(self, value):
     self.canvas.endMarkers = value
-    self.canvas.draw()
+    self.canvas.redraw()
 
 class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
   def __init__(self, *args, **kwargs):
