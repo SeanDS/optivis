@@ -636,10 +636,6 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
 
       # connect edit widget text change signal to a slot that deals with it
       self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.paramEditWidgetTextChanged)
-
-      # set its value
-      if str(paramValue) == "None":
-          paramValue = ""
           
       OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
 
@@ -923,10 +919,10 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
   def setCanvasWidgetValue(widget, itemDataType, itemValue):
     # FIXME: check inputs are valid
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
-      if itemValue is None:
-        itemValue = ""
-      else:
-        itemValue = str(itemValue)
+      itemValue = str(itemValue)
+
+      if itemValue == 'None':
+        itemValue = ''
 
       widget.setText(itemValue)
     else:
