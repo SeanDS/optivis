@@ -569,6 +569,9 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     # set layout
     self.setLayout(self.vBox)
 
+  def tmp(self, *args, **kwargs):
+    print self.sender()
+
   def setContentFromCanvasItem(self, canvasItem):
     # empty current contents
     # from http://stackoverflow.com/questions/4528347/clear-all-widgets-in-a-layout-in-pyqt
@@ -596,14 +599,16 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
       dataType = attributes[paramName]
 
       # get attribute value
+      paramValue = getattr(pykatObject, paramName)
+
+      # get widget for this parameter
       try:
-        paramValue = getattr(pykatObject, paramName)
+        paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(paramName, dataType, canvasItem)
+
+        self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.tmp)
       except AttributeError, e:
         print "[GUI] WARNING: the value of a parameter specified in the parameter list with this object is not available. Skipping."
         continue
-
-      # get widget for this parameter
-      paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(dataType, canvasItem)
 
       # set its value
       if str(paramValue) == "None":
@@ -869,7 +874,7 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
   """
 
   @staticmethod
-  def getCanvasWidget(itemDataType, canvasItem):
+  def getCanvasWidget(itemParamName, itemDataType, canvasItem):
     if not isinstance(canvasItem, AbstractCanvasItem):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
 
@@ -877,17 +882,13 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
       widget = PyQt4.QtGui.QLineEdit()
 
       return widget
-
-    if itemDataType == OptivisCanvasItemDataType.CHECKBOX:
-      widget = PyQt4.QtGui.QCheckBox()
-
-      return widget
+    else:
+      raise Exception('Specified item data type is invalid')
 
   @staticmethod
-  def setCanvasWidgetValue(widget, itemDataType, value):
+  def setCanvasWidgetValue(widget, itemDataType, itemValue):
+    # FIXME: check inputs are valid
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
-      widget.setText(str(value))
-    elif itemDataType == OptivisCanvasItemDataType.CHECKBOX:
-      widget.setChecked(value)
+      widget.setText(str(itemValue))
     else:
       raise Exception('Specified item data type is invalid')
