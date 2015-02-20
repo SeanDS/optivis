@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, division
 
 import abc
+import weakref
 
 import labels
 
@@ -47,3 +48,19 @@ class AbstractBenchItem(object):
         processedLabels.append(label)
 
     self.__labels = processedLabels
+
+  @property
+  def pykatObject(self):
+    # references to external items should be made using weakref, so if they are deleted after the reference is made, the reference will be None
+    if self.__pykatObject is None:
+      raise Exception('External item is deleted')
+
+    # handle weak references
+    if isinstance(self.__pykatObject, weakref.ReferenceType):
+      return self.__pykatObject()
+    else:
+      return self.__pykatObject
+
+  @pykatObject.setter
+  def pykatObject(self, pykatObject):
+    self.__pykatObject = pykatObject
