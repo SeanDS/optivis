@@ -606,6 +606,9 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
       paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(dataType, canvasItem)
 
       # set its value
+      if str(paramValue) == "None":
+          paramValue = ""
+          
       OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
 
       # create a container for this edit widget
@@ -819,13 +822,13 @@ class CanvasLabel(object):
 
     # create label
     text = self.label.text
-    
+
     if self._canvasLabelFlags is not None:
         for kv in self.label.content.items():
             if self._canvasLabelFlags[kv[0]] == True:
-                text += "\n%s: %2.2g" % kv
+                text += "\n%s" % kv[1]
 
-    labelItem = PyQt4.QtGui.QGraphicsTextItem(text)
+    labelItem = PyQt4.QtGui.QGraphicsSimpleTextItem(text)
     
     # calculate label size
     labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
