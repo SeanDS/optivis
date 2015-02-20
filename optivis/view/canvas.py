@@ -569,8 +569,30 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     # set layout
     self.setLayout(self.vBox)
 
-  def tmp(self, *args, **kwargs):
-    print self.sender()
+  def paramEditWidgetTextChanged(self, *args, **kwargs):
+    sender = self.sender()
+
+    # get parameters from sender
+    paramName, itemDataType, canvasItem = sender.data
+
+    # get the canvas item associated with this edit widget
+    # reference the weakref by calling sender.data like a function
+    canvasItem = canvasItem()
+
+    if not isinstance(canvasItem, AbstractCanvasItem):
+      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
+
+    ### send edit to externally linked item
+
+    # get external object
+    pykatObject = canvasItem.item.pykatObject
+
+    # set the updated value
+    try:
+      setattr(pykatObject, paramName, OptivisCanvasItemDataType.getCanvasWidgetValue(sender, itemDataType))
+    except AttributeError, e:
+      print OptivisCanvasItemDataType.getCanvasWidgetValue(sender, itemDataType)
+      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, canvasItem.item, e))
 
   def setContentFromCanvasItem(self, canvasItem):
     # empty current contents
@@ -586,14 +608,6 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     attributes = canvasItem.item.paramList
     pykatObject = canvasItem.item.pykatObject
 
-    # references to external items should be made using weakref, so if they are deleted after the reference is made, the reference will be None
-    if pykatObject is None:
-      raise Exception('External item is deleted')
-
-    # handle weak references
-    if isinstance(pykatObject, weakref.ReferenceType):
-      pykatObject = pykatObject()
-
     # loop over attributes from external object and create
     for paramName in attributes:
       dataType = attributes[paramName]
@@ -605,10 +619,15 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
       try:
         paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(paramName, dataType, canvasItem)
 
-        self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.tmp)
+        # give the edit widget knowledge of its canvas item
+        # use a weak reference to avoid making the canvas item a zombie if it is deleted
+        paramEditWidget.data = (paramName, dataType, weakref.ref(canvasItem))
       except AttributeError, e:
         print "[GUI] WARNING: the value of a parameter specified in the parameter list with this object is not available. Skipping."
         continue
+
+      # connect edit widget text change signal to a slot that deals with it
+      self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.paramEditWidgetTextChanged)
 
       # set its value
       OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
@@ -883,9 +902,21 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
       raise Exception('Specified item data type is invalid')
 
   @staticmethod
+  def getCanvasWidgetValue(widget, itemDataType):
+    if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
+      return str(widget.text())
+    else:
+      raise Exception('Specified item data type is invalid')
+
+  @staticmethod
   def setCanvasWidgetValue(widget, itemDataType, itemValue):
     # FIXME: check inputs are valid
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
-      widget.setText(str(itemValue))
+      if itemValue is None:
+        itemValue = ""
+      else:
+        itemValue = str(itemValue)
+
+      widget.setText(itemValue)
     else:
       raise Exception('Specified item data type is invalid')
