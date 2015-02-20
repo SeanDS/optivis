@@ -209,8 +209,16 @@ class AbstractCanvas(optivis.view.AbstractView):
     # show on screen
     self.qMainWindow.show()
     
-    sys.exit(self.qApplication.exec_())
-  
+    try:
+        if __IPYTHON__:
+            from IPython.lib.inputhook import enable_gui
+            app = enable_gui('qt4')
+        else:
+            raise ImportError
+            
+    except (ImportError, NameError):
+        sys.exit(self.qApplication.exec_())
+    
   def getCanvasComponents(self):
     canvasComponents = []
     
