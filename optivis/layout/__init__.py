@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, division
 
 import abc
+import math
 
 import optivis
 import optivis.geometry
@@ -9,13 +10,14 @@ import optivis.bench.links
 
 class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
+
+  title = "Abstract"
+
+  # set of components that are part of links
+  linkedComponents = set([])
   
   def __init__(self, scene):
     self.scene = scene
-  
-  @abc.abstractmethod
-  def arrange(self):
-    return
   
   @property
   def scene(self):
@@ -27,13 +29,7 @@ class AbstractLayout(object):
       raise Exception('Specified scene is not of type optivis.scene.Scene')
     
     self.__scene = scene
-    
-class SimpleLayout(AbstractLayout):
-  linkedComponents = set([])
-  
-  def __init__(self, *args, **kwargs):
-    super(SimpleLayout, self).__init__(*args, **kwargs)
-  
+
   def arrange(self):
     # empty linked components list
     self.linkedComponents = set([])
@@ -45,19 +41,6 @@ class SimpleLayout(AbstractLayout):
     if self.scene.reference is None:
       # set reference to first link's output component
       self.scene.reference = self.scene.links[0].outputNode.component
-      
-    ## add reference component to linked components set, so it is automatically constrained
-    #self.linkedComponents.add(self.scene.reference)
-    
-    ## find link with reference, and move it to start of list
-    #for i in range(len(self.scene.links)):
-      #link = self.scene.links[i]
-      
-      #if link.hasComponent(self.scene.reference):
-	#del(links[i])
-	#links.insert(0, link)
-	
-	#break
     
     ###
     # Layout and link everything
@@ -152,7 +135,7 @@ class SimpleLayout(AbstractLayout):
     pivotAngle = referenceNode.getAbsoluteAzimuth()
     
     # position of component with respect to pivot
-    relativePosition = optivis.geometry.Coordinates(link.length, 0).rotate(pivotAngle)
+    relativePosition = optivis.geometry.Coordinates(self.getScaledLinkLength(link.length), 0).rotate(pivotAngle)
     
     if isinstance(referenceNode, optivis.bench.nodes.InputNode):
       # flip position because we're going 'backwards' from input to output
@@ -176,3 +159,21 @@ class SimpleLayout(AbstractLayout):
     
     for component in self.scene.getComponents():
       component.position = component.position.translate(offset)
+    
+  def getScaledLinkLength(self, length):
+    return length
+
+class StandardLayout(AbstractLayout):
+  title = "Standard"
+
+  def __init__(self, *args, **kwargs):
+    super(StandardLayout, self).__init__(*args, **kwargs)
+
+class LargeLengthLayout(StandardLayout):
+  title = "Downscale Large Lengths"
+
+  def __init__(self, *args, **kwargs):
+    super(LargeLengthLayout, self).__init__(*args, **kwargs)
+
+  def getScaledLinkLength(self, length):
+    return length * (20 * math.erfc(length / 100) + 0.01)

@@ -39,18 +39,33 @@ class AbstractCanvas(optivis.view.AbstractView):
   # 'show all', 2^(n+1)-1 where n is the number of significant bits above
   SHOW_MAX = (1 << 3) - 1
   
-  def __init__(self, clickedCallback=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
+  def __init__(self, layoutManagerClass=None, clickedCallback=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
+
+    if layoutManagerClass is None:
+      layoutManagerClass = optivis.layout.StandardLayout
 
     if showFlags is None:
       showFlags = AbstractCanvas.SHOW_MAX
 
+    self.layoutManagerClass = layoutManagerClass
     self.clickedCallback = clickedCallback
     self.showFlags = showFlags
     self.showLabelFlags = showLabelFlags
 
     self.create()
     self.initialise()
+
+  @property
+  def layoutManagerClass(self):
+    return self.__layoutManagerClass
+
+  @layoutManagerClass.setter
+  def layoutManagerClass(self, layoutManagerClass):
+    if not issubclass(layoutManagerClass, optivis.layout.AbstractLayout):
+      raise Exception('Specified layout manager class is not of type AbstractLayout')
+
+    self.__layoutManagerClass = layoutManagerClass
 
   @property
   def clickedCallback(self):
@@ -196,7 +211,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     
   def layout(self):
     # instantiate layout manager and arrange objects
-    layout = optivis.layout.SimpleLayout(self.scene)
+    layout = self.layoutManagerClass(self.scene)
     layout.arrange()
   
   def show(self):
@@ -286,6 +301,22 @@ class AbstractCanvas(optivis.view.AbstractView):
   def exportSvg(self, *args, **kwargs):
     svgView = optivis.view.svg.Svg(self.scene)
     svgView.export(*args, **kwargs)
+
+  def getLayoutManagerClasses(self):
+    def getSubclasses(subclass):
+      """
+      http://stackoverflow.com/questions/3862310/how-can-i-find-all-subclasses-of-a-given-class-in-python
+      """
+
+      subclasses = []
+
+      for thisSubclass in subclass.__subclasses__():
+        subclasses.append(thisSubclass)
+        subclasses.extend(getSubclasses(thisSubclass))
+
+      return subclasses
+
+    return getSubclasses(optivis.layout.AbstractLayout)
 
 class MainWindow(PyQt4.Qt.QMainWindow):
   def __init__(self, *args, **kwargs):
@@ -447,6 +478,40 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   def addControls(self):
     ### master layout
     controlLayout = PyQt4.QtGui.QVBoxLayout()
+
+    ### layout chooser
+    layoutGroupBox = PyQt4.QtGui.QGroupBox(title="Layout")
+    layoutGroupBox.setFixedHeight(100)
+
+    # layout label and combo box
+    layoutLabel = PyQt4.QtGui.QLabel("Manager")
+    self.layoutComboBox = PyQt4.QtGui.QComboBox()
+
+    # populate combo box
+    layoutManagerClasses = self.canvas.getLayoutManagerClasses()
+
+    for i in range(0, len(layoutManagerClasses)):
+      layoutManagerClass = layoutManagerClasses[i]
+
+      # add this layout to the combobox, setting the userData to the class name of this layout
+      self.layoutComboBox.addItem(layoutManagerClass.title, i)
+
+    # set selected layout
+    self.layoutComboBox.setCurrentIndex(self.layoutComboBox.findText(self.canvas.layoutManagerClass.title))
+
+    # connect signal to slot to listen for changes
+    self.layoutComboBox.currentIndexChanged[int].connect(self.layoutComboBoxChangeHandler)
+
+    # add combo box to group box
+    layoutLayout = PyQt4.QtGui.QHBoxLayout()
+    
+    layoutLayout.addWidget(layoutLabel)
+    layoutLayout.addWidget(self.layoutComboBox)
+    
+    layoutGroupBox.setLayout(layoutLayout)
+    
+    # add layout chooser controls to control box layout
+    controlLayout.addWidget(layoutGroupBox)
     
     ### zoom controls
     
@@ -478,7 +543,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     zoomSliderGroupBox.setLayout(sliderLayout)
     
-    # add zoom group box to layout
+    # add zoom group box to control box layout
     controlLayout.addWidget(zoomSliderGroupBox)
     
     ### marker controls
@@ -504,7 +569,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     markerCheckBoxGroupBox.setLayout(markerLayout)
     
-    # add marker check box group box to layout
+    # add marker check box group box to control box layout
     controlLayout.addWidget(markerCheckBoxGroupBox)
 
     ### item edit controls
@@ -521,12 +586,32 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     itemEditGroupBoxLayout.addWidget(self.itemEditScrollArea)
     self.itemEditGroupBox.setLayout(itemEditGroupBoxLayout)
 
-    # add group box to layout
+    # add group box to control box layout
     controlLayout.addWidget(self.itemEditGroupBox)
     
     ### add layout to control widget
     self.setLayout(controlLayout)
   
+  def layoutComboBoxChangeHandler(self):
+    # get combo box
+    layoutComboBox = self.sender()
+
+    # get layout manager classes
+    layoutManagerClasses = self.canvas.getLayoutManagerClasses()
+
+    # get selected item's data (which is the index of the selected layout in layoutManagerClasses)
+    # The toInt() returns a tuple with the data in first position and a 'status' in the second. We don't need the second one.
+    layoutIndex, ok = layoutComboBox.itemData(layoutComboBox.currentIndex()).toInt()
+
+    # update canvas layout
+    self.canvas.layoutManagerClass = layoutManagerClasses[layoutIndex]
+
+    # re-layout
+    self.canvas.layout()
+
+    # redraw
+    self.canvas.draw()
+
   def zoomSliderChanged(self, value):
     # scale value by zoom step (sliders only support int increments)
     self.setZoom(float(value * self.zoomStep))
@@ -577,6 +662,14 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     # set layout
     self.setLayout(self.vBox)
 
+  def setEditWidgetValidity(self, widget, validity):
+    if validity:
+      # clear background on widget
+      widget.setStyleSheet("")
+    else:
+      # yellow background
+      widget.setStyleSheet("background-color: yellow;")    
+
   def paramEditWidgetTextChanged(self, *args, **kwargs):
     sender = self.sender()
 
@@ -598,8 +691,13 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     # set the updated value
     try:
       setattr(pykatObject, paramName, OptivisCanvasItemDataType.getCanvasWidgetValue(sender, itemDataType))
+
+      self.setEditWidgetValidity(sender, True)
     except AttributeError, e:
-      print OptivisCanvasItemDataType.getCanvasWidgetValue(sender, itemDataType)
+      self.setEditWidgetValidity(sender, False)
+      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, canvasItem.item, e))
+    except Exception, e:
+      self.setEditWidgetValidity(sender, False)
       raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, canvasItem.item, e))
 
   def setContentFromCanvasItem(self, canvasItem):
