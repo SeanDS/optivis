@@ -1,5 +1,8 @@
 from __future__ import unicode_literals, division
 
+# custom signals
+# https://stackoverflow.com/questions/4523006/pyqt-signal-with-arguments-of-arbitrary-type-pyqt-pyobject-equivalent-for-new
+
 import os
 import os.path
 import sys
@@ -115,6 +118,8 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     # create drawing area
     self.qScene = GraphicsScene()
+    
+    # create view
     self.qView = GraphicsView(self.qScene, self.qMainWindow)
     
     # set window title
@@ -151,6 +156,9 @@ class AbstractCanvas(optivis.view.AbstractView):
     #
     # see http://permalink.gmane.org/gmane.comp.lib.qt.user/2150
     self.qView.setSceneRect(self.qScene.itemsBoundingRect())
+    
+    # set transformation anchor to reference the mouse position, for mouse zooming
+    self.qView.setTransformationAnchor(PyQt4.QtGui.QGraphicsView.AnchorUnderMouse)
     
     # set zoom
     self.qView.setScale(self.zoom)
@@ -237,13 +245,9 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     # draw scene
     self.draw()
-    
-    print "HI"
 
     # show on screen
     self.qMainWindow.show()
-    
-    print "HI"
     
     # if IPython is being used, don't block the terminal
     try:
@@ -349,8 +353,21 @@ class GraphicsScene(PyQt4.QtGui.QGraphicsScene):
     super(GraphicsScene, self).__init__(*args, **kwargs)
 
 class GraphicsView(PyQt4.QtGui.QGraphicsView):
+  wheel = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QWheelEvent)
+  
   def __init__(self, *args, **kwargs):
+    # initialise this as a QObject (QGraphicsView is not a descendent of QObject and so can't send signals by default)
+    PyQt4.QtCore.QObject.__init__(self)
+    
+    # now initialise as normal
     super(GraphicsView, self).__init__(*args, **kwargs)
+    
+  def wheelEvent(self, event):
+    # accept the event
+    event.accept()
+    
+    # emit event as a signal
+    self.wheel.emit(event)
   
   def setScale(self, scale):
     """
@@ -380,7 +397,7 @@ class Simple(AbstractCanvas):
     return
     
 class Full(AbstractCanvas):
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, **kwargs):    
     super(Full, self).__init__(*args, **kwargs)
   
   def initialise(self):
@@ -416,6 +433,11 @@ class Full(AbstractCanvas):
     
     # add controls to layout
     self.hBox.addWidget(self.controls, stretch=1)
+
+    ### set up signal handling
+
+    # set mouse wheel listener for view scrolling
+    self.qView.wheel.connect(self.controls.wheelHandler)
     
     ### finish up
     
@@ -492,7 +514,17 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   def clickHandler(self, canvasItem, event):
     print canvasItem.item
     self.itemEditPanel.setContentFromCanvasItem(canvasItem)
-
+    
+  def wheelHandler(self, event):
+    # get wheel delta, dividing by 120 (to represent 15 degrees of rotation -
+    # see http://qt-project.org/doc/qt-4.8/qwheelevent.html#delta)
+    delta = event.delta() / 120
+    
+    # calculate new zoom level
+    zoom = self.canvas.zoom + delta * self.zoomStep
+    
+    # set zoom
+    self.setZoom(zoom)
   @property
   def canvas(self):
     return self.__canvas
@@ -646,7 +678,14 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.setZoom(float(value))
   
   def setZoom(self, zoom):
+    # calculate rounded zoom level
     zoom = round(zoom / self.zoomStep) * self.zoomStep
+    
+    # clamp zoom level to bounds
+    if zoom < self.zoomRange[0]:
+      zoom = self.zoomRange[0]
+    elif zoom > self.zoomRange[1]:
+      zoom = self.zoomRange[1]
     
     self.canvas.zoom = zoom
     self.canvas.qView.setScale(zoom)
