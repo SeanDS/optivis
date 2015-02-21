@@ -107,7 +107,7 @@ class AbstractCanvas(optivis.view.AbstractView):
       raise Exception('Specified show label flags are not valid. Show flags value must be > 0 and {0}')
 
     self.__showLabelFlags = showLabelFlags
-    
+
   def create(self):
     # create application
     self.qApplication = PyQt4.Qt.QApplication(sys.argv)
@@ -143,6 +143,15 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.initialiseView()
 
   def initialiseView(self):
+    # Set view rectangle to be equal to the rectangle enclosing the items in the scene.
+    #
+    # This is necessary because QGraphicsView uses QGraphicsScene's sceneRect() method to obtain the size of the scene,
+    # and this is always set to the LARGEST scene rectangle EVER present on the scene since its creation. Since we don't
+    # want to recreate the scene object, we just have to instead do the following.
+    #
+    # see http://permalink.gmane.org/gmane.comp.lib.qt.user/2150
+    self.qView.setSceneRect(self.qScene.itemsBoundingRect())
+    
     # set zoom
     self.qView.setScale(self.zoom)
 
@@ -228,9 +237,13 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     # draw scene
     self.draw()
+    
+    print "HI"
 
     # show on screen
     self.qMainWindow.show()
+    
+    print "HI"
     
     # if IPython is being used, don't block the terminal
     try:
