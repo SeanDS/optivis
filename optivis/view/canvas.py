@@ -246,6 +246,11 @@ class AbstractCanvas(optivis.view.AbstractView):
 	for label in canvasComponent.item.labels:
 	  self.canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
   
+  def setZoom(self, zoom):
+    self.zoom = zoom
+    
+    self.qView.setScale(self.zoom)
+  
   def export(self):
     # generate file path
     directory = os.path.join(os.path.expanduser('~'), 'export.svg')
@@ -365,6 +370,9 @@ class Simple(AbstractCanvas):
     return
     
 class Full(AbstractCanvas):
+  zoomRange = (0.1, 10)
+  zoomStep = 0.1
+  
   def __init__(self, *args, **kwargs):    
     super(Full, self).__init__(*args, **kwargs)
   
@@ -444,7 +452,7 @@ class Full(AbstractCanvas):
     ### set up signal handling
 
     # set mouse wheel listener for view scrolling
-    self.qView.wheel.connect(self.controls.wheelHandler)
+    self.qView.wheel.connect(self.wheelHandler)
     
     ### finish up
     
@@ -458,6 +466,25 @@ class Full(AbstractCanvas):
     self.qView.setMinimumSize(self.size.x, self.size.y)
 
     return
+  
+  def setZoom(self, zoom):
+    # calculate rounded zoom level
+    zoom = round(zoom / Full.zoomStep) * Full.zoomStep
+    
+    # clamp zoom level to bounds
+    if zoom < Full.zoomRange[0]:
+      zoom = Full.zoomRange[0]
+    elif zoom > Full.zoomRange[1]:
+      zoom = Full.zoomRange[1]
+    
+    # call parent
+    super(Full, self).setZoom(zoom)
+    
+    # update zoom slider
+    self.controls.zoomSlider.setSliderPosition(self.zoom / Full.zoomStep)
+    
+    # update zoom spin box
+    self.controls.zoomSpinBox.setValue(self.zoom)
   
   def canvasLinkMouseReleasedHandler(self, event):
     # Get clicked canvas link.
@@ -478,6 +505,17 @@ class Full(AbstractCanvas):
     label = sender.data
     self.canvasLabelFlags[label] = checked
     self.redraw(refreshMenu=False)
+    
+  def wheelHandler(self, event):
+    # get wheel delta, dividing by 120 (to represent 15 degrees of rotation -
+    # see http://qt-project.org/doc/qt-4.8/qwheelevent.html#delta)
+    delta = event.delta() / 120
+    
+    # calculate new zoom level
+    zoom = self.zoom + delta * self.zoomStep
+    
+    # set zoom
+    self.setZoom(zoom)
 
 class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
   def __init__(self, canvas, *args, **kwargs):
@@ -524,10 +562,7 @@ class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
   def canvas(self, canvas):
     self.__canvas = canvas
 
-class ControlPanel(PyQt4.QtGui.QWidget):
-  zoomRange = (0.1, 10)
-  zoomStep = 0.1
-  
+class ControlPanel(PyQt4.QtGui.QWidget):  
   def __init__(self, canvas, *args, **kwargs):
     super(ControlPanel, self).__init__(*args, **kwargs)
   
@@ -537,17 +572,6 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   
   def openEditControls(self, canvasItem):
     self.itemEditPanel.setContentFromCanvasItem(canvasItem)
-    
-  def wheelHandler(self, event):
-    # get wheel delta, dividing by 120 (to represent 15 degrees of rotation -
-    # see http://qt-project.org/doc/qt-4.8/qwheelevent.html#delta)
-    delta = event.delta() / 120
-    
-    # calculate new zoom level
-    zoom = self.canvas.zoom + delta * self.zoomStep
-    
-    # set zoom
-    self.setZoom(zoom)
     
   @property
   def canvas(self):
@@ -604,16 +628,16 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     # zoom slider
     self.zoomSlider = PyQt4.QtGui.QSlider(PyQt4.QtCore.Qt.Horizontal)
     self.zoomSlider.setFocusPolicy(PyQt4.QtCore.Qt.NoFocus)
-    self.zoomSlider.setRange(self.zoomRange[0] / self.zoomStep, self.zoomRange[1] / self.zoomStep)
+    self.zoomSlider.setRange(self.canvas.zoomRange[0] / self.canvas.zoomStep, self.canvas.zoomRange[1] / self.canvas.zoomStep)
     self.zoomSlider.setSingleStep(1)
-    self.zoomSlider.setSliderPosition(self.canvas.zoom / self.zoomStep)
+    self.zoomSlider.setSliderPosition(self.canvas.zoom / self.canvas.zoomStep)
     self.zoomSlider.valueChanged[int].connect(self.zoomSliderChanged)
     
     # zoom spin box
     self.zoomSpinBox = PyQt4.QtGui.QDoubleSpinBox()
     self.zoomSpinBox.setDecimals(1)
-    self.zoomSpinBox.setRange(*self.zoomRange)
-    self.zoomSpinBox.setSingleStep(self.zoomStep)
+    self.zoomSpinBox.setRange(*self.canvas.zoomRange)
+    self.zoomSpinBox.setSingleStep(self.canvas.zoomStep)
     self.zoomSpinBox.setValue(self.canvas.zoom) # TODO: check this is a valid step
     self.zoomSpinBox.valueChanged[float].connect(self.zoomSpinBoxChanged)
     
@@ -696,29 +720,10 @@ class ControlPanel(PyQt4.QtGui.QWidget):
 
   def zoomSliderChanged(self, value):
     # scale value by zoom step (sliders only support int increments)
-    self.setZoom(float(value * self.zoomStep))
+    self.canvas.setZoom(float(value * self.canvas.zoomStep))
   
   def zoomSpinBoxChanged(self, value):
-    self.setZoom(float(value))
-  
-  def setZoom(self, zoom):
-    # calculate rounded zoom level
-    zoom = round(zoom / self.zoomStep) * self.zoomStep
-    
-    # clamp zoom level to bounds
-    if zoom < self.zoomRange[0]:
-      zoom = self.zoomRange[0]
-    elif zoom > self.zoomRange[1]:
-      zoom = self.zoomRange[1]
-    
-    self.canvas.zoom = zoom
-    self.canvas.qView.setScale(zoom)
-    
-    # update zoom slider
-    self.zoomSlider.setSliderPosition(self.canvas.zoom / self.zoomStep)
-    
-    # update zoom spin box
-    self.zoomSpinBox.setValue(self.canvas.zoom)
+    self.canvas.setZoom(float(value))
   
   def startMarkersChanged(self, value):
     if value == PyQt4.QtCore.Qt.Checked:
