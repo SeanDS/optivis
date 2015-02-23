@@ -45,6 +45,11 @@ class AbstractCanvas(optivis.view.AbstractView):
   def __init__(self, layoutManagerClass=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
 
+    # create empty lists for canvas stuff
+    self.canvasLinks = []
+    self.canvasComponents = []
+    self.canvasLabels = []
+
     if layoutManagerClass is None:
       layoutManagerClass = optivis.layout.StandardLayout
 
@@ -112,19 +117,20 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.qMainWindow.setWindowTitle(self.title)
     
     ### add menu and menu items
-    menubar = self.qMainWindow.menuBar()
-    fileMenu = menubar.addMenu('&File')
-    self.labelMenu = menubar.addMenu('&Labels')
+    self.menuBar = self.qMainWindow.menuBar()
+    self.fileMenu = self.menuBar.addMenu('&File')
     
     exportAction = PyQt4.QtGui.QAction('Export', self.qMainWindow)
     exportAction.setShortcut('Ctrl+E')
     exportAction.triggered.connect(self.export)
-    fileMenu.addAction(exportAction)
+    
+    self.fileMenu.addAction(exportAction)
     
     exitAction = PyQt4.QtGui.QAction('Exit', self.qMainWindow)
     exitAction.setShortcut('Ctrl+Q')
     exitAction.triggered.connect(self.qApplication.quit)
-    fileMenu.addAction(exitAction)
+    
+    self.fileMenu.addAction(exitAction)
     
   def initialise(self):
     """
@@ -153,71 +159,34 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
       
   def draw(self):
-    # get canvas links and components
-    canvasLinks = self.getCanvasLinks()
-    canvasComponents = self.getCanvasComponents()
-    canvasLabels = []
+    # create canvas stuff
+    self.createCanvasLinks()
+    self.createCanvasComponents()
+    self.createCanvasLabels()
     
     # draw links
     if self.showFlags & AbstractCanvas.SHOW_LINKS:
-      for canvasLink in canvasLinks:
+      for canvasLink in self.canvasLinks:
 	# draw
         canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
-        
-        # link click signals
-        canvasLink.optivisLineItem.comms.mouseReleased.connect(self.canvasLinkMouseReleasedHandler)
 
     # draw components
     if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
-      for canvasComponent in canvasComponents:
+      for canvasComponent in self.canvasComponents:
 	# draw
         canvasComponent.draw(self.qScene)
-        
-        # link click signals
-        canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
 
     # draw labels
     if self.showFlags & AbstractCanvas.SHOW_LABELS:
-      for canvasLink in canvasLinks:
-	if canvasLink.item.labels is not None:
-	  # Add labels to list of canvas labels.
-          for label in canvasLink.item.labels:
-            canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
-	  
-      for canvasComponent in canvasComponents:
-        if canvasComponent.item.labels is not None:
-	  # Add labels to list of canvas labels.
-          for label in canvasComponent.item.labels:
-            canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
-	  
-      for canvasLabel in canvasLabels:
+      for canvasLabel in self.canvasLabels:
 	canvasLabel.draw(self.qScene)
 
-  def redraw(self, refreshMenu=True, *args, **kwargs):
+  def redraw(self, *args, **kwargs):
     # empty the qScene
     self.qScene.clear()
 
     # draw the scene again
     self.draw(*args, **kwargs)
-
-    if refreshMenu:
-      # Now that all labels have been created the dictionary of
-      # label content options should be available.
-      self.labelMenu.clear()
-    
-      for kv in self.canvasLabelFlags.items():
-        a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
-        a.data = kv[0]
-        a.toggled.connect(self.toggleLabelContent)
-        self.labelMenu.addAction(a)
-        # This doesn't work!
-        # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
-        # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
-        # checkableAction.setDefaultWidget(checkBox)
-        # self.labelMenu.addAction(checkableAction)
-        
-      self.labelMenu.addSeparator()
-      self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
 
     # reset the view
     self.initialiseView()
@@ -247,24 +216,35 @@ class AbstractCanvas(optivis.view.AbstractView):
             
     except (ImportError, NameError):
         sys.exit(self.qApplication.exec_())
-    
-  def getCanvasComponents(self):
-    canvasComponents = []
-    
-    for component in self.scene.getComponents():
-      # Add component to list of canvas components.
-      canvasComponents.append(CanvasComponent(component))
-    
-    return canvasComponents
-  
-  def getCanvasLinks(self):
-    canvasLinks = []
+
+  def createCanvasLinks(self):
+    self.canvasLinks = []
     
     for link in self.scene.links:
       # Add link to list of canvas links.
-      canvasLinks.append(CanvasLink(link))
+      self.canvasLinks.append(CanvasLink(link))
+
+  def createCanvasComponents(self):
+    self.canvasComponents = []
     
-    return canvasLinks
+    for component in self.scene.getComponents():
+      # Add component to list of canvas components.
+      self.canvasComponents.append(CanvasComponent(component))
+  
+  def createCanvasLabels(self):
+    self.canvasLabels = []
+    
+    for canvasLink in self.canvasLinks:
+      if canvasLink.item.labels is not None:
+	# Add labels to list of canvas labels.
+	for label in canvasLink.item.labels:
+	  self.canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
+	
+    for canvasComponent in self.canvasComponents:
+      if canvasComponent.item.labels is not None:
+	# Add labels to list of canvas labels.
+	for label in canvasComponent.item.labels:
+	  self.canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
   
   def export(self):
     # generate file path
@@ -331,18 +311,6 @@ class AbstractCanvas(optivis.view.AbstractView):
       return subclasses
 
     return getSubclasses(optivis.layout.AbstractLayout)
-  
-  def toggleLabelContent(self, checked):
-    # By default, do nothing. This is for children to override.
-    pass
-  
-  def canvasLinkMouseReleasedHandler(self, event):
-    # By default, do nothing. This is for children to override.
-    pass
-    
-  def canvasComponentMouseReleasedHandler(self, event):
-    # By default, do nothing. This is for children to override.
-    pass
 
 class MainWindow(PyQt4.Qt.QMainWindow):
   def __init__(self, *args, **kwargs):
@@ -399,6 +367,45 @@ class Simple(AbstractCanvas):
 class Full(AbstractCanvas):
   def __init__(self, *args, **kwargs):    
     super(Full, self).__init__(*args, **kwargs)
+  
+  def create(self, *args, **kwargs):
+    super(Full, self).create(*args, **kwargs)
+    
+    # Add label menu.
+    self.labelMenu = self.menuBar.addMenu('&Labels')
+  
+  def draw(self, *args, **kwargs):
+    super(Full, self).draw(*args, **kwargs)
+    
+    # attach link click signals to handlers
+    for canvasLink in self.canvasLinks:
+      canvasLink.optivisLineItem.comms.mouseReleased.connect(self.canvasLinkMouseReleasedHandler)
+
+    # attach component click signals to handlers
+    for canvasComponent in self.canvasComponents:   
+      canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
+  
+  def redraw(self, refreshMenu=True, *args, **kwargs):
+    super(Full, self).redraw(*args, **kwargs)
+    
+    if refreshMenu:
+      # Now that all labels have been created the dictionary of
+      # label content options should be available.
+      self.labelMenu.clear()
+    
+      for kv in self.canvasLabelFlags.items():
+        a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
+        a.data = kv[0]
+        a.toggled.connect(self.toggleLabelContent)
+        self.labelMenu.addAction(a)
+        # This doesn't work!
+        # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
+        # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
+        # checkableAction.setDefaultWidget(checkBox)
+        # self.labelMenu.addAction(checkableAction)
+        
+      self.labelMenu.addSeparator()
+      self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
   
   def initialise(self):
     super(Full, self).initialise()
