@@ -42,7 +42,7 @@ class AbstractCanvas(optivis.view.AbstractView):
   # 'show all', 2^(n+1)-1 where n is the number of significant bits above
   SHOW_MAX = (1 << 3) - 1
   
-  def __init__(self, layoutManagerClass=None, clickedCallback=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
+  def __init__(self, layoutManagerClass=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
 
     if layoutManagerClass is None:
@@ -52,7 +52,6 @@ class AbstractCanvas(optivis.view.AbstractView):
       showFlags = AbstractCanvas.SHOW_MAX
 
     self.layoutManagerClass = layoutManagerClass
-    self.clickedCallback = clickedCallback
     self.showFlags = showFlags
     self.showLabelFlags = showLabelFlags
 
@@ -69,19 +68,6 @@ class AbstractCanvas(optivis.view.AbstractView):
       raise Exception('Specified layout manager class is not of type AbstractLayout')
 
     self.__layoutManagerClass = layoutManagerClass
-
-  @property
-  def clickedCallback(self):
-    return self.__clickedCallback
-
-  @clickedCallback.setter
-  def clickedCallback(self, clickedCallback):
-    # FIXME: check clickedCallback is a valid callable
-    self.__clickedCallback = clickedCallback
-  
-  def clickHandler(self, canvasItem, event, *args, **kwargs):
-    if self.clickedCallback is not None:
-      self.clickedCallback(canvasItem, event)
 
   @property
   def showFlags(self):
@@ -165,12 +151,6 @@ class AbstractCanvas(optivis.view.AbstractView):
 
     # set view antialiasing
     self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
-
-  def toggleLabelContent(self, checked):
-      sender = self.qMainWindow.sender()
-      label = sender.data
-      self.canvasLabelFlags[label] = checked
-      self.redraw(refreshMenu=False)
       
   def draw(self):
     # get canvas links and components
@@ -181,12 +161,20 @@ class AbstractCanvas(optivis.view.AbstractView):
     # draw links
     if self.showFlags & AbstractCanvas.SHOW_LINKS:
       for canvasLink in canvasLinks:
+	# draw
         canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+        
+        # link click signals
+        canvasLink.optivisLineItem.comms.mouseReleased.connect(self.canvasLinkMouseReleasedHandler)
 
     # draw components
     if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
       for canvasComponent in canvasComponents:
+	# draw
         canvasComponent.draw(self.qScene)
+        
+        # link click signals
+        canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
 
     # draw labels
     if self.showFlags & AbstractCanvas.SHOW_LABELS:
@@ -265,7 +253,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     for component in self.scene.getComponents():
       # Add component to list of canvas components.
-      canvasComponents.append(CanvasComponent(component, clickedCallback=self.clickHandler))
+      canvasComponents.append(CanvasComponent(component))
     
     return canvasComponents
   
@@ -274,7 +262,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     for link in self.scene.links:
       # Add link to list of canvas links.
-      canvasLinks.append(CanvasLink(link, clickedCallback=self.clickHandler))
+      canvasLinks.append(CanvasLink(link))
     
     return canvasLinks
   
@@ -343,6 +331,18 @@ class AbstractCanvas(optivis.view.AbstractView):
       return subclasses
 
     return getSubclasses(optivis.layout.AbstractLayout)
+  
+  def toggleLabelContent(self, checked):
+    # By default, do nothing. This is for children to override.
+    pass
+  
+  def canvasLinkMouseReleasedHandler(self, event):
+    # By default, do nothing. This is for children to override.
+    pass
+    
+  def canvasComponentMouseReleasedHandler(self, event):
+    # By default, do nothing. This is for children to override.
+    pass
 
 class MainWindow(PyQt4.Qt.QMainWindow):
   def __init__(self, *args, **kwargs):
@@ -451,6 +451,26 @@ class Full(AbstractCanvas):
     self.qView.setMinimumSize(self.size.x, self.size.y)
 
     return
+  
+  def canvasLinkMouseReleasedHandler(self, event):
+    # Get clicked canvas link.
+    canvasLink = self.qMainWindow.sender().data
+    
+    # open edit controls
+    self.controls.openEditControls(canvasLink)
+    
+  def canvasComponentMouseReleasedHandler(self, event):
+    # Get clicked canvas component.
+    canvasComponent = self.qMainWindow.sender().data
+    
+    # open edit controls
+    self.controls.openEditControls(canvasComponent)
+
+  def toggleLabelContent(self, checked):
+    sender = self.qMainWindow.sender()
+    label = sender.data
+    self.canvasLabelFlags[label] = checked
+    self.redraw(refreshMenu=False)
 
 class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
   def __init__(self, canvas, *args, **kwargs):
@@ -507,12 +527,8 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas = canvas
     
     self.addControls()
-
-    # hook into AbstractCanvas's click callback
-    self.canvas.clickedCallback = self.clickHandler
   
-  def clickHandler(self, canvasItem, event):
-    print canvasItem.item
+  def openEditControls(self, canvasItem):
     self.itemEditPanel.setContentFromCanvasItem(canvasItem)
     
   def wheelHandler(self, event):
@@ -525,6 +541,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     # set zoom
     self.setZoom(zoom)
+    
   @property
   def canvas(self):
     return self.__canvas
@@ -839,12 +856,12 @@ class AbstractCanvasItem(object):
   def draw(self, *args, **kwargs):
     return
 
-class CanvasComponent(AbstractCanvasItem):  
-  def __init__(self, component, clickedCallback=None, *args, **kwargs):
+class CanvasComponent(AbstractCanvasItem):
+  def __init__(self, component, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
     
-    self.clickedCallback = clickedCallback
+    self.optivisSvgItem = None
     
     super(CanvasComponent, self).__init__(item=component, *args, **kwargs)
   
@@ -855,84 +872,87 @@ class CanvasComponent(AbstractCanvasItem):
     path = os.path.join(self.item.svgDir, self.item.filename)
     
     # Create graphical representation of SVG image at path.
-    svgItem = OptivisSvgItem(path)
-
-    # set callback
-    svgItem.clickedCallback = self.svgItemClicked
+    self.optivisSvgItem = OptivisSvgItem(path)
+    
+    # reference this CanvasComponent in the data payload
+    self.optivisSvgItem.data = self
     
     if self.item.tooltip is not None:
-        if hasattr(self.item.tooltip, "__call__"):
-            svgItem.setToolTip(str(self.item.tooltip()))
-        else:
-            svgItem.setToolTip(str(self.item.tooltip))
+      if hasattr(self.item.tooltip, "__call__"):
+	self.optivisSvgItem.setToolTip(str(self.item.tooltip()))
+      else:
+	self.optivisSvgItem.setToolTip(str(self.item.tooltip))
     
     # Set position of top-left corner.
     # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
-    svgItem.setPos(self.item.position.x - self.item.size.x / 2, self.item.position.y - self.item.size.y / 2)
+    self.optivisSvgItem.setPos(self.item.position.x - self.item.size.x / 2, self.item.position.y - self.item.size.y / 2)
     
     # Rotate clockwise.
     # Qt rotates with respect to the component's origin, i.e. top left, so to rotate around the centre we need to translate it before and after rotating it.
-    svgItem.translate(self.item.size.x / 2, self.item.size.y / 2)
-    svgItem.rotate(self.item.azimuth)
-    svgItem.translate(-self.item.size.x / 2, -self.item.size.y / 2)
+    self.optivisSvgItem.translate(self.item.size.x / 2, self.item.size.y / 2)
+    self.optivisSvgItem.rotate(self.item.azimuth)
+    self.optivisSvgItem.translate(-self.item.size.x / 2, -self.item.size.y / 2)
     
-    qScene.addItem(svgItem)
-
-  def svgItemClicked(self, event, *args, **kwargs):
-    if self.clickedCallback is not None:
-      self.clickedCallback(self, event, *args, **kwargs)
+    qScene.addItem(self.optivisSvgItem)
+    
+  @property
+  def optivisSvgItem(self):
+    return self.__optivisSvgItem
+  
+  @optivisSvgItem.setter
+  def optivisSvgItem(self, optivisSvgItem):
+    # FIXME: check type (but allow None)
+    self.__optivisSvgItem = optivisSvgItem
 
 class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
+  mousePressed = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  mouseReleased = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  
   def __init__(self, *args, **kwargs):
-    # TODO: is there a way to send the clickCallback into this consturctor without screwing up Qt? (Right now any extra arguments in the __init__ above seems to make the SvgItem silently fail to draw...)
     super(OptivisSvgItem, self).__init__(*args, **kwargs)
 
-    # default callback value (can't set it within __init__ for some reason, see above)
-    self.clickedCallback = None
-  
-  @property
-  def clickedCallback(self):
-    return self.__clickedCallback
-
-  @clickedCallback.setter
-  def clickedCallback(self, clickedCallback):
-    # FIXME: check that clickedCallback is a valid callable
-    self.__clickedCallback = clickedCallback
-
   def mousePressEvent(self, event, *args, **kwargs):
-    """
-    This method does nothing but accept the event, but this behaviour
-    is required for mouseReleaseEvent() to work below.
-    """
-    event.accept()
-  
-  def mouseReleaseEvent(self, event, *args, **kwargs):
-    if self.clickedCallback is not None:
-      # call callback
-      self.clickedCallback(event, *args, **kwargs)
-    
+    # accept the event
     # this is the default, but we'll call it anyway
     event.accept()
+    
+    # emit event as a signal
+    self.mousePressed.emit(event)
+  
+  def mouseReleaseEvent(self, event, *args, **kwargs):
+    # accept the event
+    # this is the default, but we'll call it anyway
+    event.accept()
+    
+    # emit event as a signal
+    self.mouseReleased.emit(event)
 
 class CanvasLink(AbstractCanvasItem):
-  def __init__(self, link, clickedCallback=None, *args, **kwargs):
+  def __init__(self, link, *args, **kwargs):
     if not isinstance(link, optivis.bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
     
-    self.clickedCallback = clickedCallback
+    self.optivisLineItem = None
 
     super(CanvasLink, self).__init__(item=link, *args, **kwargs)
 
   def draw(self, qScene, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
     print "[GUI] Drawing link {0}".format(self.item)
     
-    line = OptivisLineItem(self.item.start, self.item.end, self.item.width, PyQt4.QtGui.QColor(self.item.color))
-
-    # set callback
-    line.clickedCallback = self.lineItemClicked
+    # create graphics object
+    self.optivisLineItem = OptivisLineItem()
+    
+    # reference this CanvasLink in the data payload
+    self.optivisLineItem.comms.data = self
+    
+    # set start/end
+    self.optivisLineItem.setLine(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
+    
+    # set pen
+    self.optivisLineItem.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine))
 
     # add line to graphics scene
-    qScene.addItem(line)
+    qScene.addItem(self.optivisLineItem)
     
     # add markers if necessary
     if startMarkers:
@@ -949,49 +969,48 @@ class CanvasLink(AbstractCanvasItem):
       
       qScene.addItem(circle)
 
-  def lineItemClicked(self, event, *args, **kwargs):
-    if self.clickedCallback is not None:
-      self.clickedCallback(self, event, *args, **kwargs)
-
-class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
-  def __init__(self, start, end, width, color, *args, **kwargs):
-    # FIXME: check these are valid
-    self.start = start
-    self.end = end
-    self.width = width
-    self.color = color
-
-    super(OptivisLineItem, self).__init__(self.start.x, self.start.y, self.end.x, self.end.y, *args, **kwargs)
-
-    # set pen
-    self.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.color), self.width, PyQt4.QtCore.Qt.SolidLine))
-
-    # default callback value (can't set it within __init__ for some reason, see above)
-    self.clickedCallback = None
-
   @property
-  def clickedCallback(self):
-    return self.__clickedCallback
-
-  @clickedCallback.setter
-  def clickedCallback(self, clickedCallback):
-    # FIXME: check that clickedCallback is a valid callable
-    self.__clickedCallback = clickedCallback
-
-  def mousePressEvent(self, event, *args, **kwargs):
-    """
-    This method does nothing but accept the event, but this behaviour
-    is required for mouseReleaseEvent() to work below.
-    """
-    event.accept()
+  def optivisLineItem(self):
+    return self.__optivisLineItem
   
-  def mouseReleaseEvent(self, event, *args, **kwargs):
-    if self.clickedCallback is not None:
-      # call callback
-      self.clickedCallback(event, *args, **kwargs)
+  @optivisLineItem.setter
+  def optivisLineItem(self, optivisLineItem):
+    # FIXME: check type (but allow None)
+    self.__optivisLineItem = optivisLineItem
+
+class OptivisLineItemCommunicator(PyQt4.QtCore.QObject):
+  """
+  Qt Signals communication class for OptivisLineItem
+  """
+  
+  mousePressed = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  mouseReleased = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+
+class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):  
+  def __init__(self, *args, **kwargs):
+    # Create a communicator.
+    # This is necessary because QGraphicsLineItem does not inherit from QObject, so it does
+    # not inherit signalling functionality. Instead, we do our signalling via a separate
+    # communicator class which DOES inherit QObject.
+    self.comms = OptivisLineItemCommunicator()
     
+    super(OptivisLineItem, self).__init__(*args, **kwargs)
+    
+  def mousePressEvent(self, event, *args, **kwargs):
+    # accept the event
     # this is the default, but we'll call it anyway
     event.accept()
+    
+    # emit event as a signal
+    self.comms.mousePressed.emit(event)
+  
+  def mouseReleaseEvent(self, event, *args, **kwargs):
+    # accept the event
+    # this is the default, but we'll call it anyway
+    event.accept()
+    
+    # emit event as a signal
+    self.comms.mouseReleased.emit(event)
 
 class CanvasLabel(object):
   def __init__(self, label, canvasLabelFlags=None, *args, **kwargs):
