@@ -37,28 +37,25 @@ class AbstractCanvas(optivis.view.AbstractView):
   SHOW_LINKS = 1 << 1
   SHOW_LABELS = 1 << 2
 
-  canvasLabelFlags = OrderedDict()
-
   # 'show all', 2^(n+1)-1 where n is the number of significant bits above
   SHOW_MAX = (1 << 3) - 1
   
-  def __init__(self, layoutManagerClass=None, showFlags=None, showLabelFlags=0, *args, **kwargs):
+  def __init__(self, layoutManagerClass=None, showFlags=None, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
+
+    if layoutManagerClass is None:
+      layoutManagerClass = optivis.layout.StandardLayout
+      
+    if showFlags is None:
+      showFlags = AbstractCanvas.SHOW_MAX
 
     # create empty lists for canvas stuff
     self.canvasLinks = []
     self.canvasComponents = []
     self.canvasLabels = []
 
-    if layoutManagerClass is None:
-      layoutManagerClass = optivis.layout.StandardLayout
-
-    if showFlags is None:
-      showFlags = AbstractCanvas.SHOW_MAX
-
     self.layoutManagerClass = layoutManagerClass
     self.showFlags = showFlags
-    self.showLabelFlags = showLabelFlags
 
     self.create()
     self.initialise()
@@ -87,20 +84,6 @@ class AbstractCanvas(optivis.view.AbstractView):
       raise Exception('Specified show flags are not valid. Show flags value must be between 0 and {0}'.format(AbstractCanvas.SHOW_MAX))
 
     self.__showFlags = showFlags
-
-  @property
-  def showLabelFlags(self):
-    return self.__showLabelFlags
-
-  @showLabelFlags.setter
-  def showLabelFlags(self, showLabelFlags):
-    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-    showLabelFlags = int(showLabelFlags)
-
-    if showLabelFlags < 0:
-      raise Exception('Specified show label flags are not valid. Show flags value must be > 0 and {0}')
-
-    self.__showLabelFlags = showLabelFlags
 
   def create(self):
     # create application
@@ -133,13 +116,14 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.fileMenu.addAction(exitAction)
     
   def initialise(self):
+    # set view antialiasing
+    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
+  
+  def calibrateView(self):
     """
-    Lays out the GUI after all of the main widgets have been created by create()
+    Sets the view box and other rendering gubbins.
     """
-
-    self.initialiseView()
-
-  def initialiseView(self):
+    
     # Set view rectangle to be equal to the rectangle enclosing the items in the scene.
     #
     # This is necessary because QGraphicsView uses QGraphicsScene's sceneRect() method to obtain the size of the scene,
@@ -149,21 +133,10 @@ class AbstractCanvas(optivis.view.AbstractView):
     # see http://permalink.gmane.org/gmane.comp.lib.qt.user/2150
     self.qView.setSceneRect(self.qScene.itemsBoundingRect())
     
-    # set transformation anchor to reference the mouse position, for mouse zooming
-    self.qView.setTransformationAnchor(PyQt4.QtGui.QGraphicsView.AnchorUnderMouse)
-    
     # set zoom
     self.qView.setScale(self.zoom)
-
-    # set view antialiasing
-    self.qView.setRenderHints(PyQt4.QtGui.QPainter.Antialiasing | PyQt4.Qt.QPainter.TextAntialiasing | PyQt4.Qt.QPainter.SmoothPixmapTransform | PyQt4.QtGui.QPainter.HighQualityAntialiasing)
       
-  def draw(self):
-    # create canvas stuff
-    self.createCanvasLinks()
-    self.createCanvasComponents()
-    self.createCanvasLabels()
-    
+  def draw(self):    
     # draw links
     if self.showFlags & AbstractCanvas.SHOW_LINKS:
       for canvasLink in self.canvasLinks:
@@ -188,9 +161,6 @@ class AbstractCanvas(optivis.view.AbstractView):
     # draw the scene again
     self.draw(*args, **kwargs)
 
-    # reset the view
-    self.initialiseView()
-
   def layout(self):
     # instantiate layout manager and arrange objects
     layout = self.layoutManagerClass(self.scene)
@@ -200,8 +170,16 @@ class AbstractCanvas(optivis.view.AbstractView):
     # layout scene
     self.layout()
     
+    # create canvas items
+    self.createCanvasLinks()
+    self.createCanvasComponents()
+    self.createCanvasLabels()
+    
     # draw scene
     self.draw()
+    
+    # draw GUI
+    self.initialise()
 
     # show on screen
     self.qMainWindow.show()
@@ -238,13 +216,13 @@ class AbstractCanvas(optivis.view.AbstractView):
       if canvasLink.item.labels is not None:
 	# Add labels to list of canvas labels.
 	for label in canvasLink.item.labels:
-	  self.canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
+	  self.canvasLabels.append(CanvasLabel(label))
 	
     for canvasComponent in self.canvasComponents:
       if canvasComponent.item.labels is not None:
 	# Add labels to list of canvas labels.
 	for label in canvasComponent.item.labels:
-	  self.canvasLabels.append(CanvasLabel(label, canvasLabelFlags=self.canvasLabelFlags))
+	  self.canvasLabels.append(CanvasLabel(label))
   
   def setZoom(self, zoom):
     self.zoom = zoom
@@ -373,6 +351,8 @@ class Full(AbstractCanvas):
   zoomRange = (0.1, 10)
   zoomStep = 0.1
   
+  canvasLabelFlags = OrderedDict()
+  
   def __init__(self, *args, **kwargs):    
     super(Full, self).__init__(*args, **kwargs)
   
@@ -393,10 +373,12 @@ class Full(AbstractCanvas):
     for canvasComponent in self.canvasComponents:   
       canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
   
-  def redraw(self, refreshMenu=True, *args, **kwargs):
-    super(Full, self).redraw(*args, **kwargs)
+  def redraw(self, refreshLabelMenu=True, *args, **kwargs):
+    # set canvas label flags
+    for canvasLabel in self.canvasLabels:
+      canvasLabel.canvasLabelFlags = self.canvasLabelFlags
     
-    if refreshMenu:
+    if refreshLabelMenu:
       # Now that all labels have been created the dictionary of
       # label content options should be available.
       self.labelMenu.clear()
@@ -414,6 +396,9 @@ class Full(AbstractCanvas):
         
       self.labelMenu.addSeparator()
       self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
+    
+    # call parent redraw
+    super(Full, self).redraw(*args, **kwargs)
   
   def initialise(self):
     super(Full, self).initialise()
@@ -465,7 +450,11 @@ class Full(AbstractCanvas):
     # set fixed size for view
     self.qView.setMinimumSize(self.size.x, self.size.y)
 
-    return
+    # set transformation anchor to reference the mouse position, for mouse zooming
+    self.qView.setTransformationAnchor(PyQt4.QtGui.QGraphicsView.AnchorUnderMouse)
+
+    # set view box, etc.
+    self.calibrateView()
   
   def setZoom(self, zoom):
     # calculate rounded zoom level
@@ -504,7 +493,7 @@ class Full(AbstractCanvas):
     sender = self.qMainWindow.sender()
     label = sender.data
     self.canvasLabelFlags[label] = checked
-    self.redraw(refreshMenu=False)
+    self.redraw(refreshLabelMenu=False)
     
   def wheelHandler(self, event):
     # get wheel delta, dividing by 120 (to represent 15 degrees of rotation -
@@ -717,6 +706,9 @@ class ControlPanel(PyQt4.QtGui.QWidget):
 
     # redraw
     self.canvas.redraw()
+    
+    # reset view
+    self.canvas.calibrateView()
 
   def zoomSliderChanged(self, value):
     # scale value by zoom step (sliders only support int increments)
@@ -1010,7 +1002,7 @@ class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
     super(OptivisLineItem, self).__init__(*args, **kwargs)
     
   def mousePressEvent(self, event, *args, **kwargs):
-    # accept the event
+    # Accept the event.
     # this is the default, but we'll call it anyway
     event.accept()
     
@@ -1018,7 +1010,7 @@ class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
     self.comms.mousePressed.emit(event)
   
   def mouseReleaseEvent(self, event, *args, **kwargs):
-    # accept the event
+    # Accept the event.
     # this is the default, but we'll call it anyway
     event.accept()
     
@@ -1031,25 +1023,25 @@ class CanvasLabel(object):
       raise Exception('Specified label is not of type AbstractLabel')
     
     self.label = label
-    self._canvasLabelFlags = canvasLabelFlags
-    
-    if canvasLabelFlags is not None:
-        for kv in self.label.content.items():
-            if kv[0] not in self._canvasLabelFlags:
-                self._canvasLabelFlags[kv[0]] = False
+    self.canvasLabelFlags = canvasLabelFlags
                     
     super(CanvasLabel, self).__init__(*args, **kwargs)
 
   def draw(self, qScene):
     print "[GUI] Drawing label {0}".format(self.label)
+    
+    if self.canvasLabelFlags is not None:
+      for kv in self.label.content.items():
+	if kv[0] not in self.canvasLabelFlags:
+	  self.canvasLabelFlags[kv[0]] = False
 
     # create label
     text = self.label.text
 
-    if self._canvasLabelFlags is not None:
-        for kv in self.label.content.items():
-            if self._canvasLabelFlags[kv[0]] == True:
-                text += "\n%s" % kv[1]
+    if self.canvasLabelFlags is not None:
+      for kv in self.label.content.items():
+	if self.canvasLabelFlags[kv[0]] == True:
+	  text += "\n%s" % kv[1]
 
     labelItem = PyQt4.QtGui.QGraphicsSimpleTextItem(text)
     

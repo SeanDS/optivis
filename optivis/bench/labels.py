@@ -20,21 +20,19 @@ class Label(AbstractLabel):
     """
     
     super(Label, self).__init__(*args, **kwargs)
-
-    self.text = text
-    self.position = position
-    self.azimuth = azimuth
-    self.item = item
-    
-    if content is None:
-        self.content = {}
-    else:
-        self.content = content
     
     if offset is None:
       offset = optivis.geometry.Coordinates(0, 0)
     
+    if content is None:
+      content = {}
+
+    self.text = text
+    self.position = position
+    self.item = item
+    self.azimuth = azimuth
     self.offset = offset
+    self.content = content
 
   def __str__(self):
     return "\"{0}\"".format(self.text)
