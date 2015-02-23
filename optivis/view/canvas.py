@@ -766,8 +766,9 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     paramName, itemDataType, canvasItem = sender.data
 
     # get the canvas item associated with this edit widget
-    # reference the weakref by calling sender.data like a function
-    canvasItem = canvasItem()
+    if hasattr(canvasItem, "__call__"):
+      # reference the weakref by calling it like a function
+      canvasItem = canvasItem()
 
     if not isinstance(canvasItem, AbstractCanvasItem):
       raise Exception('Specified canvas item is not of type AbstractCanvasItem')
