@@ -1,8 +1,5 @@
 from __future__ import unicode_literals, division
 
-# custom signals
-# https://stackoverflow.com/questions/4523006/pyqt-signal-with-arguments-of-arbitrary-type-pyqt-pyobject-equivalent-for-new
-
 import os
 import os.path
 import sys
