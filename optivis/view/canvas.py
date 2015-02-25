@@ -183,14 +183,13 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     # if IPython is being used, don't block the terminal
     try:
-        if __IPYTHON__:
-            from IPython.lib.inputhook import enable_gui
-            app = enable_gui('qt4')
-        else:
-            raise ImportError
-            
+      if __IPYTHON__:
+	from IPython.lib.inputhook import enable_gui
+	app = enable_gui('qt4')
+      else:
+	raise ImportError
     except (ImportError, NameError):
-        sys.exit(self.qApplication.exec_())
+      sys.exit(self.qApplication.exec_())
 
   def createCanvasLinks(self):
     self.canvasLinks = []
@@ -369,6 +368,12 @@ class Full(AbstractCanvas):
     # attach component click signals to handlers
     for canvasComponent in self.canvasComponents:   
       canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
+    
+    # attach link click signals to handlers
+    for canvasLabel in self.canvasLabels:
+      canvasLabel.optivisLabelItem.comms.mousePressed.connect(self.canvasLabelMousePressedHandler)
+      canvasLabel.optivisLabelItem.comms.mouseMoved.connect(self.canvasLabelMouseMovedHandler)
+      canvasLabel.optivisLabelItem.comms.mouseReleased.connect(self.canvasLabelMouseReleasedHandler)
   
   def redraw(self, refreshLabelMenu=True, *args, **kwargs):
     # set canvas label flags
@@ -485,6 +490,30 @@ class Full(AbstractCanvas):
     
     # open edit controls
     self.controls.openEditControls(canvasComponent)
+  
+  def canvasLabelMousePressedHandler(self, event):
+    # Get clicked canvas label.
+    canvasLabel = self.qMainWindow.sender().data
+    
+    # Set position of mouse, in case this press becomes a drag
+    self.canvasLabelMousePressPosition = event.pos()
+    self.canvasLabelStartPosition = canvasLabel.item.position
+  
+  def canvasLabelMouseMovedHandler(self, event):
+    canvasItem = self.qMainWindow.sender()
+    
+    # Get moved canvas label.
+    canvasLabel = canvasItem.data
+    
+    if (event.pos() - self.canvasLabelMousePressPosition).manhattanLength() < self.qApplication.startDragDistance():
+      # drag is not far enough
+      return
+  
+  def canvasLabelMouseReleasedHandler(self, event):
+    # Get clicked canvas label.
+    canvasLabel = self.qMainWindow.sender().data
+    
+    print event
 
   def toggleLabelContent(self, checked):
     sender = self.qMainWindow.sender()
@@ -1014,58 +1043,104 @@ class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
     # emit event as a signal
     self.comms.mouseReleased.emit(event)
 
-class CanvasLabel(object):
+class CanvasLabel(AbstractCanvasItem):
   def __init__(self, label, canvasLabelFlags=None, *args, **kwargs):
     if not isinstance(label, optivis.bench.labels.AbstractLabel):
       raise Exception('Specified label is not of type AbstractLabel')
     
-    self.label = label
     self.canvasLabelFlags = canvasLabelFlags
                     
-    super(CanvasLabel, self).__init__(*args, **kwargs)
+    super(CanvasLabel, self).__init__(item=label, *args, **kwargs)
 
   def draw(self, qScene):
-    print "[GUI] Drawing label {0}".format(self.label)
+    print "[GUI] Drawing label {0}".format(self.item)
     
     if self.canvasLabelFlags is not None:
-      for kv in self.label.content.items():
+      for kv in self.item.content.items():
 	if kv[0] not in self.canvasLabelFlags:
 	  self.canvasLabelFlags[kv[0]] = False
 
-    # create label
-    text = self.label.text
+    # get text
+    text = self.item.text
 
     if self.canvasLabelFlags is not None:
-      for kv in self.label.content.items():
+      for kv in self.item.content.items():
 	if self.canvasLabelFlags[kv[0]] == True:
 	  text += "\n%s" % kv[1]
 
-    labelItem = PyQt4.QtGui.QGraphicsSimpleTextItem(text)
+    # create label
+    self.optivisLabelItem = OptivisLabelItem(text)
+    
+    # reference this CanvasLabel in the data payload
+    self.optivisLabelItem.comms.data = self
     
     # calculate label size
-    labelSize = optivis.geometry.Coordinates(labelItem.boundingRect().width(), labelItem.boundingRect().height())
+    labelSize = optivis.geometry.Coordinates(self.optivisLabelItem.boundingRect().width(), self.optivisLabelItem.boundingRect().height())
     
-    labelAzimuth = self.label.item.getLabelAzimuth() + self.label.azimuth
+    labelAzimuth = self.item.item.getLabelAzimuth() + self.item.azimuth
     
     ### calculate label position
     # get nominal position
-    labelPosition = self.label.item.getLabelOrigin()
+    labelPosition = self.item.item.getLabelOrigin()
     
     # translate to user-defined position
-    labelPosition = labelPosition.translate((self.label.position * self.label.item.getSize()).rotate(self.label.item.getLabelAzimuth()))
+    labelPosition = labelPosition.translate((self.item.position * self.item.item.getSize()).rotate(self.item.item.getLabelAzimuth()))
     
     # move label such that the text is y-centered
     labelPosition = labelPosition.translate(optivis.geometry.Coordinates(0, labelSize.y / 2).flip().rotate(labelAzimuth))
     
     # add user-defined offset
-    labelPosition = labelPosition.translate(self.label.offset.rotate(self.label.item.getLabelAzimuth()))
+    labelPosition = labelPosition.translate(self.item.offset.rotate(self.item.item.getLabelAzimuth()))
     
     # set position and angle
-    labelItem.setPos(labelPosition.x, labelPosition.y)
-    labelItem.setRotation(labelAzimuth)
+    self.optivisLabelItem.setPos(labelPosition.x, labelPosition.y)
+    self.optivisLabelItem.setRotation(labelAzimuth)
 
     # add to scene
-    qScene.addItem(labelItem)
+    qScene.addItem(self.optivisLabelItem)
+
+class OptivisLabelItemCommunicator(PyQt4.QtCore.QObject):
+  """
+  Qt Signals communication class for OptivisLabelItem
+  """
+  
+  mousePressed = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  mouseMoved = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  mouseReleased = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+
+class OptivisLabelItem(PyQt4.QtGui.QGraphicsSimpleTextItem):
+  def __init__(self, *args, **kwargs):
+    # Create a communicator.
+    # This is necessary because QGraphicsSimpleTextItem does not inherit from QObject, so it does
+    # not inherit signalling functionality. Instead, we do our signalling via a separate
+    # communicator class which DOES inherit QObject.
+    self.comms = OptivisLabelItemCommunicator()
+    
+    super(OptivisLabelItem, self).__init__(*args, **kwargs)
+  
+  def mousePressEvent(self, event, *args, **kwargs):
+    # Accept the event.
+    # this is the default, but we'll call it anyway
+    event.accept()
+    
+    # emit event as a signal
+    self.comms.mousePressed.emit(event)
+    
+  def mouseMoveEvent(self, event, *args, **kwargs):
+    # Accept the event.
+    # this is the default, but we'll call it anyway
+    event.accept()
+    
+    # emit event as a signal
+    self.comms.mouseMoved.emit(event)
+  
+  def mouseReleaseEvent(self, event, *args, **kwargs):
+    # Accept the event.
+    # this is the default, but we'll call it anyway
+    event.accept()
+    
+    # emit event as a signal
+    self.comms.mouseReleased.emit(event)
 
 class OptivisItemDataType(object):
   """
