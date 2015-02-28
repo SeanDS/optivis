@@ -77,6 +77,9 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.qApplication = PyQt4.Qt.QApplication(sys.argv)
     self.qMainWindow = MainWindow()
     
+    # set close behaviour to prevent zombie processes
+    self.qMainWindow.setAttribute(PyQt4.QtCore.Qt.WA_DeleteOnClose, True)
+    
     # create drawing area
     self.qScene = GraphicsScene()
     
