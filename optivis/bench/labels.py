@@ -67,7 +67,7 @@ class Label(AbstractLabel):
   @azimuth.setter
   def azimuth(self, azimuth):
     # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-    azimuth = float(azimuth)
+    azimuth = float(azimuth) % 360
     
     self.__azimuth = azimuth
 
