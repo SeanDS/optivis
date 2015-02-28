@@ -41,7 +41,7 @@ class Svg(optivis.view.AbstractView):
     return drawableLinks
   
   def layout(self):
-    layout = optivis.layout.SimpleLayout(self.scene)
+    layout = self.layoutManager(self.scene)
     layout.arrange()
     
     return

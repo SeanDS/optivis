@@ -41,12 +41,9 @@ class AbstractCanvas(optivis.view.AbstractView):
   
   labelFlags = OrderedDict()
   
-  def __init__(self, layoutManagerClass=None, showFlags=None, *args, **kwargs):
+  def __init__(self, showFlags=None, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
-
-    if layoutManagerClass is None:
-      layoutManagerClass = optivis.layout.StandardLayout
-      
+    
     if showFlags is None:
       showFlags = AbstractCanvas.SHOW_MAX
 
@@ -55,22 +52,11 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.canvasComponents = []
     self.canvasLabels = []
 
-    self.layoutManagerClass = layoutManagerClass
     self.showFlags = showFlags
 
+    # create and initialise GUI
     self.create()
     self.initialise()
-
-  @property
-  def layoutManagerClass(self):
-    return self.__layoutManagerClass
-
-  @layoutManagerClass.setter
-  def layoutManagerClass(self, layoutManagerClass):
-    if not issubclass(layoutManagerClass, optivis.layout.AbstractLayout):
-      raise Exception('Specified layout manager class is not of type AbstractLayout')
-
-    self.__layoutManagerClass = layoutManagerClass
 
   @property
   def showFlags(self):
@@ -209,7 +195,7 @@ class AbstractCanvas(optivis.view.AbstractView):
 
   def layout(self):
     # instantiate layout manager and arrange objects
-    layout = self.layoutManagerClass(self.scene)
+    layout = self.layoutManager(self.scene)
     layout.arrange()
   
   def show(self):
@@ -321,24 +307,8 @@ class AbstractCanvas(optivis.view.AbstractView):
     return self.exportSvg(path=path + extension, fileFormat=fileFormat)
   
   def exportSvg(self, *args, **kwargs):
-    svgView = optivis.view.svg.Svg(self.scene)
+    svgView = optivis.view.svg.Svg(self.scene, layoutManager=self.layoutManager)
     svgView.export(*args, **kwargs)
-
-  def getLayoutManagerClasses(self):
-    def getSubclasses(subclass):
-      """
-      http://stackoverflow.com/questions/3862310/how-can-i-find-all-subclasses-of-a-given-class-in-python
-      """
-
-      subclasses = []
-
-      for thisSubclass in subclass.__subclasses__():
-        subclasses.append(thisSubclass)
-        subclasses.extend(getSubclasses(thisSubclass))
-
-      return subclasses
-
-    return getSubclasses(optivis.layout.AbstractLayout)
 
 class MainWindow(PyQt4.Qt.QMainWindow):
   def __init__(self, *args, **kwargs):
@@ -689,13 +659,13 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     layoutManagerClasses = self.canvas.getLayoutManagerClasses()
 
     for i in range(0, len(layoutManagerClasses)):
-      layoutManagerClass = layoutManagerClasses[i]
+      layoutManager = layoutManagerClasses[i]
 
       # add this layout to the combobox, setting the userData to the class name of this layout
-      self.layoutComboBox.addItem(layoutManagerClass.title, i)
+      self.layoutComboBox.addItem(layoutManager.title, i)
 
     # set selected layout
-    self.layoutComboBox.setCurrentIndex(self.layoutComboBox.findText(self.canvas.layoutManagerClass.title))
+    self.layoutComboBox.setCurrentIndex(self.layoutComboBox.findText(self.canvas.layoutManager.title))
 
     # connect signal to slot to listen for changes
     self.layoutComboBox.currentIndexChanged[int].connect(self.layoutComboBoxChangeHandler)
@@ -786,7 +756,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     layoutIndex, ok = layoutComboBox.itemData(layoutComboBox.currentIndex()).toInt()
 
     # update canvas layout
-    self.canvas.layoutManagerClass = layoutManagerClasses[layoutIndex]
+    self.canvas.layoutManager = layoutManagerClasses[layoutIndex]
 
     # re-layout
     self.canvas.layout()

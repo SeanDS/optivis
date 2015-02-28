@@ -10,14 +10,15 @@ import optivis.bench.links
 class AbstractView(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, scene, size=None, zoom=1.0, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
+  def __init__(self, scene, size=None, zoom=1.0, layoutManager=None, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
     if not isinstance(scene, optivis.scene.Scene):
       raise Exception('Specified scene is not of type optivis.scene.Scene')
     
-    title = "Optivis - {0}".format(scene.title)
-    
     if size is None:
       size = optivis.geometry.Coordinates(500, 500)
+      
+    if layoutManager is None:
+      layoutManager = optivis.layout.StandardLayout
       
     if startMarkerColor is None:
       startMarkerColor = "red"
@@ -28,7 +29,7 @@ class AbstractView(object):
     self.scene = scene
     self.size = size
     self.zoom = zoom
-    self.title = title
+    self.layoutManager = layoutManager
     self.startMarkers = startMarkers
     self.endMarkers = endMarkers
     self.startMarkerRadius = startMarkerRadius
@@ -36,7 +37,27 @@ class AbstractView(object):
     self.startMarkerColor = startMarkerColor
     self.endMarkerColor = endMarkerColor
     
+    title = "Optivis - {0}".format(scene.title)
+    
+    self.title = title
+    
     return
+  
+  def getLayoutManagerClasses(self):
+    def getSubclasses(subclass):
+      """
+      http://stackoverflow.com/questions/3862310/how-can-i-find-all-subclasses-of-a-given-class-in-python
+      """
+
+      subclasses = []
+
+      for thisSubclass in subclass.__subclasses__():
+        subclasses.append(thisSubclass)
+        subclasses.extend(getSubclasses(thisSubclass))
+
+      return subclasses
+
+    return getSubclasses(optivis.layout.AbstractLayout)
 
   @property
   def scene(self):
@@ -75,6 +96,17 @@ class AbstractView(object):
   @title.setter
   def title(self, title):
     self.__title = title
+    
+  @property
+  def layoutManager(self):
+    return self.__layoutManager
+
+  @layoutManager.setter
+  def layoutManager(self, layoutManager):
+    if not issubclass(layoutManager, optivis.layout.AbstractLayout):
+      raise Exception('Specified layout manager class is not of type AbstractLayout')
+
+    self.__layoutManager = layoutManager
     
   @property
   def startMarkers(self):
