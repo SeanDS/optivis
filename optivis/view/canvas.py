@@ -358,7 +358,10 @@ class Simple(AbstractCanvas):
     self.qMainWindow.setCentralWidget(self.qView)
     
     # resize main window to fit content
-    self.qMainWindow.resize(self.size.x, self.size.y)
+    self.qMainWindow.setFixedSize(self.size.x, self.size.y)
+
+    # set view box, etc.
+    self.calibrateView()
 
     return
     
