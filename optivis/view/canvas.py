@@ -39,6 +39,8 @@ class AbstractCanvas(optivis.view.AbstractView):
   # 'show all', 2n-1 where n is 2 ^ the number of options above
   SHOW_MAX = (1 << 16) - 1
   
+  labelFlags = OrderedDict()
+  
   def __init__(self, layoutManagerClass=None, showFlags=None, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
 
@@ -164,7 +166,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     
     # draw labels
     for canvasLabel in self.canvasLabels:
-      canvasLabel.draw(self.qScene)
+      canvasLabel.draw(self.qScene, self.labelFlags)
       
       if self.showFlags & AbstractCanvas.SHOW_LABELS:
 	canvasLabel.graphicsItem.setVisible(True)
@@ -200,7 +202,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     # update labels
     for canvasLabel in self.canvasLabels:
       if self.showFlags & AbstractCanvas.SHOW_LABELS:
-	canvasLabel.redraw()
+	canvasLabel.redraw(self.labelFlags)
 	canvasLabel.graphicsItem.setVisible(True)
       else:
 	canvasLabel.graphicsItem.setVisible(False)
@@ -394,8 +396,6 @@ class Full(AbstractCanvas):
   zoomRange = (0.1, 10)
   zoomStep = 0.1
   
-  canvasLabelFlags = OrderedDict()
-  
   def __init__(self, *args, **kwargs):    
     super(Full, self).__init__(*args, **kwargs)
   
@@ -423,25 +423,33 @@ class Full(AbstractCanvas):
       canvasLabel.graphicsItem.comms.mouseReleased.connect(self.canvasLabelMouseReleasedHandler)
   
   def redraw(self, refreshLabelMenu=True, *args, **kwargs):
-    # set canvas label flags
+    # Refresh label flags
     for canvasLabel in self.canvasLabels:
-      canvasLabel.canvasLabelFlags = self.canvasLabelFlags
+      if canvasLabel.item.content is not None:
+	for kv in canvasLabel.item.content.items():
+	  if kv[0] not in self.labelFlags.keys():	    
+	    # add label to list of labels, but set it off by default
+	    self.labelFlags[kv[0]] = False
     
     if refreshLabelMenu:
       # Now that all labels have been created the dictionary of
       # label content options should be available.
       self.labelMenu.clear()
     
-      for kv in self.canvasLabelFlags.items():
+      for kv in self.labelFlags.items():
         a = PyQt4.QtGui.QAction(kv[0], self.qMainWindow, checkable=True)
+        
+        # set widget data to the label key
         a.data = kv[0]
+        
+        # set toggled status
+        a.setChecked(kv[1])
+        
+        # connect signal to handler
         a.toggled.connect(self.toggleLabelContent)
+        
+        # add to menu
         self.labelMenu.addAction(a)
-        # This doesn't work!
-        # checkableAction = PyQt4.QtGui.QWidgetAction(self.qMainWindow)
-        # checkBox = PyQt4.QtGui.QCheckBox(kv[0], self.qMainWindow)
-        # checkableAction.setDefaultWidget(checkBox)
-        # self.labelMenu.addAction(checkableAction)
         
       self.labelMenu.addSeparator()
       self.labelMenu.addAction(PyQt4.QtGui.QAction("Clear all...", self.qMainWindow))
@@ -456,7 +464,7 @@ class Full(AbstractCanvas):
     
     # add control widgets
     self.controls = ControlPanel(self)
-    self.controls.setFixedWidth(200)
+    self.controls.setFixedWidth(300)
     
     ### create container for view + layer buttons and controls
     self.container = PyQt4.QtGui.QWidget()
@@ -573,12 +581,13 @@ class Full(AbstractCanvas):
     # Get clicked canvas label.
     canvasLabel = self.qMainWindow.sender().data
     
-    print event
+    # open edit controls
+    self.controls.openEditControls(canvasLabel)
 
   def toggleLabelContent(self, checked):
     sender = self.qMainWindow.sender()
     label = sender.data
-    self.canvasLabelFlags[label] = checked
+    self.labelFlags[label] = checked
     self.redraw(refreshLabelMenu=False)
     
   def wheelHandler(self, event):
@@ -743,6 +752,7 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     # edit panel within scroll area within group box
     self.itemEditScrollArea = PyQt4.QtGui.QScrollArea()
     self.itemEditPanel = OptivisItemEditPanel()
+    self.itemEditPanel.parameterEdited.connect(self.parameterEditedHandler)
     self.itemEditScrollArea.setWidget(self.itemEditPanel)
     self.itemEditScrollArea.setWidgetResizable(True)
     itemEditGroupBoxLayout = PyQt4.QtGui.QVBoxLayout()
@@ -754,6 +764,15 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     ### add layout to control widget
     self.setLayout(controlLayout)
+  
+  def parameterEditedHandler(self):
+    """
+    Handles signals from edit panel showing that a parameter has been edited.
+    """
+    
+    # an edited parameter might have changed the look of the view, so lay it out again and redraw
+    self.canvas.layout()
+    self.canvas.redraw()
   
   def layoutComboBoxChangeHandler(self):
     # get combo box
@@ -786,6 +805,9 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.canvas.setZoom(float(value))
 
 class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
+  # signal to emit when item parameters are edited in the GUI
+  parameterEdited = PyQt4.QtCore.pyqtSignal()
+  
   def __init__(self, *args, **kwargs):
     super(OptivisItemEditPanel, self).__init__(*args, **kwargs)
 
@@ -794,7 +816,46 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     self.vBox.setAlignment(PyQt4.QtCore.Qt.AlignTop)
 
     # set layout
-    self.setLayout(self.vBox)
+    self.setLayout(self.vBox) 
+
+  def paramEditWidgetChanged(self, *args, **kwargs):    
+    # get widget that sent the signal
+    sender = self.sender()
+    
+    # get parameter data associated with this widget
+    paramName, paramType, target = self.extractParamEditWidgetPayload(sender)
+    
+    # get param value
+    paramValue = OptivisCanvasItemDataType.getCanvasWidgetValue(sender, paramType)
+    
+    ### send new value to associated bench item
+    self.setParamOnTarget(target, paramName, paramValue, sender)
+    
+    # emit signal
+    self.parameterEdited.emit()
+
+  def extractParamEditWidgetPayload(self, sender):
+    # get parameters from sender
+    paramName, paramType, target = sender.data
+
+    # get the canvas item associated with this edit widget
+    if hasattr(target, "__call__"):
+      # reference the weakref by calling it like a function
+      target = target()
+    
+    return (paramName, paramType, target)
+
+  def setParamOnTarget(self, target, paramName, paramValue, widget):    
+    try:
+      setattr(target, paramName, paramValue)
+
+      self.setEditWidgetValidity(widget, True)
+    except AttributeError, e:
+      self.setEditWidgetValidity(widget, False)
+      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, target, e))
+    except Exception, e:
+      self.setEditWidgetValidity(widget, False)
+      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, target, e))
 
   def setEditWidgetValidity(self, widget, validity):
     if validity:
@@ -802,38 +863,7 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
       widget.setStyleSheet("")
     else:
       # yellow background
-      widget.setStyleSheet("background-color: yellow;")    
-
-  def paramEditWidgetTextChanged(self, *args, **kwargs):
-    sender = self.sender()
-
-    # get parameters from sender
-    paramName, itemDataType, canvasItem = sender.data
-
-    # get the canvas item associated with this edit widget
-    if hasattr(canvasItem, "__call__"):
-      # reference the weakref by calling it like a function
-      canvasItem = canvasItem()
-
-    if not isinstance(canvasItem, AbstractCanvasItem):
-      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
-
-    ### send edit to externally linked item
-
-    # get external object
-    pykatObject = canvasItem.item.pykatObject
-
-    # set the updated value
-    try:
-      setattr(pykatObject, paramName, OptivisCanvasItemDataType.getCanvasWidgetValue(sender, itemDataType))
-
-      self.setEditWidgetValidity(sender, True)
-    except AttributeError, e:
-      self.setEditWidgetValidity(sender, False)
-      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, canvasItem.item, e))
-    except Exception, e:
-      self.setEditWidgetValidity(sender, False)
-      raise Exception('Error setting attribute {0} on {1}: {2}'.format(paramName, canvasItem.item, e))
+      widget.setStyleSheet("background-color: yellow;")
 
   def setContentFromCanvasItem(self, canvasItem):
     # empty current contents
@@ -841,37 +871,65 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     for i in reversed(range(self.vBox.count())): 
       self.vBox.itemAt(i).widget().setParent(None)
 
-    if canvasItem.item.paramList is None:
-      # no edit controls provided
-      return
+    ### Add built-in attributes.
+    
+    # Create a group box for built-in parameters
+    parameterGroupBox = PyQt4.QtGui.QGroupBox(title=str(canvasItem.item))
+    layout = PyQt4.QtGui.QVBoxLayout()
+    layout.setAlignment(PyQt4.QtCore.Qt.AlignTop)
 
-    # get attributes and external item
-    attributes = canvasItem.item.paramList
-    pykatObject = canvasItem.item.pykatObject
+    # set layout
+    parameterGroupBox.setLayout(layout)
+    
+    # Component specific controls.
+    if isinstance(canvasItem.item, optivis.bench.components.AbstractComponent):
+      # Add input/output node controls
+      
+      for node in canvasItem.item.inputNodes + canvasItem.item.outputNodes:
+	# node azimuth edit control
+	nodeAzimuthEditWidget = OptivisCanvasItemDataType.getCanvasWidget('azimuth', OptivisCanvasItemDataType.SPINBOX, acceptRange=[-360, 360], increment=1)
+	
+	# set data
+	nodeAzimuthEditWidget.data = ('azimuth', OptivisCanvasItemDataType.SPINBOX, weakref.ref(node))
+	
+	# connect edit widget text change signal to a slot that deals with it
+	nodeAzimuthEditWidget.valueChanged[float].connect(self.paramEditWidgetChanged)
+	
+	OptivisCanvasItemDataType.setCanvasWidgetValue(nodeAzimuthEditWidget, OptivisCanvasItemDataType.SPINBOX, getattr(node, 'azimuth'))
+	
+	# create a container for this edit widget
+	container = PyQt4.QtGui.QWidget()
+	containerLayout = PyQt4.QtGui.QHBoxLayout()
 
-    # loop over attributes from external object and create
-    for paramName in attributes:
-      dataType = attributes[paramName]
+	# remove padding between widgets
+	containerLayout.setContentsMargins(0, 0, 0, 0)
 
-      # get attribute value
-      paramValue = getattr(pykatObject, paramName)
+	# create label
+	label = PyQt4.QtGui.QLabel(text="{0} azimuth".format(node))
 
-      # get widget for this parameter
-      try:
-        paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(paramName, dataType, canvasItem)
+	# add label and edit widget to layout
+	containerLayout.addWidget(label, 2) # stretch 2
+	containerLayout.addWidget(nodeAzimuthEditWidget, 1) # stretch 1
 
-        # give the edit widget knowledge of its canvas item
-        # use a weak reference to avoid making the canvas item a zombie if it is deleted
-        paramEditWidget.data = (paramName, dataType, weakref.ref(canvasItem))
-      except AttributeError, e:
-        print "[GUI] WARNING: the value of a parameter specified in the parameter list with this object is not available. Skipping."
-        continue
+	# set layout of container
+	container.setLayout(containerLayout)
 
+	# add container to edit panel
+	layout.addWidget(container)
+	
+    # Link specific controls.
+    if isinstance(canvasItem.item, optivis.bench.links.AbstractLink):
+      # Add length control
+      lengthEditWidget = OptivisCanvasItemDataType.getCanvasWidget('length', OptivisCanvasItemDataType.SPINBOX, acceptRange=[0, float('inf')], increment=1)
+      
+      # set data
+      lengthEditWidget.data = ('length', OptivisCanvasItemDataType.SPINBOX, weakref.ref(canvasItem.item))
+      
       # connect edit widget text change signal to a slot that deals with it
-      self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.paramEditWidgetTextChanged)
-          
-      OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
-
+      lengthEditWidget.valueChanged[float].connect(self.paramEditWidgetChanged)
+      
+      OptivisCanvasItemDataType.setCanvasWidgetValue(lengthEditWidget, OptivisCanvasItemDataType.SPINBOX, getattr(canvasItem.item, 'length'))
+      
       # create a container for this edit widget
       container = PyQt4.QtGui.QWidget()
       containerLayout = PyQt4.QtGui.QHBoxLayout()
@@ -880,20 +938,116 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
       containerLayout.setContentsMargins(0, 0, 0, 0)
 
       # create label
-      label = PyQt4.QtGui.QLabel(text=paramName)
+      label = PyQt4.QtGui.QLabel(text='Length')
 
       # add label and edit widget to layout
-      containerLayout.addWidget(label)
-      containerLayout.addWidget(paramEditWidget)
+      containerLayout.addWidget(label, 2) # stretch 2
+      containerLayout.addWidget(lengthEditWidget, 1) # stretch 1
 
       # set layout of container
       container.setLayout(containerLayout)
 
-      # set container height
-      #container.setFixedHeight(50)
+      # add container to edit panel
+      layout.addWidget(container)
+      
+    # Label specific controls.
+    elif isinstance(canvasItem.item, optivis.bench.labels.AbstractLabel):
+      azimuthEditWidget = OptivisCanvasItemDataType.getCanvasWidget('azimuth', OptivisCanvasItemDataType.SPINBOX, acceptRange=[-360, 360], increment=1)
+      
+      # set data
+      azimuthEditWidget.data = ('azimuth', OptivisCanvasItemDataType.SPINBOX, weakref.ref(canvasItem.item))
+      
+      # connect edit widget text change signal to a slot that deals with it
+      azimuthEditWidget.valueChanged[float].connect(self.paramEditWidgetChanged)
+      
+      OptivisCanvasItemDataType.setCanvasWidgetValue(azimuthEditWidget, OptivisCanvasItemDataType.SPINBOX, getattr(canvasItem.item, 'azimuth'))
+      
+      # create a container for this edit widget
+      container = PyQt4.QtGui.QWidget()
+      containerLayout = PyQt4.QtGui.QHBoxLayout()
+
+      # remove padding between widgets
+      containerLayout.setContentsMargins(0, 0, 0, 0)
+
+      # create label
+      label = PyQt4.QtGui.QLabel(text='azimuth')
+
+      # add label and edit widget to layout
+      containerLayout.addWidget(label, 2) # stretch 2
+      containerLayout.addWidget(azimuthEditWidget, 1) # stretch 1
+
+      # set layout of container
+      container.setLayout(containerLayout)
 
       # add container to edit panel
-      self.vBox.addWidget(container)
+      layout.addWidget(container)
+    
+    # Now that we've added built-in edit controls, add the layout to the panel
+    self.vBox.addWidget(parameterGroupBox)
+
+    # Add external parameters, if available.
+    # These are only available on AbstractBenchItems, so components and links (but not labels).
+    if isinstance(canvasItem.item, optivis.bench.AbstractBenchItem):
+      # Create a group box for these external parameters
+      externalParameterGroupBox = PyQt4.QtGui.QGroupBox(title='External Parameters')
+      externalLayout = PyQt4.QtGui.QVBoxLayout()
+      externalLayout.setAlignment(PyQt4.QtCore.Qt.AlignTop)
+
+      # set layout
+      externalParameterGroupBox.setLayout(externalLayout)
+      
+      if canvasItem.item.paramList is not None:
+	# external edit controls provided
+
+	# get attributes and external item
+	attributes = canvasItem.item.paramList
+	pykatObject = canvasItem.item.pykatObject
+
+	# loop over attributes from external object and create
+	for paramName in attributes:
+	  dataType = attributes[paramName]
+
+	  # get attribute value
+	  paramValue = getattr(pykatObject, paramName)
+
+	  # get widget for this parameter
+	  try:
+	    paramEditWidget = OptivisCanvasItemDataType.getCanvasWidget(paramName, dataType)
+
+	    # give the edit widget knowledge of its canvas item
+	    # use a weak reference to avoid making the canvas item a zombie if it is deleted
+	    paramEditWidget.data = (paramName, dataType, weakref.ref(pykatObject))
+	  except AttributeError, e:
+	    print "[GUI] WARNING: the value of a parameter specified in the parameter list with this object is not available. Skipping."
+	    continue
+
+	  # connect edit widget text change signal to a slot that deals with it
+	  self.connect(paramEditWidget, PyQt4.QtCore.SIGNAL("textChanged(QString)"), self.paramEditWidgetChanged)
+	      
+	  OptivisCanvasItemDataType.setCanvasWidgetValue(paramEditWidget, dataType, paramValue)
+
+	  # create a container for this edit widget
+	  container = PyQt4.QtGui.QWidget()
+	  containerLayout = PyQt4.QtGui.QHBoxLayout()
+
+	  # remove padding between widgets
+	  containerLayout.setContentsMargins(0, 0, 0, 0)
+
+	  # create label
+	  label = PyQt4.QtGui.QLabel(text=paramName)
+
+	  # add label and edit widget to layout
+	  containerLayout.addWidget(label, 2) # stretch 2
+	  containerLayout.addWidget(paramEditWidget, 1) # stretch 1
+
+	  # set layout of container
+	  container.setLayout(containerLayout)
+
+	  # add container to edit panel
+	  externalLayout.addWidget(container)
+	  
+	# Now that we've added external edit controls, add the layout to the panel
+	self.vBox.addWidget(externalParameterGroupBox)
 
 class AbstractCanvasItem(object):
   """
@@ -957,7 +1111,7 @@ class CanvasComponent(AbstractCanvasItem):
     qScene.addItem(self.graphicsItem)
   
   def redraw(self):
-    #print "[GUI] Redrawing component {0} at {1}".format(self.item, self.item.position)
+    print "[GUI] Redrawing component {0} at {1}".format(self.item, self.item.position)
     
     self.setGraphicsFromItem()
     
@@ -1037,7 +1191,7 @@ class CanvasLink(AbstractCanvasItem):
     qScene.addItem(self.endMarker)
 
   def redraw(self, *args, **kwargs):
-    #print "[GUI] Redrawing link {0}".format(self.item)
+    print "[GUI] Redrawing link {0}".format(self.item)
     
     self.setGraphicsFromItem(*args, **kwargs)
 
@@ -1090,32 +1244,17 @@ class OptivisLineItem(PyQt4.QtGui.QGraphicsLineItem):
     self.comms.mouseReleased.emit(event)
 
 class CanvasLabel(AbstractCanvasItem):
-  def __init__(self, label, canvasLabelFlags=None, *args, **kwargs):
+  def __init__(self, label, *args, **kwargs):
     if not isinstance(label, optivis.bench.labels.AbstractLabel):
       raise Exception('Specified label is not of type AbstractLabel')
-    
-    self.canvasLabelFlags = canvasLabelFlags
                     
     super(CanvasLabel, self).__init__(item=label, *args, **kwargs)
 
-  def draw(self, qScene):
-    #print "[GUI] Drawing label {0}".format(self.item)
-    
-    if self.canvasLabelFlags is not None:
-      for kv in self.item.content.items():
-	if kv[0] not in self.canvasLabelFlags:
-	  self.canvasLabelFlags[kv[0]] = False
-
-    # get text
-    text = self.item.text
-
-    if self.canvasLabelFlags is not None:
-      for kv in self.item.content.items():
-	if self.canvasLabelFlags[kv[0]] == True:
-	  text += "\n%s" % kv[1]
+  def draw(self, qScene, *args, **kwargs):
+    print "[GUI] Drawing label {0}".format(self.item)
 
     # create label
-    self.graphicsItem = OptivisLabelItem(text)
+    self.graphicsItem = OptivisLabelItem()
     
     # reference this CanvasLabel in the data payload
     self.graphicsItem.comms.data = self
@@ -1127,17 +1266,34 @@ class CanvasLabel(AbstractCanvasItem):
     qScene.addItem(self.graphicsItem)
     
   def redraw(self, *args, **kwargs):
-    #print "[GUI] Redrawing label {0}".format(self.item)
+    print "[GUI] Redrawing label {0}".format(self.item)
     
+    # Update graphical representation.
     self.setGraphicsFromItem(*args, **kwargs)
   
-  def setGraphicsFromItem(self):
-    # calculate label size
-    labelSize = optivis.geometry.Coordinates(self.graphicsItem.boundingRect().width(), self.graphicsItem.boundingRect().height())
+  def setGraphicsFromItem(self, labelFlags=None):
+    ### Set label text.
+    # Label text is set first so we can calculate the label's boundingRect() below.
     
+    content = []
+    
+    # Create label sub-content
+    if labelFlags is not None:
+      for kv in self.item.content.items():
+	if kv[0] in labelFlags.keys():
+	  if labelFlags[kv[0]]:
+	    # label is turned on
+	    content.append("{0} = {1}".format(kv[0], kv[1]))
+    
+    # Set text
+    self.graphicsItem.setText(self.item.text + "\n" + "\n".join(content))
+    
+    ### Calculate label size and azimuth.
+    labelSize = optivis.geometry.Coordinates(self.graphicsItem.boundingRect().width(), self.graphicsItem.boundingRect().height())
     labelAzimuth = self.item.item.getLabelAzimuth() + self.item.azimuth
     
-    ### calculate label position
+    ### Draw label at the correct position and orientation.
+    
     # get nominal position
     labelPosition = self.item.item.getLabelOrigin()
     
@@ -1204,6 +1360,7 @@ class OptivisItemDataType(object):
 
   TEXTBOX = 1
   CHECKBOX = 2
+  SPINBOX = 3
 
 class OptivisCanvasItemDataType(OptivisItemDataType):
   """
@@ -1211,13 +1368,24 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
   """
 
   @staticmethod
-  def getCanvasWidget(itemParamName, itemDataType, canvasItem):
-    if not isinstance(canvasItem, AbstractCanvasItem):
-      raise Exception('Specified canvas item is not of type AbstractCanvasItem')
+  def getCanvasWidget(itemParamName, itemDataType, *args, **kwargs):
 
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
       widget = PyQt4.QtGui.QLineEdit()
 
+      return widget
+    elif itemDataType == OptivisCanvasItemDataType.SPINBOX:
+      widget = PyQt4.QtGui.QDoubleSpinBox()
+      
+      # set range and increment
+      acceptRange = kwargs['acceptRange']
+      increment = kwargs['increment']
+      
+      widget.setMinimum(acceptRange[0])
+      widget.setMaximum(acceptRange[1])
+      
+      widget.setSingleStep(increment)
+      
       return widget
     else:
       raise Exception('Specified item data type is invalid')
@@ -1226,6 +1394,8 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
   def getCanvasWidgetValue(widget, itemDataType):
     if itemDataType == OptivisCanvasItemDataType.TEXTBOX:
       return str(widget.text())
+    elif itemDataType == OptivisCanvasItemDataType.SPINBOX:
+      return float(widget.value())
     else:
       raise Exception('Specified item data type is invalid')
 
@@ -1239,5 +1409,7 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
         itemValue = ''
 
       widget.setText(itemValue)
+    elif itemDataType == OptivisCanvasItemDataType.SPINBOX:
+      widget.setValue(float(itemValue))
     else:
       raise Exception('Specified item data type is invalid')
