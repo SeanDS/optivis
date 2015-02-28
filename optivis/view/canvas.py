@@ -33,9 +33,11 @@ class AbstractCanvas(optivis.view.AbstractView):
   SHOW_COMPONENTS = 1 << 0
   SHOW_LINKS = 1 << 1
   SHOW_LABELS = 1 << 2
+  SHOW_START_MARKERS = 1 << 4
+  SHOW_END_MARKERS = 1 << 8
 
-  # 'show all', 2^(n+1)-1 where n is the number of significant bits above
-  SHOW_MAX = (1 << 3) - 1
+  # 'show all', 2n-1 where n is 2 ^ the number of options above
+  SHOW_MAX = (1 << 16) - 1
   
   def __init__(self, layoutManagerClass=None, showFlags=None, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
@@ -133,30 +135,75 @@ class AbstractCanvas(optivis.view.AbstractView):
     # set zoom
     self.qView.setScale(self.zoom)
       
-  def draw(self):    
+  def draw(self):
     # draw links
-    if self.showFlags & AbstractCanvas.SHOW_LINKS:
-      for canvasLink in self.canvasLinks:
-	# draw
-        canvasLink.draw(self.qScene, startMarkers=self.startMarkers, endMarkers=self.endMarkers, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
-
+    for canvasLink in self.canvasLinks:      
+      canvasLink.draw(self.qScene, startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+      
+      if self.showFlags & AbstractCanvas.SHOW_LINKS:	
+	# set visibility
+	canvasLink.graphicsItem.setVisible(True)
+      else:
+	canvasLink.graphicsItem.setVisible(False)
+      
+      # show start and end markers?
+      startMarker = self.showFlags & AbstractCanvas.SHOW_START_MARKERS
+      endMarker = self.showFlags & AbstractCanvas.SHOW_END_MARKERS
+      
+      canvasLink.startMarker.setVisible(startMarker)
+      canvasLink.endMarker.setVisible(endMarker)
+    
     # draw components
-    if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
-      for canvasComponent in self.canvasComponents:
-	# draw
-        canvasComponent.draw(self.qScene)
-
+    for canvasComponent in self.canvasComponents:
+      canvasComponent.draw(self.qScene)
+      
+      if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
+	canvasComponent.graphicsItem.setVisible(True)
+      else:
+	canvasComponent.graphicsItem.setVisible(False)
+    
     # draw labels
-    if self.showFlags & AbstractCanvas.SHOW_LABELS:
-      for canvasLabel in self.canvasLabels:
-	canvasLabel.draw(self.qScene)
+    for canvasLabel in self.canvasLabels:
+      canvasLabel.draw(self.qScene)
+      
+      if self.showFlags & AbstractCanvas.SHOW_LABELS:
+	canvasLabel.graphicsItem.setVisible(True)
+      else:
+	canvasLabel.graphicsItem.setVisible(False)
 
-  def redraw(self, *args, **kwargs):
-    # empty the qScene
-    self.qScene.clear()
-
-    # draw the scene again
-    self.draw(*args, **kwargs)
+  def redraw(self, *args, **kwargs):    
+    # update links
+    for canvasLink in self.canvasLinks:      
+      if self.showFlags & AbstractCanvas.SHOW_LINKS:	
+	canvasLink.redraw(startMarkerRadius=self.startMarkerRadius, endMarkerRadius=self.endMarkerRadius, startMarkerColor=self.startMarkerColor, endMarkerColor=self.endMarkerColor)
+	
+	# set visibility
+	canvasLink.graphicsItem.setVisible(True)
+      else:
+	canvasLink.graphicsItem.setVisible(False)
+      
+      # show start and end markers?
+      startMarker = self.showFlags & AbstractCanvas.SHOW_START_MARKERS
+      endMarker = self.showFlags & AbstractCanvas.SHOW_END_MARKERS
+      
+      canvasLink.startMarker.setVisible(startMarker)
+      canvasLink.endMarker.setVisible(endMarker)
+    
+    # update components
+    for canvasComponent in self.canvasComponents:
+      if self.showFlags & AbstractCanvas.SHOW_COMPONENTS:
+	canvasComponent.redraw()
+	canvasComponent.graphicsItem.setVisible(True)
+      else:
+	canvasComponent.graphicsItem.setVisible(False)
+    
+    # update labels
+    for canvasLabel in self.canvasLabels:
+      if self.showFlags & AbstractCanvas.SHOW_LABELS:
+	canvasLabel.redraw()
+	canvasLabel.graphicsItem.setVisible(True)
+      else:
+	canvasLabel.graphicsItem.setVisible(False)
 
   def layout(self):
     # instantiate layout manager and arrange objects
@@ -363,17 +410,17 @@ class Full(AbstractCanvas):
     
     # attach link click signals to handlers
     for canvasLink in self.canvasLinks:
-      canvasLink.optivisLineItem.comms.mouseReleased.connect(self.canvasLinkMouseReleasedHandler)
+      canvasLink.graphicsItem.comms.mouseReleased.connect(self.canvasLinkMouseReleasedHandler)
 
     # attach component click signals to handlers
     for canvasComponent in self.canvasComponents:   
-      canvasComponent.optivisSvgItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
+      canvasComponent.graphicsItem.mouseReleased.connect(self.canvasComponentMouseReleasedHandler)
     
     # attach link click signals to handlers
     for canvasLabel in self.canvasLabels:
-      canvasLabel.optivisLabelItem.comms.mousePressed.connect(self.canvasLabelMousePressedHandler)
-      canvasLabel.optivisLabelItem.comms.mouseMoved.connect(self.canvasLabelMouseMovedHandler)
-      canvasLabel.optivisLabelItem.comms.mouseReleased.connect(self.canvasLabelMouseReleasedHandler)
+      canvasLabel.graphicsItem.comms.mousePressed.connect(self.canvasLabelMousePressedHandler)
+      canvasLabel.graphicsItem.comms.mouseMoved.connect(self.canvasLabelMouseMovedHandler)
+      canvasLabel.graphicsItem.comms.mouseReleased.connect(self.canvasLabelMouseReleasedHandler)
   
   def redraw(self, refreshLabelMenu=True, *args, **kwargs):
     # set canvas label flags
@@ -496,18 +543,31 @@ class Full(AbstractCanvas):
     canvasLabel = self.qMainWindow.sender().data
     
     # Set position of mouse, in case this press becomes a drag
-    self.canvasLabelMousePressPosition = event.pos()
-    self.canvasLabelStartPosition = canvasLabel.item.position
+    self.canvasLabelMousePosition = self.qView.mapFromScene(event.scenePos())
   
-  def canvasLabelMouseMovedHandler(self, event):
+  def canvasLabelMouseMovedHandler(self, event):    
     canvasItem = self.qMainWindow.sender()
     
     # Get moved canvas label.
     canvasLabel = canvasItem.data
     
-    if (event.pos() - self.canvasLabelMousePressPosition).manhattanLength() < self.qApplication.startDragDistance():
-      # drag is not far enough
-      return
+    # event position
+    eventPos = self.qView.mapFromScene(event.scenePos())
+    
+    # difference
+    difference = eventPos - self.canvasLabelMousePosition
+    
+    # set canvas label position to original position plus the difference
+    projection = optivis.geometry.Coordinates(difference.x(), 0).rotate(canvasLabel.item.azimuth)
+    
+    # set label offset
+    canvasLabel.item.offset = canvasLabel.item.offset + projection
+    
+    # redraw scene
+    self.redraw()
+    
+    # update mouse position
+    self.canvasLabelMousePosition = eventPos
   
   def canvasLabelMouseReleasedHandler(self, event):
     # Get clicked canvas label.
@@ -553,18 +613,26 @@ class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
     self.button3 = PyQt4.QtGui.QCheckBox("Labels")
     self.button3.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_LABELS)
     self.button3.stateChanged.connect(self.showCheckBoxChanged)
+    self.button4 = PyQt4.QtGui.QCheckBox("Start Markers")
+    self.button4.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_START_MARKERS)
+    self.button4.stateChanged.connect(self.showCheckBoxChanged)
+    self.button5 = PyQt4.QtGui.QCheckBox("End Markers")
+    self.button5.setChecked(self.canvas.showFlags & AbstractCanvas.SHOW_END_MARKERS)
+    self.button5.stateChanged.connect(self.showCheckBoxChanged)
 
     # add buttons to layout
     self.hBox.addWidget(self.button1)
     self.hBox.addWidget(self.button2)
     self.hBox.addWidget(self.button3)
+    self.hBox.addWidget(self.button4)
+    self.hBox.addWidget(self.button5)
 
     # set layout of widget
     self.setLayout(self.hBox)
 
   def showCheckBoxChanged(self, *args, **kwargs):
     # just rebuild the show bitfield using all checkboxes
-    self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2)
+    self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2) | (self.button4.isChecked() << 4) | (self.button5.isChecked() << 8)
 
     # redraw canvas
     self.canvas.redraw()
@@ -666,32 +734,6 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     # add zoom group box to control box layout
     controlLayout.addWidget(zoomSliderGroupBox)
-    
-    ### marker controls
-    
-    # group box for marker controls
-    markerCheckBoxGroupBox = PyQt4.QtGui.QGroupBox(title="Markers")
-    markerCheckBoxGroupBox.setFixedHeight(100)
-    
-    # start marker checkbox
-    startMarkersCheckBox = PyQt4.QtGui.QCheckBox("Start")
-    startMarkersCheckBox.setChecked(self.canvas.startMarkers)
-    startMarkersCheckBox.stateChanged.connect(self.startMarkersChanged)
-    
-    endMarkersCheckBox = PyQt4.QtGui.QCheckBox("End")
-    endMarkersCheckBox.setChecked(self.canvas.endMarkers)
-    endMarkersCheckBox.stateChanged.connect(self.endMarkersChanged)
-    
-    # add marker controls to marker group box
-    markerLayout = PyQt4.QtGui.QHBoxLayout()
-    
-    markerLayout.addWidget(startMarkersCheckBox, alignment=PyQt4.QtCore.Qt.AlignHCenter)
-    markerLayout.addWidget(endMarkersCheckBox, alignment=PyQt4.QtCore.Qt.AlignHCenter)
-    
-    markerCheckBoxGroupBox.setLayout(markerLayout)
-    
-    # add marker check box group box to control box layout
-    controlLayout.addWidget(markerCheckBoxGroupBox)
 
     ### item edit controls
 
@@ -742,26 +784,6 @@ class ControlPanel(PyQt4.QtGui.QWidget):
   
   def zoomSpinBoxChanged(self, value):
     self.canvas.setZoom(float(value))
-  
-  def startMarkersChanged(self, value):
-    if value == PyQt4.QtCore.Qt.Checked:
-      self.setStartMarkers(True)
-    else:
-      self.setStartMarkers(False)
-      
-  def endMarkersChanged(self, value):
-    if value == PyQt4.QtCore.Qt.Checked:
-      self.setEndMarkers(True)
-    else:
-      self.setEndMarkers(False)
-  
-  def setStartMarkers(self, value):
-    self.canvas.startMarkers = value
-    self.canvas.redraw()
-    
-  def setEndMarkers(self, value):
-    self.canvas.endMarkers = value
-    self.canvas.redraw()
 
 class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
   def __init__(self, *args, **kwargs):
@@ -882,17 +904,38 @@ class AbstractCanvasItem(object):
   
   def __init__(self, item, *args, **kwargs):
     self.item = item
+    self.graphicsItem = None
+  
+  @property
+  def graphicsItem(self):
+    return self.__graphicsItem
+  
+  @graphicsItem.setter
+  def graphicsItem(self, graphicsItem):
+    if graphicsItem is not None and not (isinstance(graphicsItem, PyQt4.QtGui.QGraphicsItem) or isinstance(graphicsItem, PyQt4.QtGui.QWidget)):
+      raise Exception('Specified graphics item is not a QGraphicsItem or QWidget or None')
+    
+    self.__graphicsItem = graphicsItem
   
   @abc.abstractmethod
   def draw(self, *args, **kwargs):
-    return
+    pass
+  
+  @abc.abstractmethod
+  def redraw(self, *args, **kwargs):
+    pass
+  
+  @abc.abstractmethod
+  def setGraphicsFromItem(self):
+    """
+    Set graphics item information based on data from item, e.g. position, rotation, start of line, end of line, etc.
+    """
+    pass
 
 class CanvasComponent(AbstractCanvasItem):
   def __init__(self, component, *args, **kwargs):
     if not isinstance(component, optivis.bench.components.AbstractComponent):
       raise Exception('Specified component is not of type AbstractComponent')
-    
-    self.optivisSvgItem = None
     
     super(CanvasComponent, self).__init__(item=component, *args, **kwargs)
   
@@ -903,37 +946,41 @@ class CanvasComponent(AbstractCanvasItem):
     path = os.path.join(self.item.svgDir, self.item.filename)
     
     # Create graphical representation of SVG image at path.
-    self.optivisSvgItem = OptivisSvgItem(path)
+    self.graphicsItem = OptivisSvgItem(path)
     
     # reference this CanvasComponent in the data payload
-    self.optivisSvgItem.data = self
+    self.graphicsItem.data = self
     
-    if self.item.tooltip is not None:
-      if hasattr(self.item.tooltip, "__call__"):
-	self.optivisSvgItem.setToolTip(str(self.item.tooltip()))
-      else:
-	self.optivisSvgItem.setToolTip(str(self.item.tooltip))
+    # set graphics information
+    self.setGraphicsFromItem()
+    
+    qScene.addItem(self.graphicsItem)
+  
+  def redraw(self):
+    #print "[GUI] Redrawing component {0} at {1}".format(self.item, self.item.position)
+    
+    self.setGraphicsFromItem()
+    
+  def setGraphicsFromItem(self):    
+    # Reset transforms and rotations
+    self.graphicsItem.resetTransform()
     
     # Set position of top-left corner.
     # self.position.{x, y} are relative to the centre of the component, so we need to compensate for this.
-    self.optivisSvgItem.setPos(self.item.position.x - self.item.size.x / 2, self.item.position.y - self.item.size.y / 2)
+    self.graphicsItem.setPos(self.item.position.x - self.item.size.x / 2, self.item.position.y - self.item.size.y / 2)
     
     # Rotate clockwise.
     # Qt rotates with respect to the component's origin, i.e. top left, so to rotate around the centre we need to translate it before and after rotating it.
-    self.optivisSvgItem.translate(self.item.size.x / 2, self.item.size.y / 2)
-    self.optivisSvgItem.rotate(self.item.azimuth)
-    self.optivisSvgItem.translate(-self.item.size.x / 2, -self.item.size.y / 2)
+    self.graphicsItem.translate(self.item.size.x / 2, self.item.size.y / 2)
+    self.graphicsItem.rotate(self.item.azimuth)
+    self.graphicsItem.translate(-self.item.size.x / 2, -self.item.size.y / 2)
     
-    qScene.addItem(self.optivisSvgItem)
-    
-  @property
-  def optivisSvgItem(self):
-    return self.__optivisSvgItem
-  
-  @optivisSvgItem.setter
-  def optivisSvgItem(self, optivisSvgItem):
-    # FIXME: check type (but allow None)
-    self.__optivisSvgItem = optivisSvgItem
+    # Set tooltip.
+    if self.item.tooltip is not None:
+      if hasattr(self.item.tooltip, "__call__"):
+	self.graphicsItem.setToolTip(str(self.item.tooltip()))
+      else:
+	self.graphicsItem.setToolTip(str(self.item.tooltip))
 
 class OptivisSvgItem(PyQt4.QtSvg.QGraphicsSvgItem):
   mousePressed = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
@@ -962,52 +1009,51 @@ class CanvasLink(AbstractCanvasItem):
   def __init__(self, link, *args, **kwargs):
     if not isinstance(link, optivis.bench.links.AbstractLink):
       raise Exception('Specified link is not of type AbstractLink')
-    
-    self.optivisLineItem = None
+
+    self.startMarker = None
+    self.endMarker = None
 
     super(CanvasLink, self).__init__(item=link, *args, **kwargs)
 
-  def draw(self, qScene, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
+  def draw(self, qScene, *args, **kwargs):
     print "[GUI] Drawing link {0}".format(self.item)
     
     # create graphics object
-    self.optivisLineItem = OptivisLineItem()
+    self.graphicsItem = OptivisLineItem()
+    
+    # create start and end markers
+    self.startMarker = PyQt4.QtGui.QGraphicsEllipseItem()
+    self.endMarker = PyQt4.QtGui.QGraphicsEllipseItem()
     
     # reference this CanvasLink in the data payload
-    self.optivisLineItem.comms.data = self
+    self.graphicsItem.comms.data = self
     
-    # set start/end
-    self.optivisLineItem.setLine(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
-    
-    # set pen
-    self.optivisLineItem.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine))
+    # set graphics information
+    self.setGraphicsFromItem(*args, **kwargs)
 
     # add line to graphics scene
-    qScene.addItem(self.optivisLineItem)
-    
-    # add markers if necessary
-    if startMarkers:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.item.start.x - startMarkerRadius, self.item.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
-      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(startMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
-      circle.setPen(pen)
-      
-      qScene.addItem(circle)
-      
-    if endMarkers:
-      circle = PyQt4.QtGui.QGraphicsEllipseItem(self.item.end.x - endMarkerRadius, self.item.end.y - endMarkerRadius, endMarkerRadius * 2, endMarkerRadius * 2)
-      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(endMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine)
-      circle.setPen(pen)
-      
-      qScene.addItem(circle)
+    qScene.addItem(self.graphicsItem)
+    qScene.addItem(self.startMarker)
+    qScene.addItem(self.endMarker)
 
-  @property
-  def optivisLineItem(self):
-    return self.__optivisLineItem
-  
-  @optivisLineItem.setter
-  def optivisLineItem(self, optivisLineItem):
-    # FIXME: check type (but allow None)
-    self.__optivisLineItem = optivisLineItem
+  def redraw(self, *args, **kwargs):
+    #print "[GUI] Redrawing link {0}".format(self.item)
+    
+    self.setGraphicsFromItem(*args, **kwargs)
+
+  def setGraphicsFromItem(self, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):    
+    # set start/end
+    self.graphicsItem.setLine(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
+    
+    # set pen
+    self.graphicsItem.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine))
+    
+    # set markers
+    self.startMarker.setRect(self.item.start.x - startMarkerRadius, self.item.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
+    self.startMarker.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(startMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine))
+    
+    self.endMarker.setRect(self.item.end.x - endMarkerRadius, self.item.end.y - endMarkerRadius, endMarkerRadius * 2, endMarkerRadius * 2)
+    self.endMarker.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(endMarkerColor), 1, PyQt4.QtCore.Qt.SolidLine))
 
 class OptivisLineItemCommunicator(PyQt4.QtCore.QObject):
   """
@@ -1053,7 +1099,7 @@ class CanvasLabel(AbstractCanvasItem):
     super(CanvasLabel, self).__init__(item=label, *args, **kwargs)
 
   def draw(self, qScene):
-    print "[GUI] Drawing label {0}".format(self.item)
+    #print "[GUI] Drawing label {0}".format(self.item)
     
     if self.canvasLabelFlags is not None:
       for kv in self.item.content.items():
@@ -1069,13 +1115,25 @@ class CanvasLabel(AbstractCanvasItem):
 	  text += "\n%s" % kv[1]
 
     # create label
-    self.optivisLabelItem = OptivisLabelItem(text)
+    self.graphicsItem = OptivisLabelItem(text)
     
     # reference this CanvasLabel in the data payload
-    self.optivisLabelItem.comms.data = self
+    self.graphicsItem.comms.data = self
     
+    # set graphics information
+    self.setGraphicsFromItem()
+
+    # add to scene
+    qScene.addItem(self.graphicsItem)
+    
+  def redraw(self, *args, **kwargs):
+    #print "[GUI] Redrawing label {0}".format(self.item)
+    
+    self.setGraphicsFromItem(*args, **kwargs)
+  
+  def setGraphicsFromItem(self):
     # calculate label size
-    labelSize = optivis.geometry.Coordinates(self.optivisLabelItem.boundingRect().width(), self.optivisLabelItem.boundingRect().height())
+    labelSize = optivis.geometry.Coordinates(self.graphicsItem.boundingRect().width(), self.graphicsItem.boundingRect().height())
     
     labelAzimuth = self.item.item.getLabelAzimuth() + self.item.azimuth
     
@@ -1093,11 +1151,8 @@ class CanvasLabel(AbstractCanvasItem):
     labelPosition = labelPosition.translate(self.item.offset.rotate(self.item.item.getLabelAzimuth()))
     
     # set position and angle
-    self.optivisLabelItem.setPos(labelPosition.x, labelPosition.y)
-    self.optivisLabelItem.setRotation(labelAzimuth)
-
-    # add to scene
-    qScene.addItem(self.optivisLabelItem)
+    self.graphicsItem.setPos(labelPosition.x, labelPosition.y)
+    self.graphicsItem.setRotation(labelAzimuth)
 
 class OptivisLabelItemCommunicator(PyQt4.QtCore.QObject):
   """
