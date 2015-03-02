@@ -653,11 +653,21 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     ### master layout
     controlLayout = PyQt4.QtGui.QVBoxLayout()
 
-    ### layout chooser
-    layoutGroupBox = PyQt4.QtGui.QGroupBox(title="Layout")
-    layoutGroupBox.setFixedHeight(100)
+    ### scene controls group (layout and reference component)
+    sceneControlsGroupBox = PyQt4.QtGui.QGroupBox(title="Scene")
+    sceneControlsGroupBox.setFixedHeight(100)
+    
+    sceneControlsGroupBoxLayout = PyQt4.QtGui.QVBoxLayout()
 
-    # layout label and combo box
+    ## layout controls
+    
+    # create a container for this edit widget
+    layoutContainer = PyQt4.QtGui.QWidget()
+    layoutContainerLayout = PyQt4.QtGui.QHBoxLayout()
+
+    # remove padding between widgets
+    layoutContainerLayout.setContentsMargins(0, 0, 0, 0)
+    
     layoutLabel = PyQt4.QtGui.QLabel("Manager")
     self.layoutComboBox = PyQt4.QtGui.QComboBox()
 
@@ -677,15 +687,63 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     self.layoutComboBox.currentIndexChanged[int].connect(self.layoutComboBoxChangeHandler)
 
     # add combo box to group box
-    layoutLayout = PyQt4.QtGui.QHBoxLayout()
+    layoutContainerLayout.addWidget(layoutLabel, 1)
+    layoutContainerLayout.addWidget(self.layoutComboBox, 2)
     
-    layoutLayout.addWidget(layoutLabel)
-    layoutLayout.addWidget(self.layoutComboBox)
+    # set layout container layout
+    layoutContainer.setLayout(layoutContainerLayout)
     
-    layoutGroupBox.setLayout(layoutLayout)
+    # add container to scene controls group
+    sceneControlsGroupBoxLayout.addWidget(layoutContainer)
+
+    ## scene reference controls
     
-    # add layout chooser controls to control box layout
-    controlLayout.addWidget(layoutGroupBox)
+    # create a container for this edit widget
+    referenceContainer = PyQt4.QtGui.QWidget()
+    referenceContainerLayout = PyQt4.QtGui.QHBoxLayout()
+
+    # remove padding between widgets
+    referenceContainerLayout.setContentsMargins(0, 0, 0, 0)
+    
+    # reference label combo box
+    referenceLabel = PyQt4.QtGui.QLabel("Reference")
+    self.referenceComboBox = PyQt4.QtGui.QComboBox()
+
+    # populate combo box
+    canvasComponents = self.canvas.canvasComponents
+    
+    # add 'Default'
+    self.referenceComboBox.addItem('Default', 0)
+    
+    for i in range(0, len(canvasComponents)):
+      canvasComponent = canvasComponents[i]
+
+      # add this layout to the combobox, setting the userData to the class name of this layout
+      self.referenceComboBox.addItem(str(canvasComponent.item), i)
+
+    # set selected layout
+    if self.canvas.scene.reference is None:
+      # default value
+      self.referenceComboBox.setCurrentIndex(0)
+    else:
+      self.referenceComboBox.setCurrentIndex(self.referenceComboBox.findText(str(self.canvas.scene.reference)))
+
+    # connect signal to slot to listen for changes
+    self.referenceComboBox.currentIndexChanged[int].connect(self.referenceComboBoxChangeHandler)
+
+    # add combo box to group box
+    referenceContainerLayout.addWidget(referenceLabel, 1)
+    referenceContainerLayout.addWidget(self.referenceComboBox, 2)
+    
+    referenceContainer.setLayout(referenceContainerLayout)
+    
+    sceneControlsGroupBoxLayout.addWidget(referenceContainer)
+    
+    # set scene controls layout
+    sceneControlsGroupBox.setLayout(sceneControlsGroupBoxLayout)
+    
+    # add all to control box
+    controlLayout.addWidget(sceneControlsGroupBox)
     
     ### zoom controls
     
@@ -763,6 +821,33 @@ class ControlPanel(PyQt4.QtGui.QWidget):
 
     # update canvas layout
     self.canvas.layoutManager = layoutManagerClasses[layoutIndex]
+
+    # re-layout
+    self.canvas.layout()
+
+    # redraw
+    self.canvas.redraw()
+    
+    # reset view
+    self.canvas.calibrateView()
+    
+  def referenceComboBoxChangeHandler(self):
+    # get combo box
+    referenceComboBox = self.sender()
+
+    # get components
+    canvasComponents = self.canvas.canvasComponents
+
+    # get selected item's data (which is the index of the selected component in canvasComponents)
+    # The toInt() returns a tuple with the data in first position and a 'status' in the second. We don't need the second one.
+    componentIndex, ok = referenceComboBox.itemData(referenceComboBox.currentIndex()).toInt()
+
+    # update scene reference
+    if componentIndex == 0:
+      # 'None'
+      self.canvas.scene.reference = None
+    else:
+      self.canvas.scene.reference = canvasComponents[componentIndex].item
 
     # re-layout
     self.canvas.layout()
