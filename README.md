@@ -118,8 +118,9 @@ For the purposes of defining angles of incidence, it is necessary to designate a
 ![bs-outputs](https://cloud.githubusercontent.com/assets/5225190/6199972/aab69baa-b459-11e4-9a5f-f9ed437e538c.png)
 * For input nodes, the angle between the normal and the primary input is **negative** (for clockwise rotations):
 ![bs-inputs](https://cloud.githubusercontent.com/assets/5225190/6199973/b2b8a474-b459-11e4-9362-5df434d5425e.png)
+* A node's azimuth is determined by three numbers: the component's angle of incidence (`aoi` parameter), the node's `aoiMultiplier` factor and its `aoiOffset` factor. For example, a beam splitter's reflected back output has an `aoiMultiplier` of `-1` and an `aoiOffset` of `180`, so for an angle of incidence of `45`, the node's azimuth would be `-1 * 45 + 180 = 135`.
 
-For example, the beam splitter's `frA` output is its primary output (by design). Defining an angle of incidence `aoi` during the instantiation of a beam splitter will make light leave `frA` at angle `aoi` with respect to the component's normal. The beam splitter's `frB` output, on the other hand, is defined, by design, to output light at angle `-aoi` with respect to the normal.
+The primary output is typically designated the name `fr` or `frA`. On a beam splitter, for example, the azimuth of the output node `frA` is just the component's `aoi` parameter. Other outputs have modifiers such as `aoiMultiplier = -1` or `aoiOffset = 180`.
 
 This is a design choice, not a rule, so you are free to define new components using whatever convention you like. However, for the sake of clarity, consider following this convention.
 
