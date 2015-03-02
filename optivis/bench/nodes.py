@@ -8,15 +8,24 @@ import components
 class Node(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, name, component, position, azimuth):
+  def __init__(self, name, component, position, aoiMultiplier=1, aoiOffset=0):
     """
     position is normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
+    
+    aoiMultiplier is the constant to multiply the angle of incidence by
+    aoiOffset is the offset to add to the angle of incidence
     """
     
     self.name = name
     self.component = component
     self.position = position
-    self.azimuth = azimuth
+    self.aoiMultiplier = aoiMultiplier
+    self.aoiOffset = aoiOffset
+  
+  def getNodeAzimuth(self):
+    aoi = self.component.aoi
+    
+    return self.aoiMultiplier * aoi + self.aoiOffset
   
   @property
   def name(self):
@@ -49,12 +58,20 @@ class Node(object):
     self.__position = position
   
   @property
-  def azimuth(self):
-    return self.__azimuth
+  def aoiMultiplier(self):
+    return self.__aoiMultiplier
   
-  @azimuth.setter
-  def azimuth(self, azimuth):
-    self.__azimuth = azimuth
+  @aoiMultiplier.setter
+  def aoiMultiplier(self, aoiMultiplier):
+    self.__aoiMultiplier = aoiMultiplier
+    
+  @property
+  def aoiOffset(self):
+    return self.__aoiOffset
+  
+  @aoiOffset.setter
+  def aoiOffset(self, aoiOffset):
+    self.__aoiOffset = aoiOffset
 
   @abc.abstractmethod
   def __str__(self):
@@ -75,7 +92,7 @@ class Node(object):
     return self.component.position.translate(self.getRelativePosition())
   
   def getAbsoluteAzimuth(self):
-    return self.component.azimuth + self.azimuth
+    return self.component.azimuth + self.getNodeAzimuth()
   
   def setAbsolutePosition(self, nodeAbsolutePosition):
     """
@@ -90,7 +107,7 @@ class Node(object):
     Set azimuth of component based on azimuth of node
     """
     
-    self.component.azimuth = absoluteAzimuth - self.azimuth
+    self.component.azimuth = absoluteAzimuth - self.getNodeAzimuth()
 
 class InputNode(Node):
   def __init__(self, *args, **kwargs):

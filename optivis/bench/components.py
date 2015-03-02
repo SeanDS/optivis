@@ -13,7 +13,7 @@ class AbstractComponent(optivis.bench.AbstractBenchItem):
   
   svgDir = os.path.join(os.path.dirname(__file__), '..', 'assets')
   
-  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, name=None, position=None, tooltip=None, *args, **kwargs):
+  def __init__(self, filename, size, inputNodes, outputNodes, azimuth=0, aoi=0, name=None, position=None, tooltip=None, *args, **kwargs):
     if name is None:
       # empty name
       name = ''
@@ -27,6 +27,7 @@ class AbstractComponent(optivis.bench.AbstractBenchItem):
     self.inputNodes = inputNodes
     self.outputNodes = outputNodes
     self.azimuth = azimuth
+    self.aoi = aoi
     self.position = position
     self.tooltip = tooltip
     
@@ -134,6 +135,17 @@ class AbstractComponent(optivis.bench.AbstractBenchItem):
     azimuth = float(azimuth) % 360
     
     self.__azimuth = azimuth
+  
+  @property
+  def aoi(self):
+    return self.__aoi
+  
+  @aoi.setter
+  def aoi(self, aoi):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    aoi = float(aoi) % 360
+    
+    self.__aoi = aoi
     
   @property
   def position(self):
@@ -177,7 +189,7 @@ class Laser(Source):
     filename = "c-laser1.svg"
     size = optivis.geometry.Coordinates(62, 46)
     
-    outputNode = nodes.OutputNode(name="out", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0)
+    outputNode = nodes.OutputNode(name="out", component=self, position=optivis.geometry.Coordinates(0.5, 0))
     
     super(Laser, self).__init__(filename=filename, size=size, outputNode=outputNode, *args, **kwargs)
 
@@ -188,37 +200,37 @@ class Mirror(AbstractComponent):
     super(Mirror, self).__init__(*args, **kwargs)
 
 class CavityMirror(Mirror):
-  def __init__(self, aoi=0, *args, **kwargs):
+  def __init__(self, *args, **kwargs):
     filename = "b-cav-mir.svg"
     size = optivis.geometry.Coordinates(11, 29)
     
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0)),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiOffset=180)
     ]
     
     super(CavityMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
 
 class SteeringMirror(Mirror):
-  def __init__(self, aoi=0, *args, **kwargs):
+  def __init__(self, *args, **kwargs):
     filename = "b-mir.svg"
     size = optivis.geometry.Coordinates(11, 29)
     
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0))
     ]
     
     super(SteeringMirror, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
@@ -229,20 +241,20 @@ class BeamSplitter(Mirror):
     size = optivis.geometry.Coordinates(11, 29)
     
     inputNodes = [
-      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180+aoi),
-      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi),
-      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiOffset=180),
+      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0)),
+      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1)
     ]
     
     outputNodes = [
-      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=-aoi),
-      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0)),
+      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1),
+      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiOffset=180)
     ]
     
-    super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitter, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
 
 class BeamSplitterCube(Mirror):
   def __init__(self, aoi=0, *args, **kwargs):
@@ -250,20 +262,20 @@ class BeamSplitterCube(Mirror):
     size = optivis.geometry.Coordinates(23, 23)
     
     inputNodes = [
-      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0, -0.5), azimuth=aoi+90),
-      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180),
-      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi),
-      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(0, 0.5), azimuth=aoi+270)
+      nodes.InputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0, -0.5), aoiOffset=90),
+      nodes.InputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiOffset=180),
+      nodes.InputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(-0.5, 0)),
+      nodes.InputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(0, 0.5), aoiOffset=270)
     ]
     
     outputNodes = [
-      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=-aoi),
-      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0, -0.5), azimuth=270-aoi),
-      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(0, 0.5), azimuth=90-aoi),
-      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi)
+      nodes.OutputNode(name="frA", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1),
+      nodes.OutputNode(name="frB", component=self, position=optivis.geometry.Coordinates(0, -0.5), aoiMultiplier=-1, aoiOffset=270),
+      nodes.OutputNode(name="bkA", component=self, position=optivis.geometry.Coordinates(0, 0.5), aoiMultiplier=-1, aoiOffset=90),
+      nodes.OutputNode(name="bkB", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1, aoiOffset=180)
     ]
     
-    super(BeamSplitterCube, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(BeamSplitterCube, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
 
 class Lens(AbstractComponent):
   __metaclass__ = abc.ABCMeta
@@ -271,17 +283,17 @@ class Lens(AbstractComponent):
   def __init__(self, aoi, *args, **kwargs):
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0)),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiOffset=180)
     ]
     
-    super(Lens, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(Lens, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
 
 class ConvexLens(Lens):
   def __init__(self, aoi=0, *args, **kwargs):
@@ -303,17 +315,17 @@ class Plate(AbstractComponent):
   def __init__(self, aoi, *args, **kwargs):
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0)),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiOffset=180)
     ]
     
-    super(Plate, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(Plate, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
 
 class QuarterWavePlate(Plate):
   def __init__(self, aoi=0, *args, **kwargs):
@@ -335,17 +347,17 @@ class Modulator(AbstractComponent):
   def __init__(self, aoi, *args, **kwargs):
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=180-aoi),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=-aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180+aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(0.5, 0)),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiOffset=180)
     ]
     
-    super(Modulator, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(Modulator, self).__init__(inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
     
 class ElectroopticModulator(Modulator):
   def __init__(self, aoi=0, *args, **kwargs):
@@ -369,25 +381,25 @@ class FaradayIsolator(AbstractComponent):
     
     inputNodes = [
       # input node azimuth defined WRT input light direction
-      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=aoi+0),
-      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=aoi+180),
-      nodes.InputNode(name="frPoA", component=self, position=optivis.geometry.Coordinates(-0.35, -0.1), azimuth=90+aoi),
-      nodes.InputNode(name="frPoB", component=self, position=optivis.geometry.Coordinates(-0.35, 0.1), azimuth=-90-aoi),
-      nodes.InputNode(name="bkPoA", component=self, position=optivis.geometry.Coordinates(0.35, -0.1), azimuth=-90-aoi),
-      nodes.InputNode(name="bkPoB", component=self, position=optivis.geometry.Coordinates(0.35, 0.1), azimuth=-90+aoi)
+      nodes.InputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0)),
+      nodes.InputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiOffset=180),
+      nodes.InputNode(name="frPoA", component=self, position=optivis.geometry.Coordinates(-0.35, -0.1), aoiOffset=90),
+      nodes.InputNode(name="frPoB", component=self, position=optivis.geometry.Coordinates(-0.35, 0.1), aoiMultiplier=-1, aoiOffset=90),
+      nodes.InputNode(name="bkPoA", component=self, position=optivis.geometry.Coordinates(0.35, -0.1), aoiMultiplier=-1, aoiOffset=-90),
+      nodes.InputNode(name="bkPoB", component=self, position=optivis.geometry.Coordinates(0.35, 0.1), aoiOffset=-90)
     ]
     
     outputNodes = [
       # output node azimuth defined WRT output light direction
-      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=180-aoi),
-      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), azimuth=0-aoi),
-      nodes.OutputNode(name="frPoA", component=self, position=optivis.geometry.Coordinates(-0.35, -0.1), azimuth=90-aoi),
-      nodes.OutputNode(name="frPoB", component=self, position=optivis.geometry.Coordinates(-0.35, 0.1), azimuth=270+aoi),
-      nodes.OutputNode(name="bkPoA", component=self, position=optivis.geometry.Coordinates(0.35, -0.1), azimuth=270+aoi),
-      nodes.OutputNode(name="bkPoB", component=self, position=optivis.geometry.Coordinates(0.35, 0.1), azimuth=90-aoi)
+      nodes.OutputNode(name="fr", component=self, position=optivis.geometry.Coordinates(-0.5, 0), aoiMultiplier=-1, aoiOffset=180),
+      nodes.OutputNode(name="bk", component=self, position=optivis.geometry.Coordinates(0.5, 0), aoiMultiplier=-1),
+      nodes.OutputNode(name="frPoA", component=self, position=optivis.geometry.Coordinates(-0.35, -0.1), aoiMultiplier=-1, aoiOffset=90),
+      nodes.OutputNode(name="frPoB", component=self, position=optivis.geometry.Coordinates(-0.35, 0.1), aoiOffset=270),
+      nodes.OutputNode(name="bkPoA", component=self, position=optivis.geometry.Coordinates(0.35, -0.1), aoiOffset=270),
+      nodes.OutputNode(name="bkPoB", component=self, position=optivis.geometry.Coordinates(0.35, 0.1), aoiMultiplier=-1, aoiOffset=90)
     ]
     
-    super(FaradayIsolator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, *args, **kwargs)
+    super(FaradayIsolator, self).__init__(filename=filename, size=size, inputNodes=inputNodes, outputNodes=outputNodes, aoi=aoi, *args, **kwargs)
 
 class Sink(AbstractComponent):
   __metaclass__ = abc.ABCMeta
@@ -404,7 +416,7 @@ class Photodiode(Sink):
     filename = "e-pd1.svg"
     size = optivis.geometry.Coordinates(16, 23)
     
-    inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=0)
+    inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0))
     
     super(Photodiode, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)
     
@@ -414,6 +426,6 @@ class Dump(Sink):
     filename = "b-dump.svg"
     size = optivis.geometry.Coordinates(22, 33)
     
-    inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0), azimuth=0)
+    inputNode = nodes.InputNode(name="in", component=self, position=optivis.geometry.Coordinates(-0.5, 0))
     
     super(Dump, self).__init__(filename=filename, size=size, inputNode=inputNode, *args, **kwargs)

@@ -859,39 +859,36 @@ class OptivisItemEditPanel(PyQt4.QtGui.QWidget):
     
     # Component specific controls.
     if isinstance(canvasItem.item, optivis.bench.components.AbstractComponent):
-      # Add input/output node controls
+      # Add aoi control
+      aoiEditWidget = OptivisCanvasItemDataType.getCanvasWidget('aoi', OptivisCanvasItemDataType.SPINBOX, acceptRange=[-360, 360], increment=1)
       
-      for node in canvasItem.item.inputNodes + canvasItem.item.outputNodes:
-	# node azimuth edit control
-	nodeAzimuthEditWidget = OptivisCanvasItemDataType.getCanvasWidget('azimuth', OptivisCanvasItemDataType.SPINBOX, acceptRange=[-360, 360], increment=1)
-	
-	# set data
-	nodeAzimuthEditWidget.data = ('azimuth', OptivisCanvasItemDataType.SPINBOX, weakref.ref(node))
-	
-	# connect edit widget text change signal to a slot that deals with it
-	nodeAzimuthEditWidget.valueChanged[float].connect(self.paramEditWidgetChanged)
-	
-	OptivisCanvasItemDataType.setCanvasWidgetValue(nodeAzimuthEditWidget, OptivisCanvasItemDataType.SPINBOX, getattr(node, 'azimuth'))
-	
-	# create a container for this edit widget
-	container = PyQt4.QtGui.QWidget()
-	containerLayout = PyQt4.QtGui.QHBoxLayout()
+      # set data
+      aoiEditWidget.data = ('aoi', OptivisCanvasItemDataType.SPINBOX, weakref.ref(canvasItem.item))
+      
+      # connect edit widget text change signal to a slot that deals with it
+      aoiEditWidget.valueChanged[float].connect(self.paramEditWidgetChanged)
+      
+      OptivisCanvasItemDataType.setCanvasWidgetValue(aoiEditWidget, OptivisCanvasItemDataType.SPINBOX, getattr(canvasItem.item, 'aoi'))
+      
+      # create a container for this edit widget
+      container = PyQt4.QtGui.QWidget()
+      containerLayout = PyQt4.QtGui.QHBoxLayout()
 
-	# remove padding between widgets
-	containerLayout.setContentsMargins(0, 0, 0, 0)
+      # remove padding between widgets
+      containerLayout.setContentsMargins(0, 0, 0, 0)
 
-	# create label
-	label = PyQt4.QtGui.QLabel(text="{0} azimuth".format(node))
+      # create label
+      label = PyQt4.QtGui.QLabel(text="{0} aoi".format(canvasItem.item))
 
-	# add label and edit widget to layout
-	containerLayout.addWidget(label, 2) # stretch 2
-	containerLayout.addWidget(nodeAzimuthEditWidget, 1) # stretch 1
+      # add label and edit widget to layout
+      containerLayout.addWidget(label, 2) # stretch 2
+      containerLayout.addWidget(aoiEditWidget, 1) # stretch 1
 
-	# set layout of container
-	container.setLayout(containerLayout)
+      # set layout of container
+      container.setLayout(containerLayout)
 
-	# add container to edit panel
-	layout.addWidget(container)
+      # add container to edit panel
+      layout.addWidget(container)
 	
     # Link specific controls.
     if isinstance(canvasItem.item, optivis.bench.links.AbstractLink):
