@@ -20,8 +20,6 @@ import optivis.bench.components
 import optivis.bench.links
 import optivis.geometry
 
-from collections import OrderedDict
-
 class AbstractCanvas(optivis.view.AbstractView):
   __metaclass__ = abc.ABCMeta
   
@@ -29,48 +27,18 @@ class AbstractCanvas(optivis.view.AbstractView):
   qMainWindow = None
   qScene = None
   qView = None
-
-  SHOW_COMPONENTS = 1 << 0
-  SHOW_LINKS = 1 << 1
-  SHOW_LABELS = 1 << 2
-  SHOW_START_MARKERS = 1 << 4
-  SHOW_END_MARKERS = 1 << 8
-
-  # 'show all', 2n-1 where n is 2 ^ the number of options above
-  SHOW_MAX = (1 << 16) - 1
   
-  labelFlags = OrderedDict()
-  
-  def __init__(self, showFlags=None, *args, **kwargs):
+  def __init__(self, *args, **kwargs):
     super(AbstractCanvas, self).__init__(*args, **kwargs)
-    
-    if showFlags is None:
-      showFlags = AbstractCanvas.SHOW_MAX
 
     # create empty lists for canvas stuff
     self.canvasLinks = []
     self.canvasComponents = []
     self.canvasLabels = []
 
-    self.showFlags = showFlags
-
     # create and initialise GUI
     self.create()
     self.initialise()
-
-  @property
-  def showFlags(self):
-    return self.__showFlags
-
-  @showFlags.setter
-  def showFlags(self, showFlags):
-    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-    showFlags = int(showFlags)
-
-    if showFlags < 0 or showFlags > AbstractCanvas.SHOW_MAX:
-      raise Exception('Specified show flags are not valid. Show flags value must be between 0 and {0}'.format(AbstractCanvas.SHOW_MAX))
-
-    self.__showFlags = showFlags
 
   def create(self):
     # create application
@@ -617,7 +585,7 @@ class ViewCheckboxPanel(PyQt4.QtGui.QGroupBox):
 
   def showCheckBoxChanged(self, *args, **kwargs):
     # just rebuild the show bitfield using all checkboxes
-    self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2) | (self.button4.isChecked() << 4) | (self.button5.isChecked() << 8)
+    self.canvas.showFlags = (self.button1.isChecked() << 0) | (self.button2.isChecked() << 1) | (self.button3.isChecked() << 2) | (self.button4.isChecked() << 3) | (self.button5.isChecked() << 4)
 
     # redraw canvas
     self.canvas.redraw()

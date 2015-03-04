@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, division
 
 import abc
+from collections import OrderedDict
 
 import optivis.geometry
 import optivis.scene
@@ -10,7 +11,18 @@ import optivis.bench.links
 class AbstractView(object):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, scene, size=None, zoom=1.0, layoutManager=None, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
+  SHOW_COMPONENTS = 1 << 0
+  SHOW_LINKS = 1 << 1
+  SHOW_LABELS = 1 << 2
+  SHOW_START_MARKERS = 1 << 3
+  SHOW_END_MARKERS = 1 << 4
+
+  # 'show all'
+  SHOW_MAX = (1 << 5) - 1
+  
+  labelFlags = OrderedDict()
+  
+  def __init__(self, scene, size=None, zoom=1.0, layoutManager=None, showFlags=None, startMarkers=False, endMarkers=False, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
     if not isinstance(scene, optivis.scene.Scene):
       raise Exception('Specified scene is not of type optivis.scene.Scene')
     
@@ -19,6 +31,9 @@ class AbstractView(object):
       
     if layoutManager is None:
       layoutManager = optivis.layout.StandardLayout
+      
+    if showFlags is None:
+      showFlags = AbstractView.SHOW_MAX
       
     if startMarkerColor is None:
       startMarkerColor = "red"
@@ -30,6 +45,7 @@ class AbstractView(object):
     self.size = size
     self.zoom = zoom
     self.layoutManager = layoutManager
+    self.showFlags = showFlags
     self.startMarkers = startMarkers
     self.endMarkers = endMarkers
     self.startMarkerRadius = startMarkerRadius
@@ -109,20 +125,40 @@ class AbstractView(object):
     self.__layoutManager = layoutManager
     
   @property
+  def showFlags(self):
+    return self.__showFlags
+
+  @showFlags.setter
+  def showFlags(self, showFlags):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    showFlags = int(showFlags)
+
+    if showFlags < 0 or showFlags > AbstractView.SHOW_MAX:
+      raise Exception('Specified show flags are not valid. Show flags value must be between 0 and {0}'.format(AbstractView.SHOW_MAX))
+
+    self.__showFlags = showFlags
+    
+  @property
   def startMarkers(self):
-    return self.__startMarkers
+    return self.showFlags & AbstractView.SHOW_START_MARKERS
   
   @startMarkers.setter
   def startMarkers(self, startMarkers):
-    self.__startMarkers = bool(startMarkers)
+    if bool(startMarkers):
+      self.showFlags |= 1 << 3
+    else:
+      self.showFlags &= ~(1 << 3)
     
   @property
   def endMarkers(self):
-    return self.__endMarkers
+    return self.showFlags & AbstractView.SHOW_END_MARKERS
   
   @endMarkers.setter
   def endMarkers(self, endMarkers):
-    self.__endMarkers = bool(endMarkers)
+    if bool(endMarkers):
+      self.showFlags |= 1 << 4
+    else:
+      self.showFlags &= ~(1 << 4)
     
   @property
   def startMarkerRadius(self):
