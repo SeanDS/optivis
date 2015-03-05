@@ -53,10 +53,6 @@ class AbstractView(object):
     self.startMarkerColor = startMarkerColor
     self.endMarkerColor = endMarkerColor
     
-    title = "Optivis - {0}".format(scene.title)
-    
-    self.title = title
-    
     return
   
   def getLayoutManagerClasses(self):

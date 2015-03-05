@@ -55,7 +55,7 @@ class AbstractCanvas(optivis.view.AbstractView):
     self.qView = GraphicsView(self.qScene, self.qMainWindow)
     
     # set window title
-    self.qMainWindow.setWindowTitle(self.title)
+    self.qMainWindow.setWindowTitle('Optivis - {0}'.format(self.scene.title))
     
     ### add menu and menu items
     self.menuBar = self.qMainWindow.menuBar()
