@@ -26,7 +26,7 @@ class TestSceneSetReference(TestCase):
     self.componentA = components.Laser()
     self.componentB = components.CavityMirror()
 
-    self.link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), 10)
+    self.link = links.Link(self.componentA.getOutputNode('out'), self.componentB.getInputNode('fr'), length=10)
   
   def test_set_invalid_reference_link(self):
     self.scene.addLink(self.link)

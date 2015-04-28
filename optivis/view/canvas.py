@@ -1141,7 +1141,7 @@ class CanvasComponent(AbstractCanvasItem):
     
     self.setGraphicsFromItem()
     
-  def setGraphicsFromItem(self):    
+  def setGraphicsFromItem(self):
     # Reset transforms and rotations
     self.graphicsItem.resetTransform()
     
@@ -1225,8 +1225,14 @@ class CanvasLink(AbstractCanvasItem):
     # set start/end
     self.graphicsItem.setLine(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
     
+    # create pen
+    pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine)
+    
+    # set pattern
+    pen.setDashPattern(self.item.pattern)
+    
     # set pen
-    self.graphicsItem.setPen(PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine))
+    self.graphicsItem.setPen(pen)
     
     # set markers
     self.startMarker.setRect(self.item.start.x - startMarkerRadius, self.item.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)

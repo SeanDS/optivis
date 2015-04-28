@@ -56,3 +56,14 @@ class TestLinkAttributes(TestCase):
     
     # invalid
     self.assertRaises(Exception, setattr, self.link, 'width', None)
+  
+  def test_invalid_pattern(self):
+    # invalid type
+    self.assertRaises(Exception, setattr, self.link, 'pattern', str('invalid'))
+    self.assertRaises(Exception, setattr, self.link, 'pattern', None)
+    
+    # odd number of elements
+    self.assertRaises(Exception, setattr, self.link, 'pattern', [1, 2, 3])
+    
+    # invalid elements
+    self.assertRaises(Exception, setattr, self.link, 'pattern', [1, 2, 3, str('invalid')])

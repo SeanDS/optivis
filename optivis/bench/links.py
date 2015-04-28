@@ -112,9 +112,10 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     self.__end = end
 
 class Link(AbstractLink):
-  def __init__(self, width=1.0, color="red", startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
+  def __init__(self, width=1.0, color="red", pattern=None, startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
     self.width = width
     self.color = color
+    self.pattern = pattern
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
@@ -153,3 +154,26 @@ class Link(AbstractLink):
     
     #FIXME: check for valid colors here
     self.__color = color
+
+  @property
+  def pattern(self):
+    return self.__pattern
+  
+  @pattern.setter
+  def pattern(self, pattern):
+    if pattern is None:
+      pattern = []
+    else:
+      # check that input is a list
+      if not isinstance(pattern, list):
+        raise Exception('Specified pattern is not a list')
+  
+      # check that list is an even number (a pattern must be a series of dash-space pairs)
+      if len(pattern) % 2 is not 0:
+        raise Exception('Specified pattern list must contain an even number of elements')
+    
+      # check elements are integers
+      if not all(isinstance(item, float) or isinstance(item, int) for item in pattern):
+        raise Exception('Specified pattern list must only contain elements of type int or float')
+    
+    self.__pattern = pattern

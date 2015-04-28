@@ -24,7 +24,7 @@ scene.link(outputNode=l1.getOutputNode('out'), inputNode=m1.getInputNode('bk'), 
 scene.link(outputNode=m1.getOutputNode('fr'), inputNode=bs1.getInputNode('bkA'), length=50)
 scene.link(outputNode=bs1.getOutputNode('frB'), inputNode=m2.getInputNode('fr'), length=50)
 scene.link(outputNode=bs1.getOutputNode('frA'), inputNode=m3.getInputNode('fr'), length=50)
-scene.link(outputNode=bs1.getOutputNode('bkA'), inputNode=m4.getInputNode('fr'), length=50)
+scene.link(outputNode=bs1.getOutputNode('bkA'), inputNode=m4.getInputNode('fr'), length=50, pattern=[1, 2])
 scene.link(outputNode=m2.getOutputNode('fr'), inputNode=m3.getInputNode('fr'), length=35)
 
 gui = canvas.Simple(scene=scene)
