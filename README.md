@@ -1,6 +1,6 @@
 # Optivis #
 
-![example](https://cloud.githubusercontent.com/assets/5225190/5718217/570c509a-9b03-11e4-8e4a-65114fb75d43.png)
+![gui](https://cloud.githubusercontent.com/assets/5225190/7524596/087d225e-f4fb-11e4-84b1-c4f08847b59e.png)
 
 Script to visualise optical environments. Uses the fantastic SVG optical components created by Alexander Franzen (http://www.gwoptics.org/ComponentLibrary/).  
 
