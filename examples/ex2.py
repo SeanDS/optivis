@@ -27,6 +27,9 @@ mirror2 = components.CavityMirror(name="Mirror 2", aoi=15)
 mirror3 = components.CavityMirror(name="Mirror 3", aoi=-45)
 pd = components.Photodiode(name="Photodiode")
 
+# dashed pattern to indicate sidebands
+pat = [5, 5]
+
 scene.link(
   outputNode=laser.getOutputNode('out'),
   inputNode=wp1.getInputNode('bk'),
@@ -92,8 +95,8 @@ scene.link(
   length=100,
   specs=[
     links.LinkSpec(width=3, color="red", pattern=None, offset=0),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=-3),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=3)
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=-3),
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=3)
   ]
 )
 
@@ -103,8 +106,8 @@ scene.link(
   length=100,
   specs=[
     links.LinkSpec(width=3, color="red", pattern=None, offset=0),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=-3),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=3)
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=-3),
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=3)
   ],
   labels=[
     labels.Label(text="mirror1->mirror2", position=geometry.Coordinates(0, 0), azimuth=90, offset=geometry.Coordinates(0, 0))
@@ -117,8 +120,8 @@ scene.link(
   length=150,
   specs=[
     links.LinkSpec(width=3, color="red", pattern=None, offset=0),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=-3),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=3)
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=-3),
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=3)
   ],
   labels=[
     labels.Label(text="mirror2->mirror3", position=geometry.Coordinates(0, 0), azimuth=90, offset=geometry.Coordinates(0, 0))
@@ -131,8 +134,8 @@ scene.link(
   length=65,
   specs=[
     links.LinkSpec(width=3, color="red", pattern=None, offset=0),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=-3),
-    links.LinkSpec(width=2, color="green", pattern=[1, 2], offset=3)
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=-3),
+    links.LinkSpec(width=2, color="green", pattern=pat, offset=3)
   ],
 )
 

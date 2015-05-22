@@ -400,6 +400,9 @@ class Full(AbstractCanvas):
     
     # call parent redraw
     super(Full, self).redraw(*args, **kwargs)
+
+    # update scene to avoid graphical artifacts
+    self.qScene.update()
   
   def initialise(self):
     super(Full, self).initialise()
