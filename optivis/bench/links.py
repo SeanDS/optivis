@@ -11,7 +11,7 @@ import labels
 class AbstractLink(optivis.bench.AbstractBenchItem):
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, outputNode, inputNode, length, start=None, end=None, *args, **kwargs):
+  def __init__(self, outputNode, inputNode, length, start=None, end=None, specs=None, *args, **kwargs):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
@@ -21,9 +21,18 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     
     if end is None:
       end = optivis.geometry.Coordinates(0, 0)
-      
+
+    if specs is None:
+      # default link spec
+      specs = LinkSpec()
+
     self.start = start
     self.end = end
+    self.specs = specs
+
+    # check we've not linked one component to itself
+    if self.outputNode.component == self.inputNode.component:
+      raise Exception('Cannot link component directly to itself')
     
     super(AbstractLink, self).__init__(*args, **kwargs)
 
@@ -111,11 +120,32 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     
     self.__end = end
 
+  @property
+  def specs(self):
+    return self.__specs
+
+  @specs.setter
+  def specs(self, specs):
+    if isinstance(specs, LinkSpec):
+      self.__specs = [specs]
+    elif isinstance(specs, (list, tuple)):
+      if not all(isinstance(spec, LinkSpec) for spec in specs):
+        raise Exception('A specified spec is not of type LinkSpec')
+
+      self.__specs = specs
+    else:
+      raise Exception('Specified specs is not a LinkSpec or a list of LinkSpec objects')
+
 class Link(AbstractLink):
-  def __init__(self, width=1.0, color="red", pattern=None, startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
+  def __init__(self, *args, **kwargs):
+    super(Link, self).__init__(*args, **kwargs)
+
+class LinkSpec(object):
+  def __init__(self, width=1.0, color="red", pattern=None, offset=0, startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
     self.width = width
     self.color = color
     self.pattern = pattern
+    self.offset = offset
     self.startMarker = startMarker
     self.endMarker = endMarker
     self.startMarkerRadius = startMarkerRadius
@@ -123,11 +153,7 @@ class Link(AbstractLink):
     self.startMarkerColor = startMarkerColor
     self.endMarkerColor = endMarkerColor
 
-    super(Link, self).__init__(*args, **kwargs)
-    
-    # check we've not linked one component to itself
-    if self.outputNode.component == self.inputNode.component:
-      raise Exception('Cannot link component directly to itself')
+    super(LinkSpec, self).__init__(*args, **kwargs)
     
   @property
   def width(self):
@@ -177,3 +203,14 @@ class Link(AbstractLink):
         raise Exception('Specified pattern list must only contain elements of type int or float')
     
     self.__pattern = pattern
+
+  @property
+  def offset(self):
+    return self.__offset
+
+  @offset.setter
+  def offset(self, offset):
+    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+    offset = float(offset)
+    
+    self.__offset = offset

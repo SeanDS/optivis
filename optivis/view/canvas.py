@@ -1092,8 +1092,8 @@ class AbstractCanvasItem(object):
   
   @graphicsItem.setter
   def graphicsItem(self, graphicsItem):
-    if graphicsItem is not None and not (isinstance(graphicsItem, PyQt4.QtGui.QGraphicsItem) or isinstance(graphicsItem, PyQt4.QtGui.QWidget)):
-      raise Exception('Specified graphics item is not a QGraphicsItem or QWidget or None')
+    if not isinstance(graphicsItem, (type(None), PyQt4.QtGui.QGraphicsItem, PyQt4.QtGui.QWidget, OptivisItemContainer)):
+      raise Exception('Specified graphics item is not a QGraphicsItem, QWidget, OptivisItemContainer or None')
     
     self.__graphicsItem = graphicsItem
   
@@ -1198,41 +1198,57 @@ class CanvasLink(AbstractCanvasItem):
   def draw(self, qScene, *args, **kwargs):
     print "[GUI] Drawing link {0}".format(self.item)
     
-    # create graphics object
-    self.graphicsItem = OptivisLineItem()
-    
+    # create graphics object(s)
+    container = OptivisItemContainer()
+
+    # reference this CanvasLink in the data payload
+    container.comms.data = self
+
+    for spec in self.item.specs:
+      lineItem = OptivisLineItem()
+
+      container.addItem(lineItem)
+
+    self.graphicsItem = container
+
     # create start and end markers
     self.startMarker = PyQt4.QtGui.QGraphicsEllipseItem()
     self.endMarker = PyQt4.QtGui.QGraphicsEllipseItem()
-    
-    # reference this CanvasLink in the data payload
-    self.graphicsItem.comms.data = self
-    
+
+    # add markers to graphics scene
+    qScene.addItem(self.startMarker)
+    qScene.addItem(self.endMarker)
+
     # set graphics information
     self.setGraphicsFromItem(*args, **kwargs)
 
-    # add line to graphics scene
-    qScene.addItem(self.graphicsItem)
-    qScene.addItem(self.startMarker)
-    qScene.addItem(self.endMarker)
+    container.draw(qScene)
 
   def redraw(self, *args, **kwargs):
     print "[GUI] Redrawing link {0}".format(self.item)
     
     self.setGraphicsFromItem(*args, **kwargs)
 
-  def setGraphicsFromItem(self, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):    
-    # set start/end
-    self.graphicsItem.setLine(self.item.start.x, self.item.start.y, self.item.end.x, self.item.end.y)
+  def setGraphicsFromItem(self, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
+    for i in range(0, len(self.item.specs)):
+      # create an offset coordinate
+      linePos = optivis.geometry.Coordinates(self.item.end.x - self.item.start.x, self.item.end.y - self.item.start.y)
+      azimuth = linePos.getAzimuth()
+
+      offsetPos = optivis.geometry.Coordinates(0, self.item.specs[i].offset)
+      offsetPos = offsetPos.rotate(azimuth)
+
+      # set start/end
+      self.graphicsItem.getItem(i).setLine(self.item.start.x + offsetPos.x, self.item.start.y + offsetPos.y, self.item.end.x + offsetPos.x, self.item.end.y + offsetPos.y)
     
-    # create pen
-    pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.color), self.item.width, PyQt4.QtCore.Qt.SolidLine)
+      # create pen
+      pen = PyQt4.QtGui.QPen(PyQt4.QtGui.QColor(self.item.specs[i].color), self.item.specs[i].width, PyQt4.QtCore.Qt.SolidLine)
     
-    # set pattern
-    pen.setDashPattern(self.item.pattern)
+      # set pattern
+      pen.setDashPattern(self.item.specs[i].pattern)
     
-    # set pen
-    self.graphicsItem.setPen(pen)
+      # set pen
+      self.graphicsItem.getItem(i).setPen(pen)
     
     # set markers
     self.startMarker.setRect(self.item.start.x - startMarkerRadius, self.item.start.y - startMarkerRadius, startMarkerRadius * 2, startMarkerRadius * 2)
@@ -1384,6 +1400,54 @@ class OptivisLabelItem(PyQt4.QtGui.QGraphicsSimpleTextItem):
     
     # emit event as a signal
     self.comms.mouseReleased.emit(event)
+
+class OptivisItemContainerCommunicator(PyQt4.QtCore.QObject):
+  """
+  Qt Signals communication class for OptivisItemContainer
+  """
+  
+  mousePressed = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+  mouseReleased = PyQt4.QtCore.pyqtSignal(PyQt4.QtGui.QGraphicsSceneMouseEvent)
+
+class OptivisItemContainer(object):
+  """
+  Generic container for other OptivisItem objects. Supports draw().
+  """
+
+  def __init__(self):
+    self.items = []
+
+    # Create a communicator.
+    self.comms = OptivisItemContainerCommunicator()
+
+  def addItem(self, item):
+    if not isinstance(item, (PyQt4.QtGui.QGraphicsItem, PyQt4.QtGui.QWidget)):
+      raise Exception('Specified item is not of type QGraphicsItem or QWidget')
+
+    item.comms.mousePressed.connect(self.comms.mousePressed)
+    item.comms.mouseReleased.connect(self.comms.mouseReleased)
+
+    self.items.append(item)
+
+  def getItem(self, index):
+    # FIXME: check index is valid and raise an exception if not (and make test)
+    return self.items[index]
+
+  def draw(self, qScene):
+    for item in self.items:
+      qScene.addItem(item)
+
+  def setVisible(self, visibility):
+    for item in self.items:
+      item.setVisible(visibility)
+
+  @property
+  def items(self):
+    return self.__items
+
+  @items.setter
+  def items(self, items):
+    self.__items = items
 
 class OptivisItemDataType(object):
   """

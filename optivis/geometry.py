@@ -49,6 +49,9 @@ class Coordinates(object):
   def flip(self):
     return Coordinates(-self.x, -self.y)
   
+  def getAzimuth(self):
+    return math.degrees(math.atan2(self.y, self.x))
+
   def __eq__(self, otherCoordinates):
     """
     Compare coordinate floats without precision errors. Based on http://code.activestate.com/recipes/577124-approximately-equal/.
