@@ -16,8 +16,9 @@ class AbstractLayout(object):
   # set of components that are part of links
   linkedComponents = set([])
   
-  def __init__(self, scene):
+  def __init__(self, scene, scaleFunc=None):    
     self.scene = scene
+    self.scaleFunc = scaleFunc
   
   @property
   def scene(self):
@@ -29,6 +30,17 @@ class AbstractLayout(object):
       raise Exception('Specified scene is not of type optivis.scene.Scene')
     
     self.__scene = scene
+
+  @property
+  def scaleFunc(self):
+    return self.__scaleFunc
+  
+  @scaleFunc.setter
+  def scaleFunc(self, scaleFunc):
+    if not hasattr(scaleFunc, '__call__'):
+      raise Exception('Specified scale function is not callable')
+    
+    self.__scaleFunc = scaleFunc
 
   def arrange(self):
     # empty linked components list
@@ -161,19 +173,19 @@ class AbstractLayout(object):
       component.position = component.position.translate(offset)
     
   def getScaledLinkLength(self, length):
-    return length
+    return self.scaleFunc(length)
 
 class StandardLayout(AbstractLayout):
   title = "Standard"
 
-  def __init__(self, *args, **kwargs):
-    super(StandardLayout, self).__init__(*args, **kwargs)
+  def __init__(self, *args, **kwargs):    
+    super(StandardLayout, self).__init__(scaleFunc=lambda x: x, *args, **kwargs)
 
-class LargeLengthLayout(StandardLayout):
+class LargeLengthLayout(AbstractLayout):
   title = "Downscale Large Lengths"
 
   def __init__(self, *args, **kwargs):
-    super(LargeLengthLayout, self).__init__(*args, **kwargs)
+    super(LargeLengthLayout, self).__init__(scaleFunc=self.largeScaleFunc, *args, **kwargs)
 
-  def getScaledLinkLength(self, length):
+  def largeScaleFunc(self, length):
     return length * (20 * math.erfc(length / 100) + 0.01)
