@@ -7,6 +7,7 @@ import optivis
 import optivis.geometry
 import optivis.bench.components
 import optivis.bench.links
+import scale
 
 class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
@@ -37,8 +38,8 @@ class AbstractLayout(object):
   
   @scaleFunc.setter
   def scaleFunc(self, scaleFunc):
-    if not hasattr(scaleFunc, '__call__'):
-      raise Exception('Specified scale function is not callable')
+    if not isinstance(scaleFunc, scale.ScaleFunction):
+      raise Exception('Specified scale function is not of type ScaleFunction')
     
     self.__scaleFunc = scaleFunc
 
@@ -173,19 +174,16 @@ class AbstractLayout(object):
       component.position = component.position.translate(offset)
     
   def getScaledLinkLength(self, length):
-    return self.scaleFunc(length)
+    return self.scaleFunc.getScaledLength(length)
 
 class StandardLayout(AbstractLayout):
   title = "Standard"
 
   def __init__(self, *args, **kwargs):    
-    super(StandardLayout, self).__init__(scaleFunc=lambda x: x, *args, **kwargs)
+    super(StandardLayout, self).__init__(scaleFunc=scale.ScaleFunction(), *args, **kwargs)
 
 class LargeLengthLayout(AbstractLayout):
   title = "Downscale Large Lengths"
 
   def __init__(self, *args, **kwargs):
-    super(LargeLengthLayout, self).__init__(scaleFunc=self.largeScaleFunc, *args, **kwargs)
-
-  def largeScaleFunc(self, length):
-    return length * (20 * math.erfc(length / 100) + 0.01)
+    super(LargeLengthLayout, self).__init__(scaleFunc=scale.ScaleFunction([1], [0.3]), *args, **kwargs)
