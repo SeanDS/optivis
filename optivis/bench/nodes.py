@@ -12,8 +12,8 @@ class Node(object):
     """
     position is normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
     
-    aoiMultiplier is the constant to multiply the angle of incidence by
-    aoiOffset is the offset to add to the angle of incidence
+    aoiMultiplier is the constant to multiply the component angle of incidence by
+    aoiOffset is the offset to add to the component angle of incidence
     """
     
     self.name = name

@@ -1,37 +1,23 @@
 from __future__ import unicode_literals, division
+import numpy
 
 class ScaleFunction(object):  
-  def __init__(self, powers=None, coefficients=None):
-    if powers is None:
-      powers = [1]
-    
+  def __init__(self, coefficients=None):    
     if coefficients is None:
-      coefficients = [1]
+      coefficients = [0, 1]
     
-    self.powers = powers
     self.coefficients = coefficients
-    
-    if len(self.powers) != len(self.coefficients):
-      raise Exception('Specified powers and coefficients lists have different lengths')
   
   def getScaledLength(self, length):
     scaledLength = 0
     
-    for i in range(0, len(self.powers)):
-      scaledLength += self.coefficients[i] * length ** self.powers[i]
+    for i in range(0, len(self.coefficients)):
+      scaledLength += self.coefficients[i] * length ** i
     
     return scaledLength
-    
-  @property
-  def powers(self):
-    return self.__powers
-
-  @powers.setter
-  def powers(self, powers):
-    if not isinstance(powers, (list, tuple)):
-      raise Exception('Specified powers is not a list or tuple')
-    
-    self.__powers = powers
+  
+  def validate(self):
+    roots = numpy.roots(numpy.polyder(self.coefficients))
     
   @property
   def coefficients(self):
@@ -43,3 +29,7 @@ class ScaleFunction(object):
       raise Exception('Specified coefficients is not a list or tuple')
     
     self.__coefficients = coefficients
+
+class LargeLengthScaleFunction(ScaleFunction):
+  def __init__(self):
+    return super(LargeLengthScaleFunction, self).__init__(coefficients=[0, 0.3])

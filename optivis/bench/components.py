@@ -172,6 +172,9 @@ class AbstractComponent(optivis.bench.AbstractBenchItem):
     
     raise Exception('No output node with name {0} found'.format(nodeName))
   
+  def getAoiForConstrainedNodeAngle(self, node1, node2, angle):
+    return (angle - node1.aoiOffset - node2.aoiOffset) / (node1.aoiMultiplier - node2.aoiMultiplier)
+  
   def __str__(self):
     return self.name
 

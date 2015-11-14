@@ -1,12 +1,14 @@
 from __future__ import unicode_literals, division
 
 import abc
+import inspect
 from collections import OrderedDict
 
 import optivis.geometry
 import optivis.scene
 import optivis.bench.components
 import optivis.bench.links
+import optivis.layout
 
 class AbstractView(object):
   __metaclass__ = abc.ABCMeta
@@ -55,21 +57,15 @@ class AbstractView(object):
     
     return
   
-  def getLayoutManagerClasses(self):
-    def getSubclasses(subclass):
-      """
-      http://stackoverflow.com/questions/3862310/how-can-i-find-all-subclasses-of-a-given-class-in-python
-      """
-
-      subclasses = []
-
-      for thisSubclass in subclass.__subclasses__():
-        subclasses.append(thisSubclass)
-        subclasses.extend(getSubclasses(thisSubclass))
-
-      return subclasses
-
-    return getSubclasses(optivis.layout.AbstractLayout)
+  def getLayoutManagerClasses(self):    
+    managers = []
+    
+    # http://stackoverflow.com/questions/1796180/how-can-i-get-a-list-of-all-classes-within-current-module-in-python
+    for name, obj in inspect.getmembers(optivis.layout):
+      if inspect.isclass(obj):
+        managers.append(obj)
+    
+    return managers
 
   @property
   def scene(self):

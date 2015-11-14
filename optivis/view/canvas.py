@@ -646,7 +646,8 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     layoutManagerClasses = self.canvas.getLayoutManagerClasses()
 
     for i in range(0, len(layoutManagerClasses)):
-      layoutManager = layoutManagerClasses[i]
+      # instantiate layout manager correctly
+      layoutManager = layoutManagerClasses[i](self.canvas.scene)
 
       # add this layout to the combobox, setting the userData to the class name of this layout
       self.layoutComboBox.addItem(layoutManager.title, i)
@@ -657,9 +658,14 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     # connect signal to slot to listen for changes
     self.layoutComboBox.currentIndexChanged[int].connect(self.layoutComboBoxChangeHandler)
 
+    # create layout edit button
+    layoutEditButton = PyQt4.QtGui.QPushButton("Edit")
+    layoutEditButton.clicked.connect(self.layoutEditButtonClickHandler)
+
     # add combo box to group box
     layoutContainerLayout.addWidget(layoutLabel, 1)
-    layoutContainerLayout.addWidget(self.layoutComboBox, 2)
+    layoutContainerLayout.addWidget(self.layoutComboBox, 4)
+    layoutContainerLayout.addWidget(layoutEditButton, 1)
     
     # set layout container layout
     layoutContainer.setLayout(layoutContainerLayout)
@@ -801,6 +807,11 @@ class ControlPanel(PyQt4.QtGui.QWidget):
     
     # reset view
     self.canvas.calibrateView()
+  
+  def layoutEditButtonClickHandler(self):
+    print self.canvas.layoutManager.title
+    layoutEditWindow = CanvasScaleFunctionEditor(self.canvas.qMainWindow, self.canvas.layoutManager)
+    layoutEditWindow.show()
     
   def referenceComboBoxChangeHandler(self):
     # get combo box
@@ -1512,3 +1523,20 @@ class OptivisCanvasItemDataType(OptivisItemDataType):
       widget.setValue(float(itemValue))
     else:
       raise Exception('Specified item data type is invalid')
+
+class CanvasScaleFunctionEditor(PyQt4.Qt.QMainWindow):
+  def __init__(self, layoutManager, *args, **kwargs):
+    self.layoutManager = layoutManager
+    
+    super(CanvasScaleFunctionEditor, self).__init__(*args, **kwargs)
+    
+  @property
+  def layoutManager(self):
+    return self.__layoutManager
+  
+  @layoutManager.setter
+  def layoutManager(self, layoutManager):
+    if not isinstance(layoutManager, optivis.layout.AbstractLayout):
+      raise Exception('Specified layout manager is not of type AbstractLayout')
+    
+    self.__layoutManager = layoutManager

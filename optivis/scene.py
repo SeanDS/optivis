@@ -5,9 +5,11 @@ import datetime
 import geometry
 import bench.components
 import bench.links
+import layout.constraints
 
 class Scene(object):
   links = []
+  constraints = []
   
   def __init__(self, title=None, reference=None):
     if title is None:
@@ -55,6 +57,12 @@ class Scene(object):
       raise Exception('Specified link is not of type AbstractLink')
     
     self.links.append(link)
+  
+  def addConstraint(self, constraint):
+    if not isinstance(constraint, layout.constraints.AbstractConstraint):
+      raise Exception('Specified constraint is not of type AbstractConstraint')
+    
+    self.constraints.append(constraint)
   
   def getComponents(self):
     components = []

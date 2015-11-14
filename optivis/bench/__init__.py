@@ -12,7 +12,7 @@ class AbstractBenchItem(object):
   
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, labels=None, paramList=None, pykatObject=None, *args, **kwargs):
+  def __init__(self, labels=None, paramList=None, pykatObject=None, *args, **kwargs):    
     self.labels = labels
     self.paramList = paramList
     self.pykatObject = pykatObject

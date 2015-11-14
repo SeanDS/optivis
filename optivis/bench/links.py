@@ -11,7 +11,7 @@ import labels
 class AbstractLink(optivis.bench.AbstractBenchItem):
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, outputNode, inputNode, length, start=None, end=None, specs=None, *args, **kwargs):
+  def __init__(self, outputNode, inputNode, length=None, start=None, end=None, specs=None, *args, **kwargs):
     self.outputNode = outputNode
     self.inputNode = inputNode
     self.length = length
@@ -61,6 +61,25 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
       return True
     
     return False
+
+  def getNodesForCommonComponent(self, otherLink):
+    thisOutputComponent = self.outputNode.component
+    thisInputComponent = self.inputNode.component
+    
+    otherOutputComponent = otherLink.outputNode.component
+    otherInputComponent = otherLink.inputNode.component
+    
+    # gets common component shared with other link
+    if thisOutputComponent is otherOutputComponent:
+      return (thisOutputComponent, self.outputNode, otherLink.outputNode)
+    elif thisOutputComponent is otherInputComponent:
+      return (thisOutputComponent, self.outputNode, otherLink.inputNode)
+    elif thisInputComponent is otherOutputComponent:
+      return (thisInputComponent, self.inputNode, otherLink.outputNode)
+    elif thisInputComponent is otherInputComponent:
+      return (thisInputComponent, self.inputNode, otherLink.inputNode)
+    else:
+      raise Exception('Specified other link does not share a common component with this link')
   
   @property
   def outputNode(self):
@@ -90,11 +109,13 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
 
   @length.setter
   def length(self, length):
-    # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-    length = float(length)
-    
-    if length < 0:
-      raise Exception('Length must be greater than or equal to 0')
+    if length is not None:
+      # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+      length = float(length)
+      
+      
+      if length < 0:
+        raise Exception('Length must be greater than or equal to 0')
     
     self.__length = length
     

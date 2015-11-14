@@ -17,7 +17,10 @@ class AbstractLayout(object):
   # set of components that are part of links
   linkedComponents = set([])
   
-  def __init__(self, scene, scaleFunc=None):    
+  def __init__(self, scene, scaleFunc=None):
+    if scaleFunc is None:
+      scaleFunc = scale.ScaleFunction()
+    
     self.scene = scene
     self.scaleFunc = scaleFunc
   
@@ -107,7 +110,7 @@ class AbstractLayout(object):
     targetComponent = targetNode.component
     
     # check if target is already laid out
-    if targetComponent in self.linkedComponents:
+    if targetComponent in self.linkedComponents:      
       print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
       
       # set link start and end positions
@@ -180,10 +183,37 @@ class StandardLayout(AbstractLayout):
   title = "Standard"
 
   def __init__(self, *args, **kwargs):    
-    super(StandardLayout, self).__init__(scaleFunc=scale.ScaleFunction(), *args, **kwargs)
+    super(StandardLayout, self).__init__(*args, **kwargs)
 
-class LargeLengthLayout(AbstractLayout):
-  title = "Downscale Large Lengths"
-
+class ConstrainedLayout(AbstractLayout):
+  title = "Constrained"
+  
   def __init__(self, *args, **kwargs):
-    super(LargeLengthLayout, self).__init__(scaleFunc=scale.ScaleFunction([1], [0.3]), *args, **kwargs)
+    super(ConstrainedLayout, self).__init__(*args, **kwargs)
+  
+  def arrange(self):
+    # empty linked components list
+    self.linkedComponents = set([])
+
+    for constraint in self.scene.constraints:
+      constraint.constrain()
+
+    # make copy of links list
+    links = self.scene.links
+    
+    # make sure there is a reference component
+    if self.scene.reference is None:
+      # set reference to first link's output component
+      self.scene.reference = self.scene.links[0].outputNode.component
+    
+    ###
+    # Layout and link everything
+    
+    # get links attached to reference component
+    links = self.getComponentLinks(self.scene.reference)
+    
+    for link in links:
+      self.layoutLink(link, self.scene.reference)
+    
+    # move scene positions so that left most, topmost object is at the origin
+    self.normalisePositions()
