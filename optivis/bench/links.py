@@ -57,10 +57,13 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     return optivis.geometry.Coordinates(math.sqrt(math.pow(size.x, 2) + math.pow(size.y, 2)), 0)
   
   def hasComponent(self, component):
-    if self.outputNode.component is component or self.inputNode.component is component:
+    if component in self.getComponents():
       return True
     
     return False
+  
+  def getComponents(self):
+    return [self.outputNode.component, self.inputNode.component]
 
   def getNodesForCommonComponent(self, otherLink):
     thisOutputComponent = self.outputNode.component

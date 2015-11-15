@@ -37,6 +37,13 @@ class AbstractConstraint():
   @abc.abstractmethod
   def constrain(self):
     pass
+  
+  @abc.abstractmethod
+  def constrains(self, benchItem):
+    """
+    Does this constraint involve the specified bench item?
+    """
+    pass
 
 class AbstractLinkConstraint(AbstractConstraint):
   __metaclass__ = abc.ABCMeta
@@ -54,6 +61,18 @@ class AbstractLinkConstraint(AbstractConstraint):
   @property
   def linkB(self):
     return self.componentB
+  
+  def getCommonComponent(self):
+    return self.linkA.getNodesForCommonComponent(self.linkB)[0]
+  
+  def constrains(self, benchItem):
+    """
+    Does this constraint involve the specified bench item?
+    """
+    
+    #TODO: type checking
+    
+    return benchItem is self.getCommonComponent()
 
 class LinkAngularConstraint(AbstractLinkConstraint):
   def __init__(self, angle, *args, **kwargs):

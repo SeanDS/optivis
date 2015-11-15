@@ -45,14 +45,12 @@ class AbstractLayout(object):
       raise Exception('Specified scale function is not of type ScaleFunction')
     
     self.__scaleFunc = scaleFunc
+  
+  @abc.abstractmethod
+  def isFixed(self, component):
+    pass
 
-  def arrange(self):
-    # empty linked components list
-    self.linkedComponents = set([])
-
-    # make copy of links list
-    links = self.scene.links
-    
+  def arrange(self):    
     # make sure there is a reference component
     if self.scene.reference is None:
       # set reference to first link's output component
@@ -61,38 +59,23 @@ class AbstractLayout(object):
     ###
     # Layout and link everything
     
-    # get links attached to reference component
-    links = self.getComponentLinks(self.scene.reference)
+    # empty linked components list
+    self.linkedComponents = set([])
     
-    for link in links:
-      self.layoutLink(link, self.scene.reference)
+    # layout links
+    self.layoutLinks()
     
     # move scene positions so that left most, topmost object is at the origin
     self.normalisePositions()
-    
-  def getComponentLinks(self, component, avoid=None):
-    links = []
-    
-    for link in self.scene.links:
-      if link == avoid:
-	# skip this link, because it has been requested to be avoided
-	continue
-      
-      if link.hasComponent(component):
-	links.append(link)
-
-    return links
-
-  def removeLinkFromList(self, link, links):
-    for i in range(0, len(links)):
-      if links[i] == link:
-	del(links[i])
-	
-	return links
-    
-    raise Exception('Link {0} was not found in the list provided'.format(link))
   
-  def layoutLink(self, link, referenceComponent):    
+  def layoutLinks(self):
+    # loop over links attached to reference component, and also other links
+    # attached to components to which these links attach the reference
+    for link in self.getComponentLinks(self.scene.reference):
+      # recursive
+      self.layoutLinkChain(link, self.scene.reference)
+      
+  def layoutLinkChain(self, link, referenceComponent):    
     print "[Layout] Linking {0} with respect to {1}".format(link, referenceComponent)
     
     referenceNode = None
@@ -110,7 +93,7 @@ class AbstractLayout(object):
     targetComponent = targetNode.component
     
     # check if target is already laid out
-    if targetComponent in self.linkedComponents:      
+    if self.isFixed(targetComponent):      
       print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
       
       # set link start and end positions
@@ -138,7 +121,29 @@ class AbstractLayout(object):
     
     # layout any components linked to target component
     for subLink in subLinks:
-      self.layoutLink(subLink, targetComponent)
+      self.layoutLinkChain(subLink, targetComponent)
+    
+  def getComponentLinks(self, component, avoid=None):
+    links = []
+    
+    for link in self.scene.links:
+      if link == avoid:
+	# skip this link, because it has been requested to be avoided
+	continue
+      
+      if link.hasComponent(component):
+	links.append(link)
+
+    return links
+
+  def removeLinkFromList(self, link, links):
+    for i in range(0, len(links)):
+      if links[i] == link:
+	del(links[i])
+	
+	return links
+    
+    raise Exception('Link {0} was not found in the list provided'.format(link))
   
   def getTargetNodePositionRelativeToReferenceNode(self, link, referenceNode):    
     if link.inputNode != referenceNode and link.outputNode != referenceNode:
@@ -184,6 +189,9 @@ class StandardLayout(AbstractLayout):
 
   def __init__(self, *args, **kwargs):    
     super(StandardLayout, self).__init__(*args, **kwargs)
+  
+  def isFixed(self, component):
+    return component in self.linkedComponents
 
 class ConstrainedLayout(AbstractLayout):
   title = "Constrained"
@@ -191,29 +199,35 @@ class ConstrainedLayout(AbstractLayout):
   def __init__(self, *args, **kwargs):
     super(ConstrainedLayout, self).__init__(*args, **kwargs)
   
-  def arrange(self):
-    # empty linked components list
-    self.linkedComponents = set([])
-
+  # override
+  def layoutLinks(self, *args, **kwargs):
+    # first constrain angles of optics
     for constraint in self.scene.constraints:
       constraint.constrain()
-
-    # make copy of links list
-    links = self.scene.links
     
-    # make sure there is a reference component
-    if self.scene.reference is None:
-      # set reference to first link's output component
-      self.scene.reference = self.scene.links[0].outputNode.component
+    super(ConstrainedLayout, self).layoutLinks(*args, **kwargs)
     
-    ###
-    # Layout and link everything
+  def isFixed(self, component):
+    if component in self.linkedComponents:
+      # check if any constraints constrain this component
+      for constraint in self.scene.constraints:
+        if constraint.constrains(component):
+          print "{0} is fixed".format(component)
+          return True
+      
+      # check if this is attached to a constrained component
+      for link in self.scene.links:
+        if link.hasComponent(component):
+          # this link is attached to the component
+          # is the other side constrained?
+          for thisComponent in link.getComponents():
+            if thisComponent is not component:
+              # this is the other side of the link
+              for constraint in self.scene.constraints:
+                if constraint.constrains(thisComponent):
+                  print "{0} is fixed because it's attached to fixed component {1}".format(component, thisComponent)
+                  return True
     
-    # get links attached to reference component
-    links = self.getComponentLinks(self.scene.reference)
+    print "{0} is not fixed".format(component)
     
-    for link in links:
-      self.layoutLink(link, self.scene.reference)
-    
-    # move scene positions so that left most, topmost object is at the origin
-    self.normalisePositions()
+    return False
