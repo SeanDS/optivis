@@ -3,83 +3,126 @@ from __future__ import unicode_literals, division
 import abc
 
 from optivis.bench import AbstractBenchItem
-from optivis.bench.links import AbstractLink
+from optivis.layout import AbstractLayout
+from optivis.bench.nodes import Node
 
 class AbstractConstraint():
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, componentA, componentB):
-    self.componentA = componentA
-    self.componentB = componentB
-    
-  @property
-  def componentA(self):
-    return self.__componentA
-  
-  @componentA.setter
-  def componentA(self, component):
-    if not isinstance(component, AbstractBenchItem):
-      raise Exception('Specified component is not of type AbstractBenchItem')
-    
-    self.__componentA = component
-
-  @property
-  def componentB(self):
-    return self.__componentB
-  
-  @componentB.setter
-  def componentB(self, component):
-    if not isinstance(component, AbstractBenchItem):
-      raise Exception('Specified component is not of type AbstractBenchItem')
-    
-    self.__componentB = component
+  def __init__(self):
+    self.constrainedNodes = set([])
   
   @abc.abstractmethod
-  def constrain(self):
-    pass
+  def constrain(self, layout):    
+    self.layout = layout
   
-  @abc.abstractmethod
-  def constrains(self, benchItem):
-    """
-    Does this constraint involve the specified bench item?
-    """
-    pass
+  @property
+  def layout(self):
+    return self.__layout
+  
+  @layout.setter
+  def layout(self, layout):
+    if not isinstance(layout, AbstractLayout):
+      raise Exception('Specified layout is not of type AbstractLayout')
+    
+    self.__layout = layout
+  
+  @property
+  def constrainedNodes(self):
+    return self.__constrainedNodes
+  
+  @constrainedNodes.setter
+  def constrainedNodes(self, constrainedNodes):
+    if not isinstance(constrainedNodes, set):
+      raise Exception('Specified constrained nodes set is not a set')
+    
+    for node in constrainedNodes:
+      if not isinstance(node, Node):
+        raise Exception('A node in constrained nodes set is not of type Node')
+    
+    self.__constrainedNodes = constrainedNodes
+  
+  def addConstrainedNode(self, node):
+    if not isinstance(node, Node):
+      raise Exception('Specified node is not of type Node')
+    
+    self.__constrainedNodes.add(node)
 
 class AbstractLinkConstraint(AbstractConstraint):
   __metaclass__ = abc.ABCMeta
   
-  def __init__(self, linkA, linkB):
-    if not isinstance(linkA, AbstractLink) or not isinstance(linkB, AbstractLink):
-      raise Exception('A specified link is not of type AbstractLink')
+  def __init__(self, nodeA, nodeB, *args, **kwargs):    
+    super(AbstractLinkConstraint, self).__init__(*args, **kwargs)
     
-    super(AbstractLinkConstraint, self).__init__(componentA=linkA, componentB=linkB)
+    self.nodeA = nodeA
+    self.nodeB = nodeB
   
   @property
-  def linkA(self):
-    return self.componentA
+  def nodeA(self):
+    return self.__nodeA
   
+  @nodeA.setter
+  def nodeA(self, nodeA):
+    if not isinstance(nodeA, Node):
+      raise Exception('Specified node is not of type Node')
+    
+    self.__nodeA = nodeA
+    
   @property
-  def linkB(self):
-    return self.componentB
+  def nodeB(self):
+    return self.__nodeB
   
-  def getCommonComponent(self):
-    return self.linkA.getNodesForCommonComponent(self.linkB)[0]
-  
-  def constrains(self, benchItem):
-    """
-    Does this constraint involve the specified bench item?
-    """
+  @nodeB.setter
+  def nodeB(self, nodeB):
+    if not isinstance(nodeB, Node):
+      raise Exception('Specified node is not of type Node')
     
-    #TODO: type checking
+    self.__nodeB = nodeB
     
-    return benchItem is self.getCommonComponent()
+  def updateConstrainedNodes(self):
+    self.addConstrainedNode(self.nodeA)
+    self.addConstrainedNode(self.nodeB)
 
-class LinkAngularConstraint(AbstractLinkConstraint):
-  def __init__(self, angle, *args, **kwargs):
-    super(LinkAngularConstraint, self).__init__(*args, **kwargs)
+class LinkLengthConstraint(AbstractLinkConstraint):
+  def __init__(self, length, *args, **kwargs):
+    super(LinkLengthConstraint, self).__init__(*args, **kwargs)
+    
+    self.length = length
+  
+  @property
+  def length(self):
+    return self.__length
+
+  @length.setter
+  def length(self, length):
+    if length is not None:
+      # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+      length = float(length)
+      
+      
+      if length < 0:
+        raise Exception('Length must be greater than or equal to 0')
+    
+    self.__length = length
+  
+  def constrain(self, *args, **kwargs):
+    super(LinkLengthConstraint, self).constrain(*args, **kwargs)
+    
+    # get Link object between nodes
+    # TODO: wrap this in try/catch
+    link = self.layout.scene.getLinkFromNodes(self.nodeA, self.nodeB)
+    
+    # set link length
+    link.length = self.length
+    
+    self.updateConstrainedNodes()
+
+class LinkAngleConstraint(AbstractLinkConstraint):
+  def __init__(self, length, *args, **kwargs):
+    super(LinkLengthConstraint, self).__init__(*args, **kwargs)
     
     self.angle = angle
-    
+  
   @property
   def angle(self):
     return self.__angle
@@ -91,11 +134,14 @@ class LinkAngularConstraint(AbstractLinkConstraint):
     
     self.__angle = angle
   
-  def constrain(self):
-    # set common component's angle of incidence
-    (component, nodeA, nodeB) = self.linkA.getNodesForCommonComponent(self.linkB)
+  def constrain(self, *args, **kwargs):
+    super(LinkAngleConstraint, self).constrain(*args, **kwargs)
     
-    # get angle of incidence required for this constraint
-    aoi = component.getAoiForConstrainedNodeAngle(nodeA, nodeB, self.angle)
+    # get Link object between nodes
+    # TODO: wrap this in try/catch
+    link = self.layout.scene.getLinkFromNodes(self.nodeA, self.nodeB)
     
-    component.aoi = aoi
+    # set link angle
+    link.angle = self.angle
+    
+    self.updateConstrainedNodes()

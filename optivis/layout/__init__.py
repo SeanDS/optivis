@@ -45,12 +45,8 @@ class AbstractLayout(object):
       raise Exception('Specified scale function is not of type ScaleFunction')
     
     self.__scaleFunc = scaleFunc
-  
-  @abc.abstractmethod
-  def isFixed(self, component):
-    pass
 
-  def arrange(self):    
+  def arrange(self):
     # make sure there is a reference component
     if self.scene.reference is None:
       # set reference to first link's output component
@@ -62,11 +58,30 @@ class AbstractLayout(object):
     # empty linked components list
     self.linkedComponents = set([])
     
+    # process constraints
+    self.constrain()
+    
     # layout links
     self.layoutLinks()
     
     # move scene positions so that left most, topmost object is at the origin
     self.normalisePositions()
+  
+  def constrain(self):
+    """
+    Constrains bench items and checks for conflicts
+    """
+    
+    # list of nodes already constrained
+    constrainedNodes = set([])
+    
+    for constraint in self.scene.constraints:
+      constraint.constrain(self)
+      
+      if len(constrainedNodes.intersection(constraint.constrainedNodes)) > 0:
+        raise Exception('A constraint has constrained an already-constrained node')
+      
+      constrainedNodes.update(constraint.constrainedNodes)
   
   def layoutLinks(self):
     # loop over links attached to reference component, and also other links
@@ -81,10 +96,10 @@ class AbstractLayout(object):
     referenceNode = None
     targetNode = None
     
-    if link.inputNode.component == referenceComponent:
+    if link.inputNode.component is referenceComponent:
       referenceNode = link.inputNode
       targetNode = link.outputNode
-    elif link.outputNode.component == referenceComponent:
+    elif link.outputNode.component is referenceComponent:
       referenceNode = link.outputNode
       targetNode = link.inputNode
     else:
@@ -93,7 +108,7 @@ class AbstractLayout(object):
     targetComponent = targetNode.component
     
     # check if target is already laid out
-    if self.isFixed(targetComponent):      
+    if self.isFixed(targetComponent):
       print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
       
       # set link start and end positions
@@ -192,42 +207,3 @@ class StandardLayout(AbstractLayout):
   
   def isFixed(self, component):
     return component in self.linkedComponents
-
-class ConstrainedLayout(AbstractLayout):
-  title = "Constrained"
-  
-  def __init__(self, *args, **kwargs):
-    super(ConstrainedLayout, self).__init__(*args, **kwargs)
-  
-  # override
-  def layoutLinks(self, *args, **kwargs):
-    # first constrain angles of optics
-    for constraint in self.scene.constraints:
-      constraint.constrain()
-    
-    super(ConstrainedLayout, self).layoutLinks(*args, **kwargs)
-    
-  def isFixed(self, component):
-    if component in self.linkedComponents:
-      # check if any constraints constrain this component
-      for constraint in self.scene.constraints:
-        if constraint.constrains(component):
-          print "{0} is fixed".format(component)
-          return True
-      
-      # check if this is attached to a constrained component
-      for link in self.scene.links:
-        if link.hasComponent(component):
-          # this link is attached to the component
-          # is the other side constrained?
-          for thisComponent in link.getComponents():
-            if thisComponent is not component:
-              # this is the other side of the link
-              for constraint in self.scene.constraints:
-                if constraint.constrains(thisComponent):
-                  print "{0} is fixed because it's attached to fixed component {1}".format(component, thisComponent)
-                  return True
-    
-    print "{0} is not fixed".format(component)
-    
-    return False

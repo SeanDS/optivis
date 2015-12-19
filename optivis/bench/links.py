@@ -5,17 +5,14 @@ import math
 
 import optivis.bench
 import optivis.geometry
+import optivis.layout.constraints as constraints
 import nodes
 import labels
 
 class AbstractLink(optivis.bench.AbstractBenchItem):
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, outputNode, inputNode, length=None, start=None, end=None, specs=None, *args, **kwargs):
-    self.outputNode = outputNode
-    self.inputNode = inputNode
-    self.length = length
-    
+  def __init__(self, outputNode, inputNode, start=None, end=None, specs=None, *args, **kwargs):
     if start is None:
       start = optivis.geometry.Coordinates(0, 0)
     
@@ -25,10 +22,15 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     if specs is None:
       # default link spec
       specs = LinkSpec()
-
+    
+    self.outputNode = outputNode
+    self.inputNode = inputNode
     self.start = start
     self.end = end
     self.specs = specs
+    
+    # set default length
+    self.length = 0
 
     # check we've not linked one component to itself
     if self.outputNode.component == self.inputNode.component:
@@ -107,22 +109,6 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     self.__inputNode = inputNode
     
   @property
-  def length(self):
-    return self.__length
-
-  @length.setter
-  def length(self, length):
-    if length is not None:
-      # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-      length = float(length)
-      
-      
-      if length < 0:
-        raise Exception('Length must be greater than or equal to 0')
-    
-    self.__length = length
-    
-  @property
   def start(self):
     return self.__start
   
@@ -159,6 +145,32 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
       self.__specs = specs
     else:
       raise Exception('Specified specs is not a LinkSpec or a list of LinkSpec objects')
+    
+  @property
+  def length(self):
+    return self.__length
+
+  @length.setter
+  def length(self, length):
+    if length is not None:
+      # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
+      length = float(length)
+      
+      if length < 0:
+        raise Exception('Length must be greater than or equal to 0')
+    
+    self.__length = length
+  
+  def hasNodes(self, nodeA, nodeB):
+    if not isinstance(nodeA, nodes.Node):
+      raise Exception('Specified nodeA is not of type Node')
+    elif not isinstance(nodeB, nodes.Node):
+      raise Exception('Specified nodeB is not of type Node')
+    
+    if (self.inputNode is nodeA and self.outputNode is nodeB) or (self.inputNode is nodeB and self.outputNode is nodeA):
+      return True
+    
+    return False
 
 class Link(AbstractLink):
   def __init__(self, *args, **kwargs):

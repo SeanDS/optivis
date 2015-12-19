@@ -11,12 +11,13 @@ class Scene(object):
   links = []
   constraints = []
   
-  def __init__(self, title=None, reference=None):
+  def __init__(self, title=None, reference=None, constraints=[]):
     if title is None:
       title = datetime.datetime.now().strftime('%Y-%M-%d %H:%M')
     
     self.title = title
     self.reference = reference
+    self.constraints = constraints
   
   @property
   def title(self):
@@ -46,11 +47,33 @@ class Scene(object):
 	raise Exception('Specified component is not of type AbstractComponent')
     
     self.__reference = component
+    
+  @property
+  def constraints(self):
+    return self.__constraints
+
+  @constraints.setter
+  def constraints(self, constraints):
+    if isinstance(constraints, layout.constraints.AbstractConstraint):
+      self.__constraints = [constraints]
+    elif isinstance(constraints, (list, tuple)):
+      if not all(isinstance(constraint, layout.constraints.AbstractConstraint) for constraint in constraints):
+        raise Exception('A specified constraint is not of type AbstractConstraint')
+
+      self.__constraints = constraints
+    else:
+      raise Exception('Specified constraints are not an AbstractConstraint or a list of AbstractConstraint objects')
   
   def link(self, *args, **kwargs):
+    # create Link object
     link = bench.links.Link(*args, **kwargs)
     
+    # add to scene
     self.addLink(link)
+    
+    # constrain length if specified
+    if 'length' in kwargs:
+      self.addConstraint(layout.constraints.LinkLengthConstraint(kwargs['length'], nodeA=link.outputNode, nodeB=link.inputNode))
   
   def addLink(self, link):
     if not isinstance(link, bench.links.AbstractLink):
@@ -96,3 +119,10 @@ class Scene(object):
     (lowerBound, upperBound) = self.getBoundingBox()
     
     return upperBound.translate(lowerBound.flip())
+
+  def getLinkFromNodes(self, nodeA, nodeB):
+    for link in self.links:
+      if link.hasNodes(nodeA, nodeB):
+        return link
+    
+    raise Exception('Specified nodes are not present in any link in this scene')
