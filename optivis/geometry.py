@@ -87,6 +87,10 @@ class Coordinates(object):
     else:
       return (abs(self.x - otherCoordinates.x) <= max(xTests)) and (abs(self.y - otherCoordinates.y) <= max(yTests))
   
+  @property
+  def length(self):
+    return math.sqrt(self.x ** 2 + self.y ** 2)
+  
   def __ne__(self, otherCoordinates):
     return not self.__eq__(otherCoordinates)
   

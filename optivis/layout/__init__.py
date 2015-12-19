@@ -14,8 +14,7 @@ class AbstractLayout(object):
 
   title = "Abstract"
 
-  # set of components that are part of links
-  linkedComponents = set([])
+  positionConstrainedComponents = set([])
   
   def __init__(self, scene, scaleFunc=None):
     if scaleFunc is None:
@@ -55,13 +54,19 @@ class AbstractLayout(object):
     ###
     # Layout and link everything
     
-    # empty linked components list
-    self.linkedComponents = set([])
+    # empty position-constrained components list
+    self.positionConstrainedComponents = set([])
+    
+    # laid out links
+    self.laidOutLinks = set([])
     
     # process constraints
     self.constrain()
     
-    # layout links
+    # layout constrained links
+    self.layoutLinks()
+    
+    # now that we've constrained the positions of items, now layout unconstrained links
     self.layoutLinks()
     
     # move scene positions so that left most, topmost object is at the origin
@@ -86,13 +91,12 @@ class AbstractLayout(object):
   def layoutLinks(self):
     # loop over links attached to reference component, and also other links
     # attached to components to which these links attach the reference
-    for link in self.getComponentLinks(self.scene.reference):
-      # recursive
-      self.layoutLinkChain(link, self.scene.reference)
+    while len(self.laidOutLinks) < len(self.scene.links):
+      for link in self.getComponentLinks(self.scene.reference):
+        # recursive
+        self.layoutLinkChain(link, self.scene.reference)
       
-  def layoutLinkChain(self, link, referenceComponent):    
-    print "[Layout] Linking {0} with respect to {1}".format(link, referenceComponent)
-    
+  def layoutLinkChain(self, link, referenceComponent):      
     referenceNode = None
     targetNode = None
     
@@ -107,36 +111,67 @@ class AbstractLayout(object):
     
     targetComponent = targetNode.component
     
-    # check if target is already laid out
-    if self.isFixed(targetComponent):
-      print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
+    if referenceComponent in self.positionConstrainedComponents and targetComponent in self.positionConstrainedComponents:
+      # both component positions already constrained
+      print "[Layout] Linking {0}".format(link)
+      
+      # TODO: check for angular constraints
+
+      # set link start and end positions
+      link.start = link.outputNode.getAbsolutePosition()
+      link.end = link.inputNode.getAbsolutePosition()
+      
+      # set link length
+      link.length = link.getSize().x
+      
+      # set angle from positions
+      angle = (link.end - link.start).getAzimuth()
+      
+      # set node azimuths
+      referenceNode.setAbsoluteAzimuth(angle)
+      targetNode.setAbsoluteAzimuth(angle)
+      
+      self.laidOutLinks.add(link)
+    elif targetComponent not in self.positionConstrainedComponents and link.length is not None:
+      # only target component not yet positioned
+      print "[Layout] Linking {0} with respect to {1}".format(link, referenceComponent)
+      
+      # check if target is already laid out
+      if self.isFixed(targetComponent):
+        print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
+        
+        # set link start and end positions
+        link.start = link.outputNode.getAbsolutePosition()
+        link.end = link.inputNode.getAbsolutePosition()
+        
+        return
+      
+      # set other node azimuth first
+      targetNode.setAbsoluteAzimuth(referenceNode.getAbsoluteAzimuth())
+      
+      # set the position of the input component
+      targetNode.setAbsolutePosition(self.getTargetNodePositionRelativeToReferenceNode(link, referenceNode))
       
       # set link start and end positions
       link.start = link.outputNode.getAbsolutePosition()
       link.end = link.inputNode.getAbsolutePosition()
       
+      # add components to set of constrained components
+      self.positionConstrainedComponents.add(referenceComponent)
+      self.positionConstrainedComponents.add(targetComponent)
+      
+      self.laidOutLinks.add(link)
+      
+      # get links to/from the target component, avoiding this one, and layout any
+      # components linked to target component
+      for subLink in self.getComponentLinks(targetComponent, avoid=link):
+        self.layoutLinkChain(subLink, targetComponent)
+    else:
+      # This link is zero-length and we are attempting to link a not-yet-position-constrained
+      # component. We just do nothing for now, and the recursion will automatically link this
+      # component when the first condition is matched, i.e. that both components are position-
+      # constrained.
       return
-    
-    # set other node azimuth first
-    targetNode.setAbsoluteAzimuth(referenceNode.getAbsoluteAzimuth())
-    
-    # then set the position of the input component
-    targetNode.setAbsolutePosition(self.getTargetNodePositionRelativeToReferenceNode(link, referenceNode))
-    
-    # set link start and end positions
-    link.start = link.outputNode.getAbsolutePosition()
-    link.end = link.inputNode.getAbsolutePosition()
-    
-    # add components to set of constrained components
-    self.linkedComponents.add(referenceComponent)
-    self.linkedComponents.add(targetComponent)
-    
-    # get links to/from the target component, avoiding this one
-    subLinks = self.getComponentLinks(targetComponent, avoid=link)
-    
-    # layout any components linked to target component
-    for subLink in subLinks:
-      self.layoutLinkChain(subLink, targetComponent)
     
   def getComponentLinks(self, component, avoid=None):
     links = []
@@ -153,7 +188,7 @@ class AbstractLayout(object):
 
   def removeLinkFromList(self, link, links):
     for i in range(0, len(links)):
-      if links[i] == link:
+      if links[i] is link:
 	del(links[i])
 	
 	return links
@@ -161,7 +196,7 @@ class AbstractLayout(object):
     raise Exception('Link {0} was not found in the list provided'.format(link))
   
   def getTargetNodePositionRelativeToReferenceNode(self, link, referenceNode):    
-    if link.inputNode != referenceNode and link.outputNode != referenceNode:
+    if link.inputNode is not referenceNode and link.outputNode is not referenceNode:
       raise Exception('Specified reference node, {0}, is not a node in the specified link, {1}'.format(referenceNode, link))
     
     # absolute position of pivot point
@@ -198,12 +233,12 @@ class AbstractLayout(object):
     
   def getScaledLinkLength(self, length):
     return self.scaleFunc.getScaledLength(length)
+  
+  def isFixed(self, component):
+    return component in self.positionConstrainedComponents
 
 class StandardLayout(AbstractLayout):
   title = "Standard"
 
   def __init__(self, *args, **kwargs):    
     super(StandardLayout, self).__init__(*args, **kwargs)
-  
-  def isFixed(self, component):
-    return component in self.linkedComponents

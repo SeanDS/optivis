@@ -30,7 +30,7 @@ class AbstractLink(optivis.bench.AbstractBenchItem):
     self.specs = specs
     
     # set default length
-    self.length = 0
+    self.length = None
 
     # check we've not linked one component to itself
     if self.outputNode.component == self.inputNode.component:
