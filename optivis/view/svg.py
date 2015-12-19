@@ -259,12 +259,14 @@ class SvgLink(AbstractSvgItem):
     if not isinstance(document, et.Element):
       raise Exception('Specified document is not of type ElementTree')
     
+    width = self.link.specs[0].width
+    color = self.link.specs[0].color
     # create SVG dash array from pattern
     pattern = 'none'
     
-    if len(self.link.pattern) > 0:
+    if len(self.link.specs[0].pattern) > 0:
       # pattern specified - create dash array
-      pattern = self.link.pattern
+      pattern = self.link.specs[0].pattern
       
       # swap elements (SVG uses the opposite dash-space convention to Optivis)
       for i in range(0, len(pattern) // 2):
@@ -273,6 +275,6 @@ class SvgLink(AbstractSvgItem):
         pattern[i] = nextItem
       
       # create SVG dash array string
-      pattern = ', '.join(str(item) for item in self.link.pattern)
+      pattern = ', '.join(str(item) for item in self.link.specs[0].pattern)
     
-    line = et.SubElement(document, 'line', x1=str(self.link.start.x), x2=str(self.link.end.x), y1=str(self.link.start.y), y2=str(self.link.end.y), style='stroke: {0}; stroke-width: {1}; stroke-dasharray: {2}'.format(self.link.color, self.link.width, pattern))
+    line = et.SubElement(document, 'line', x1=str(self.link.start.x), x2=str(self.link.end.x), y1=str(self.link.start.y), y2=str(self.link.end.y), style='stroke: {0}; stroke-width: {1}; stroke-dasharray: {2}'.format(color, width, pattern))
