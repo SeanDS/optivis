@@ -13,7 +13,12 @@ class AbstractLayout(object):
   __metaclass__ = abc.ABCMeta
 
   title = "Abstract"
+  
+  # laid out links
+  laidOutLinks = set([])
 
+  distanceConstrainedNodes = set([])
+  angleConstrainedComponents = set([])
   positionConstrainedComponents = set([])
   
   def __init__(self, scene, scaleFunc=None):
@@ -51,14 +56,16 @@ class AbstractLayout(object):
       # set reference to first link's output component
       self.scene.reference = self.scene.links[0].outputNode.component
     
+    # constrain the reference component
+    self.positionConstrainedComponents.add(self.scene.reference)
+    self.angleConstrainedComponents.add(self.scene.reference)
+    
+    # set zero position
+    # FIXME: make reference a node
+    self.scene.reference.outputNodes[0].setAbsolutePosition(optivis.geometry.Coordinates(0, 0))
+    
     ###
     # Layout and link everything
-    
-    # empty position-constrained components list
-    self.positionConstrainedComponents = set([])
-    
-    # laid out links
-    self.laidOutLinks = set([])
     
     # process constraints
     self.constrain()
@@ -77,109 +84,139 @@ class AbstractLayout(object):
     Constrains bench items and checks for conflicts
     """
     
-    # list of nodes already constrained
-    constrainedNodes = set([])
-    
     for constraint in self.scene.constraints:
       constraint.constrain(self)
       
-      if len(constrainedNodes.intersection(constraint.constrainedNodes)) > 0:
-        raise Exception('A constraint has constrained an already-constrained node')
+      if len(self.distanceConstrainedNodes.intersection(constraint.distanceConstrainedNodes)) > 0:
+        raise Exception('A constraint has position-constrained an already-position-constrained node')
       
-      constrainedNodes.update(constraint.constrainedNodes)
+      if len(self.angleConstrainedComponents.intersection(constraint.angleConstrainedComponents)) > 0:
+        raise Exception('A constraint has angle-constrained an already-angle-constrained component')
+      
+      self.distanceConstrainedNodes.update(constraint.distanceConstrainedNodes)
+      self.angleConstrainedComponents.update(constraint.angleConstrainedComponents)
   
   def layoutLinks(self):
-    # loop over links attached to reference component, and also other links
-    # attached to components to which these links attach the reference
-    while len(self.laidOutLinks) < len(self.scene.links):
-      for link in self.getComponentLinks(self.scene.reference):
-        # recursive
-        self.layoutLinkChain(link, self.scene.reference)
-      
-  def layoutLinkChain(self, link, referenceComponent):      
-    referenceNode = None
-    targetNode = None
+    # solve constraints
+    while len(self.positionConstrainedComponents) < len(self.scene.getComponents()):
+      for link in self.scene.links:
+        self.solveConstraints(link)
     
-    if link.inputNode.component is referenceComponent:
-      referenceNode = link.inputNode
-      targetNode = link.outputNode
-    elif link.outputNode.component is referenceComponent:
-      referenceNode = link.outputNode
-      targetNode = link.inputNode
-    else:
-      raise Exception('Specified reference component, {0}, is not part of the specified link, {1}'.format(referenceComponent, link))
+    # set link positions
+    self.setLinkPositions()
+  
+  def setLinkPositions(self):
+    for link in self.scene.links:      
+      link.start = link.inputNode.getAbsolutePosition()
+      link.end = link.outputNode.getAbsolutePosition()
     
-    targetComponent = targetNode.component
+  def solveConstraints(self, link):
+    outputNode = link.outputNode
+    inputNode = link.inputNode
     
-    if referenceComponent in self.positionConstrainedComponents and targetComponent in self.positionConstrainedComponents:
-      # both component positions already constrained
-      print "[Layout] Linking {0}".format(link)
-      
-      # TODO: check for angular constraints
-
-      # set link start and end positions
-      link.start = link.outputNode.getAbsolutePosition()
-      link.end = link.inputNode.getAbsolutePosition()
-      
-      # set link length
-      link.length = link.getSize().x
-      
-      # set angle from positions
-      angle = (link.end - link.start).getAzimuth()
-      
-      # set node azimuths
-      referenceNode.setAbsoluteAzimuth(angle)
-      targetNode.setAbsoluteAzimuth(angle)
-      
-      self.laidOutLinks.add(link)
-    elif targetComponent not in self.positionConstrainedComponents and link.length is not None:
-      # only target component not yet positioned
-      print "[Layout] Linking {0} with respect to {1}".format(link, referenceComponent)
-      
-      # check if target is already laid out
-      if self.isFixed(targetComponent):
-        print "[Layout]      WARNING: target component {0} is already laid out. Linking with straight line.".format(targetComponent)
+    outputComponent = outputNode.component
+    inputComponent = inputNode.component
+    
+    outNodeSet = outputNode in self.distanceConstrainedNodes
+    outCompSet = outputComponent in self.angleConstrainedComponents
+    inNodeSet = inputNode in self.distanceConstrainedNodes
+    inCompSet = inputComponent in self.angleConstrainedComponents
+    
+    if link.length is not None:
+      if outNodeSet and outCompSet and inNodeSet and inCompSet:
+        # fully constrained link
         
-        # set link start and end positions
-        link.start = link.outputNode.getAbsolutePosition()
-        link.end = link.inputNode.getAbsolutePosition()
+        # check that we're not going to move an already-constrained component
+        if inputComponent in self.positionConstrainedComponents:
+          #raise Exception("{0} overconstrained".format(inputComponent))
+          pass
+        
+        # link vector
+        linkVector = optivis.geometry.Coordinates(link.length, 0).rotate(outputNode.getAbsoluteAzimuth())
+        
+        # set input component proper position
+        inputNode.setAbsoluteAzimuth(outputNode.getAbsoluteAzimuth())
+        inputNode.setAbsolutePosition(outputNode.getAbsolutePosition().translate(linkVector))
+        
+        self.positionConstrainedComponents.add(inputComponent)
+        self.positionConstrainedComponents.add(outputComponent)
         
         return
+      elif not outNodeSet and outCompSet and inNodeSet and inCompSet:
+        # output node NOT distance constrained
+        # output component angle constrained
+        # input node distance constrained
+        # input component angle constrained
+        
+        print "[Layout] Constraining position of {0} using position and angle of {1} and link length".format(outputNode, inputNode)
+          
+        # set output node's absolute position using link
+        outputNode.setAbsolutePosition(self.targetPosFromRefAndLink(inputNode, link))
+          
+        # we can now constrain the distance of the output node
+        self.distanceConstrainedNodes.add(outputNode)
+      elif outNodeSet and not outCompSet and inNodeSet and inCompSet:
+        # output node distance constrained
+        # output component NOT angle constrained
+        # input node distance constrained
+        # input component angle constrained
+        
+        print "[Layout] Constraining angle of {0} using angle of {1} ({2})".format(outputNode, inputNode, inputNode.getAbsoluteAzimuth())
+        
+        # set output node angle
+        outputNode.setAbsoluteAzimuth(inputNode.getAbsoluteAzimuth())
+        
+        # set input node proper position
+        linkVector = optivis.geometry.Coordinates(link.length, 0).rotate(outputNode.getAbsoluteAzimuth())
+        inputNode.setAbsolutePosition(outputNode.getAbsolutePosition().translate(linkVector))
+        
+        # we can now constrain the angle of the output component
+        self.angleConstrainedComponents.add(outputComponent)
+      elif outNodeSet and outCompSet and not inNodeSet and inCompSet:
+        # output node distance constrained
+        # output component angle constrained
+        # input node NOT distance constrained
+        # input component angle constrained
+        
+        print "[Layout] Constraining position of {0} using position and angle of {1} and link length".format(inputNode, outputNode)
+          
+        # set input node's absolute position using link
+        inputNode.setAbsolutePosition(self.targetPosFromRefAndLink(outputNode, link))
+          
+        # we can now constrain the distance of the input node
+        self.distanceConstrainedNodes.add(inputNode)
+      elif outNodeSet and outCompSet and inNodeSet and not inCompSet:
+        # output node distance constrained
+        # output component angle constrained
+        # input node distance constrained
+        # input component NOT angle constrained
+        
+        print "[Layout] Constraining angle of {0} using angle of {1} ({2})".format(inputNode, outputNode, outputNode.getAbsoluteAzimuth())
+        
+        # set input node angle
+        inputNode.setAbsoluteAzimuth(outputNode.getAbsoluteAzimuth())
+        
+        # set input node proper position
+        linkVector = optivis.geometry.Coordinates(link.length, 0).rotate(outputNode.getAbsoluteAzimuth())
+        inputNode.setAbsolutePosition(outputNode.getAbsolutePosition().translate(linkVector))
+        
+        # we can now constrain the angle of the input component
+        self.angleConstrainedComponents.add(inputComponent)
+      else:
+        print "[Layout] Skipping {0} until it is sufficiently constrained".format(link)
       
-      # set other node azimuth first
-      targetNode.setAbsoluteAzimuth(referenceNode.getAbsoluteAzimuth())
-      
-      # set the position of the input component
-      targetNode.setAbsolutePosition(self.getTargetNodePositionRelativeToReferenceNode(link, referenceNode))
-      
-      # set link start and end positions
-      link.start = link.outputNode.getAbsolutePosition()
-      link.end = link.inputNode.getAbsolutePosition()
-      
-      # add components to set of constrained components
-      self.positionConstrainedComponents.add(referenceComponent)
-      self.positionConstrainedComponents.add(targetComponent)
-      
-      self.laidOutLinks.add(link)
-      
-      # get links to/from the target component, avoiding this one, and layout any
-      # components linked to target component
-      for subLink in self.getComponentLinks(targetComponent, avoid=link):
-        self.layoutLinkChain(subLink, targetComponent)
-    else:
-      # This link is zero-length and we are attempting to link a not-yet-position-constrained
-      # component. We just do nothing for now, and the recursion will automatically link this
-      # component when the first condition is matched, i.e. that both components are position-
-      # constrained.
-      return
-    
   def getComponentLinks(self, component, avoid=None):
+    if avoid is not None:
+      if not isinstance(avoid, set):
+        raise Exception('Specified avoid set is not a set')
+    
     links = []
     
     for link in self.scene.links:
-      if link == avoid:
-	# skip this link, because it has been requested to be avoided
-	continue
+      if avoid is not None:
+        if link in avoid:
+          # skip this link, because it has been requested to be avoided
+          continue
       
       if link.hasComponent(component):
 	links.append(link)
@@ -195,7 +232,7 @@ class AbstractLayout(object):
     
     raise Exception('Link {0} was not found in the list provided'.format(link))
   
-  def getTargetNodePositionRelativeToReferenceNode(self, link, referenceNode):    
+  def targetPosFromRefAndLink(self, referenceNode, link):
     if link.inputNode is not referenceNode and link.outputNode is not referenceNode:
       raise Exception('Specified reference node, {0}, is not a node in the specified link, {1}'.format(referenceNode, link))
     

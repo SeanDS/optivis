@@ -89,6 +89,7 @@ class Scene(object):
   
   def getComponents(self):
     components = []
+    # FIXME: change to use sets
     
     for link in self.links:
       if link.inputNode.component not in components:
