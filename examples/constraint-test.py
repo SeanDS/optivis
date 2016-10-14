@@ -96,7 +96,7 @@ class Line(object):
 if __name__ == '__main__':
     canvas = Canvas()
     
-    canvas.lines.append(Line(0, 0, 50, 50))
-    canvas.lines.append(Line(50, 50, 0, 100))
+    canvas.lines.append(Line(20.0193955537, 29.1309884187, 49.9691834116, 30.8659836481))
+    canvas.lines.append(Line(34.4198589692, 29.9775997704, 35.5765218288, 10.011074507))
     
     canvas.show()
