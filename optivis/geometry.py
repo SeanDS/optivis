@@ -11,7 +11,7 @@ class Coordinates(object):
     """Cartesian coordinates"""
 
     # absolute and relative tolerances for comparing coordinates
-    tol = 1e-18
+    tol = 1e-10 # good enough for most applications
     rel = 1e-7
 
     def __init__(self, *args):
@@ -30,7 +30,7 @@ class Coordinates(object):
     def __str__(self):
         """String representation of the coordinates"""
 
-        return "({0:.3f}, {1:.3f})".format(self.x, self.y)
+        return "({0:.20f}, {1:.20f})".format(self.x, self.y)
 
     def __repr__(self):
         """Representation of the coordinates"""

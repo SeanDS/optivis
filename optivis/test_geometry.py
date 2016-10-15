@@ -52,3 +52,27 @@ class TestCoordinates(TestCase):
         # (1,1) - (1,1) - (1,1) = -(1,1)
         self.assertEqual(self.unit_vector - self.unit_vector \
         - self.unit_vector, self.unit_vector.flip())
+
+    def test_n_sided_polygons(self):
+        # test a whole bunch of polygons
+        for i in xrange(3, 100):
+            self._do_test_n_sided_polygon(i)
+
+    def _do_test_n_sided_polygon(self, n):
+        # external angle of each side w.r.t. last
+        external_angle = 180 - (180 * (n - 2)) / n
+
+        # side length
+        side_vec = geometry.Coordinates(10.023522718, 0)
+
+        # start vector
+        vec = self.a
+
+        # loop over the sides
+        for i in range(n):
+            # add the next side
+            vec += side_vec.rotate(external_angle * i)
+
+        # assert the vector is back at the origin
+        self.assertEqual(vec, self.a, \
+        "{0} != {1} ({2} sided polygon)".format(vec, self.a, n))
