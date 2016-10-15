@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, division
 
 from unittest import TestCase
+import math
 
 import optivis.geometry as geometry
 
@@ -36,6 +37,13 @@ class TestCoordinates(TestCase):
 
         # rotation through full circle
         self.assertEqual(self.b.rotate(360), self.b)
+
+    def test_azimuth(self):
+        # angle
+        self.assertEqual(self.a.azimuth, \
+        math.degrees(math.atan2(self.a.y, self.a.x)))
+        self.assertEqual(self.b.azimuth, \
+        math.degrees(math.atan2(self.b.y, self.b.x)))
 
     def test_flip(self):
         self.assertEqual(self.unit_vector.flip(), self.anti_unit_vector)
