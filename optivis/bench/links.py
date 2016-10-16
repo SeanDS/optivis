@@ -1,240 +1,178 @@
 from __future__ import unicode_literals, division
 
-import abc
 import math
 
-import optivis.bench
-import optivis.geometry
-import nodes
-import labels
+from optivis.bench.items import BenchItem
+from optivis.geometry import Coordinates
 
-class AbstractLink(optivis.bench.AbstractBenchItem):
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self, outputNode, inputNode, length=None, start=None, end=None, specs=None, *args, **kwargs):
-        self.outputNode = outputNode
-        self.inputNode = inputNode
+class Link(BenchItem):
+    def __init__(self, output_node, input_node, length=None, specs=None, \
+    *args, **kwargs):
+        self.output_node = output_node
+        self.input_node = input_node
         self.length = length
-
-        if start is None:
-            start = optivis.geometry.Coordinates(0, 0)
-
-        if end is None:
-            end = optivis.geometry.Coordinates(0, 0)
 
         if specs is None:
             # default link spec
             specs = LinkSpec()
 
-        self.start = start
-        self.end = end
         self.specs = specs
 
         # check we've not linked one component to itself
-        if self.outputNode.component == self.inputNode.component:
-            raise Exception('Cannot link component directly to itself')
+        if self.output_node.component == self.input_node.component:
+            raise Exception("Cannot link component directly to itself")
 
-        super(AbstractLink, self).__init__(*args, **kwargs)
+        # start and end position defaults (layout manager sets this properly)
+        self.start_pos = Coordinates.origin()
+        self.end_pos = Coordinates.origin()
+
+        super(Link, self).__init__(*args, **kwargs)
+
+    def __unicode__(self):
+        """String representation of this link"""
+
+        return "{0} --> {1}".format(self.output_node, self.input_node)
 
     def __str__(self):
-        return "{0} --> {1}".format(self.outputNode, self.inputNode)
+        return unicode(self).encode('utf-8')
 
-    def getLabelOrigin(self):
-        return self.start + (self.end - self.start) / 2
+    def __repr__(self):
+        """Representation of this link"""
 
-    def getLabelAzimuth(self):
-        size = self.end - self.start
-
-        if size.y == 0:
-            # avoid division by zero
-            return 0
-
-        return math.degrees(math.atan2(size.y, size.x))
-
-    def getSize(self):
-        size = self.end - self.start
-
-        return optivis.geometry.Coordinates(math.sqrt(math.pow(size.x, 2) + math.pow(size.y, 2)), 0)
-
-    def hasComponent(self, component):
-        if component in self.getComponents():
-            return True
-
-        return False
-
-    def getComponents(self):
-        return [self.outputNode.component, self.inputNode.component]
-
-    def getNodesForCommonComponent(self, otherLink):
-        thisOutputComponent = self.outputNode.component
-        thisInputComponent = self.inputNode.component
-
-        otherOutputComponent = otherLink.outputNode.component
-        otherInputComponent = otherLink.inputNode.component
-
-        # gets common component shared with other link
-        if thisOutputComponent is otherOutputComponent:
-            return (thisOutputComponent, self.outputNode, otherLink.outputNode)
-        elif thisOutputComponent is otherInputComponent:
-            return (thisOutputComponent, self.outputNode, otherLink.inputNode)
-        elif thisInputComponent is otherOutputComponent:
-            return (thisInputComponent, self.inputNode, otherLink.outputNode)
-        elif thisInputComponent is otherInputComponent:
-            return (thisInputComponent, self.inputNode, otherLink.inputNode)
-        else:
-            raise Exception('Specified other link does not share a common component with this link')
-
-    @property
-    def outputNode(self):
-        return self.__outputNode
-
-    @outputNode.setter
-    def outputNode(self, outputNode):
-        if not isinstance(outputNode, nodes.OutputNode):
-            raise Exception('Specified output node is not of type nodes.OutputNode')
-
-        self.__outputNode = outputNode
-
-    @property
-    def inputNode(self):
-        return self.__inputNode
-
-    @inputNode.setter
-    def inputNode(self, inputNode):
-        if not isinstance(inputNode, nodes.InputNode):
-            raise Exception('Specified input node is not of type nodes.InputNode')
-
-        self.__inputNode = inputNode
+        return unicode(self)
 
     @property
     def length(self):
-        return self.__length
+        return self._length
 
     @length.setter
     def length(self, length):
-        if length is not None:
-            # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-            length = float(length)
-
-
-            if length < 0:
-                raise Exception('Length must be greater than or equal to 0')
-
-        self.__length = length
+        self._length = float(length)
 
     @property
-    def start(self):
-        return self.__start
+    def start_pos(self):
+        return self._start_pos
 
-    @start.setter
-    def start(self, start):
-        if not isinstance(start, optivis.geometry.Coordinates):
-            raise Exception('Specified start is not of type optivis.geometry.Coordinates')
-
-        self.__start = start
+    @start_pos.setter
+    def start_pos(self, start_pos):
+        self._start_pos = Coordinates(start_pos)
 
     @property
-    def end(self):
-        return self.__end
+    def end_pos(self):
+        return self._end_pos
 
-    @end.setter
-    def end(self, end):
-        if not isinstance(end, optivis.geometry.Coordinates):
-            raise Exception('Specified end is not of type optivis.geometry.Coordinates')
+    @end_pos.setter
+    def end_pos(self, end_pos):
+        self._end_pos = Coordinates(end_pos)
 
-        self.__end = end
+    def get_bounding_box(self):
+        """Coordinates of item's edges closest to and furthest away from \
+        origin
 
-    @property
-    def specs(self):
-        return self.__specs
+        :return: (lower, upper) bounds
+        """
 
-    @specs.setter
-    def specs(self, specs):
-        if isinstance(specs, LinkSpec):
-            self.__specs = [specs]
-        elif isinstance(specs, (list, tuple)):
-            if not all(isinstance(spec, LinkSpec) for spec in specs):
-                raise Exception('A specified spec is not of type LinkSpec')
-
-            self.__specs = specs
+        # swap if start is further from end
+        if self.start_pos.length() < self.end_pos.length():
+            return (self.start_pos, self.end_pos)
         else:
-            raise Exception('Specified specs is not a LinkSpec or a list of LinkSpec objects')
+            return (self.end_pos, self.start_pos)
 
-class Link(AbstractLink):
-    def __init__(self, *args, **kwargs):
-        super(Link, self).__init__(*args, **kwargs)
+    def get_label_origin(self):        
+        return self.start_pos + (self.end_pos - self.start_pos) / 2
+
+    def get_label_azimuth(self):
+        mid_point = self.end_pos - self.start_pos
+
+        if mid_point.y == 0:
+            # avoid division by zero
+            return 0
+
+        return math.degrees(math.atan2(mid_point.y, mid_point.x))
+
+    def has_component(self, component):
+        return component in self.get_components()
+
+    def get_components(self):
+        return [self.output_node.component, self.input_node.component]
+
+#    def getNodesForCommonComponent(self, otherLink):
+#        thisOutputComponent = self.outputNode.component
+#        thisInputComponent = self.inputNode.component
+#
+#        otherOutputComponent = otherLink.outputNode.component
+#        otherInputComponent = otherLink.inputNode.component
+#
+#        # gets common component shared with other link
+#        if thisOutputComponent is otherOutputComponent:
+#            return (thisOutputComponent, self.outputNode, otherLink.outputNode)
+#        elif thisOutputComponent is otherInputComponent:
+#            return (thisOutputComponent, self.outputNode, otherLink.inputNode)
+#        elif thisInputComponent is otherOutputComponent:
+#            return (thisInputComponent, self.inputNode, otherLink.outputNode)
+#        elif thisInputComponent is otherInputComponent:
+#            return (thisInputComponent, self.inputNode, otherLink.inputNode)
+#        else:
+#            raise Exception("Specified other link does not share a common component with this link")
 
 class LinkSpec(object):
-    def __init__(self, width=1.0, color="red", pattern=None, offset=0, startMarker=False, endMarker=False, startMarkerRadius=3, endMarkerRadius=2, startMarkerColor="red", endMarkerColor="blue", *args, **kwargs):
+    def __init__(self, width=1.0, color="red", pattern=None, offset=0, \
+    start_marker=False, end_marker=False, start_marker_radius=3, \
+    end_marker_radius=2, start_marker_color="red", end_marker_color="blue"):
         self.width = width
         self.color = color
         self.pattern = pattern
         self.offset = offset
-        self.startMarker = startMarker
-        self.endMarker = endMarker
-        self.startMarkerRadius = startMarkerRadius
-        self.endMarkerRadius = endMarkerRadius
-        self.startMarkerColor = startMarkerColor
-        self.endMarkerColor = endMarkerColor
-
-        super(LinkSpec, self).__init__(*args, **kwargs)
+        self.start_marker = start_marker
+        self.end_marker = end_marker
+        self.start_marker_radius = start_marker_radius
+        self.end_marker_radius = end_marker_radius
+        self.start_marker_color = start_marker_color
+        self.end_marker_color = end_marker_color
 
     @property
     def width(self):
-        return self.__width
+        return self._width
 
     @width.setter
     def width(self, width):
-        # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
         width = float(width)
 
         if width < 0:
-            raise Exception('Width must be >= 0')
+            raise ValueError('Width must be >= 0')
 
-        self.__width = width
+        self._width = width
 
     @property
     def color(self):
-        return self.__color
+        return self._color
 
     @color.setter
     def color(self, color):
-        if not isinstance(color, basestring):
-            raise Exception('Specified color is not of type basestring')
-
         #FIXME: check for valid colors here
-        self.__color = color
+        self._color = color
 
     @property
     def pattern(self):
-        return self.__pattern
+        return self._pattern
 
     @pattern.setter
     def pattern(self, pattern):
         if pattern is None:
             pattern = []
         else:
-            # check that input is a list
-            if not isinstance(pattern, list):
-                raise Exception('Specified pattern is not a list')
+            pattern = list(pattern)
 
             # check that list is an even number (a pattern must be a series of dash-space pairs)
             if len(pattern) % 2 is not 0:
-                raise Exception('Specified pattern list must contain an even number of elements')
+                raise Exception("Specified pattern list must contain an even number of elements")
 
-            # check elements are integers
-            if not all(isinstance(item, float) or isinstance(item, int) for item in pattern):
-                raise Exception('Specified pattern list must only contain elements of type int or float')
-
-        self.__pattern = pattern
+        self._pattern = pattern
 
     @property
     def offset(self):
-        return self.__offset
+        return self._offset
 
     @offset.setter
     def offset(self, offset):
-        # raises TypeError if input is invalid, or ValueError if a string input can't be interpreted
-        offset = float(offset)
-
-        self.__offset = offset
+        self._offset = float(offset)

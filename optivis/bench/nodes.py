@@ -1,124 +1,101 @@
+# -*- coding: utf-8 -*-
+
+"""Node classes"""
+
 from __future__ import unicode_literals, division
 
-import abc
-
-import optivis.geometry
-import components
+from optivis.geometry import Coordinates
 
 class Node(object):
-    __metaclass__ = abc.ABCMeta
+    def __init__(self, name, component, position, aoi_offset=0):
+        """Instantiates a Node
 
-    def __init__(self, name, component, position, aoiMultiplier=1, aoiOffset=0):
+        :param name: name of the node
+        :param component: component this node is associated with
+        :param position: position of node, defined with respect to the \
+        component's center
+        :param aoi_offset: azimuthal offset this node's outgoing light has \
+        with respect to the component's angle of incidence
         """
-        position is normalised to the component's dimensions (i.e. usually between -0.5 and 0.5)
 
-        aoiMultiplier is the constant to multiply the component angle of incidence by
-        aoiOffset is the offset to add to the component angle of incidence
-        """
-
+        # set properties
         self.name = name
         self.component = component
         self.position = position
-        self.aoiMultiplier = aoiMultiplier
-        self.aoiOffset = aoiOffset
+        self.aoi_offset = aoi_offset
 
-    def getNodeAzimuth(self):
-        aoi = self.component.aoi
+    def __unicode__(self):
+        """String representation of this node"""
 
-        return self.aoiMultiplier * aoi + self.aoiOffset
+        return "{0}::{1}".format(self.component, self.name)
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __repr__(self):
+        """Representation of this node"""
+
+        return unicode(self)
 
     @property
     def name(self):
-        return self.__name
+        return self._name
 
     @name.setter
     def name(self, name):
-        self.__name = name
-
-    @property
-    def component(self):
-        return self.__component
-
-    @component.setter
-    def component(self, component):
-        if not isinstance(component, components.AbstractComponent):
-            raise Exception('Specified component is not of type components.AbstractComponent')
-
-        self.__component = component
+        self._name = unicode(name)
 
     @property
     def position(self):
-        return self.__position
+        return self._position
 
     @position.setter
     def position(self, position):
-        if not isinstance(position, optivis.geometry.Coordinates):
-            raise Exception('Specified position is not of type optivis.geometry.Coordinates')
-
-        self.__position = position
+        self._position = Coordinates(position)
 
     @property
-    def aoiMultiplier(self):
-        return self.__aoiMultiplier
+    def aoi_offset(self):
+        return self._aoi_offset
 
-    @aoiMultiplier.setter
-    def aoiMultiplier(self, aoiMultiplier):
-        self.__aoiMultiplier = aoiMultiplier
+    @aoi_offset.setter
+    def aoi_offset(self, aoi_offset):
+        self._aoi_offset = float(aoi_offset)
 
-    @property
-    def aoiOffset(self):
-        return self.__aoiOffset
+    def get_relative_output_azimuth(self):
+        """Get azimuth of node in the output direction with respect to the \
+        component"""
 
-    @aoiOffset.setter
-    def aoiOffset(self, aoiOffset):
-        self.__aoiOffset = aoiOffset
+        return self.component.aoi + self.aoi_offset
 
-    @abc.abstractmethod
-    def __str__(self):
-        return
+    def get_absolute_output_azimuth(self):
+        """Get azimuth of node in the output direction with respect to the \
+        global coordinate system"""
 
-    def getRelativePosition(self):
-        """
-        Get position of node with respect to component's center
-        """
+        return self.component.azimuth + self.get_relative_output_azimuth()
 
-        return (self.position * self.component.size).rotate(self.component.azimuth)
+    def get_relative_pos(self):
+        """Get position of node with respect to component's center"""
 
-    def getAbsolutePosition(self):
-        """
-        Return position of node taking account of node's component's position
-        """
+        return self.position.rotate(self.component.azimuth)
 
-        return self.component.position.translate(self.getRelativePosition())
+    def get_absolute_pos(self):
+        """Get position of node in global coordinate system"""
 
-    def getAbsoluteAzimuth(self):
-        return self.component.azimuth + self.getNodeAzimuth()
+        return self.component.position + self.get_relative_pos()
 
-    def setAbsolutePosition(self, nodeAbsolutePosition):
-        """
-        Set position of component based on position of node
+    def set_absolute_node_pos(self, absolute_pos):
+        """Set position of the component based on the specified position of \
+        the node
+
+        :param absolute_pos: absolute position of the node
         """
 
         # component position
-        self.component.position = nodeAbsolutePosition.translate(self.getRelativePosition().flip())
+        self.component.position = absolute_pos - self.get_relative_pos()
 
-    def setAbsoluteAzimuth(self, absoluteAzimuth):
-        """
-        Set azimuth of component based on azimuth of node
-        """
+    def set_absolute_azimuth(self, absolute_azimuth):
+        """Set azimuth of the component based on the specified azimuth of \
+        the node"""
 
-        self.component.azimuth = absoluteAzimuth - self.getNodeAzimuth()
-
-class InputNode(Node):
-    def __init__(self, *args, **kwargs):
-        super(InputNode, self).__init__(*args, **kwargs)
-
-    def __str__(self):
-        return "{0}<-{1}".format(self.component, self.name)
-
-class OutputNode(Node):
-    def __init__(self, *args, **kwargs):
-        super(OutputNode, self).__init__(*args, **kwargs)
-
-    def __str__(self):
-        return "{0}->{1}".format(self.component, self.name)
+        self.component.azimuth = absolute_azimuth \
+        - self.get_relative_output_azimuth()
