@@ -37,12 +37,21 @@ class Coordinates(object):
 
         return self.__str__()
 
+    @classmethod
+    def origin(cls):
+        """The coordinates of the origin"""
+        
+        return cls(0, 0)
+
     def rotate(self, azimuth):
         """Rotation of coordinates about the origin using a left-handed \
         coordinate system
 
         :param azimuth: the angle in degrees to rotate in a clockwise direction
         """
+
+        # validate azimuth
+        azimuth = float(azimuth)
 
         # apply rotation matrix to x and y
         x = self.x * math.cos(math.radians(azimuth)) \
@@ -173,7 +182,7 @@ class Coordinates(object):
 
         # check number of inputs
         if len(sequence) < 1:
-            raise ValueError('There must be at least one input')
+            raise ValueError("There must be at least one input")
         elif len(sequence) == 1:
             # check if the input is already Coordinates type
             if isinstance(sequence[0], Coordinates):
@@ -181,7 +190,7 @@ class Coordinates(object):
                 return (sequence[0].x, sequence[0].y)
 
             # make second coordinate zero
-            y = 0
+            y = float(0)
         else:
             # use explicit y definition
             y = float(sequence[1])
