@@ -27,15 +27,18 @@ class Coordinates(object):
         self.x = float(x)
         self.y = float(y)
 
-    def __str__(self):
+    def __unicode__(self):
         """String representation of the coordinates"""
 
         return "({0:.20f}, {1:.20f})".format(self.x, self.y)
 
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
     def __repr__(self):
         """Representation of the coordinates"""
 
-        return self.__str__()
+        return unicode(self)
 
     @classmethod
     def origin(cls):
@@ -202,8 +205,9 @@ class Coordinates(object):
                 # return coordinates
                 return (sequence[0].x, sequence[0].y)
 
-            # make second coordinate zero
-            y = float(0)
+            # make second coordinate equal to first (essential for
+            # multiplication and division by single values)
+            y = float(sequence[0])
         else:
             # use explicit y definition
             y = float(sequence[1])
