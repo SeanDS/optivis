@@ -40,7 +40,7 @@ class Coordinates(object):
     @classmethod
     def origin(cls):
         """The coordinates of the origin"""
-        
+
         return cls(0, 0)
 
     def rotate(self, azimuth):
@@ -68,6 +68,11 @@ class Coordinates(object):
 
         return math.degrees(math.atan2(self.y, self.x))
 
+    def length(self):
+        """Length between point defined by coordinates and the origin"""
+
+        return math.hypot(self.x, self.y)
+
     def flip(self):
         """Flips the coordinates
 
@@ -76,6 +81,14 @@ class Coordinates(object):
         """
 
         return Coordinates(-self.x, -self.y)
+
+    def is_positive(self):
+        """Checks if the coordinates are all positive
+
+        Assumes 0 is positive.
+        """
+
+        return self.x >= 0 and self.y >= 0
 
     def __eq__(self, other):
         """Compare coordinates to this one

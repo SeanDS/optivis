@@ -7,7 +7,7 @@ import optivis.geometry as geometry
 
 class TestCoordinates(TestCase):
     def setUp(self):
-        self.a = geometry.Coordinates(0, 0)
+        self.a = geometry.Coordinates.origin()
         self.b = geometry.Coordinates(1.5, 8.3)
         self.unit_vector = geometry.Coordinates(1, 1)
         self.anti_unit_vector = geometry.Coordinates(-1, -1)
@@ -27,6 +27,10 @@ class TestCoordinates(TestCase):
         self.assertRaises(TypeError, geometry.Coordinates, [], [])
         self.assertRaises(TypeError, geometry.Coordinates, {}, {})
 
+        # test copy constructor
+        self.assertEqual(self.a, geometry.Coordinates(self.a))
+        self.assertEqual(self.b, geometry.Coordinates(self.b))
+
     def test_translate(self):
         self.assertEqual(self.a + self.b, self.b)
         self.assertEqual(self.b - self.b, self.a)
@@ -37,6 +41,12 @@ class TestCoordinates(TestCase):
 
         # rotation through full circle
         self.assertEqual(self.b.rotate(360), self.b)
+
+    def test_hypot(self):
+        self.assertEqual(self.a.length(), math.sqrt(self.a.x ** 2 + self.a.y ** 2))
+        self.assertEqual(self.b.length(), math.sqrt(self.b.x ** 2 + self.b.y ** 2))
+        self.assertEqual(self.unit_vector.length(), math.sqrt(2))
+        self.assertEqual(self.anti_unit_vector.length(), math.sqrt(2))
 
     def test_azimuth(self):
         # angle
@@ -76,3 +86,14 @@ class TestCoordinates(TestCase):
         # assert the vector is back at the origin
         self.assertEqual(vec, self.a, \
         "{0} != {1} ({2} sided polygon)".format(vec, self.a, n))
+
+    def test_is_positive(self):
+        self.assertTrue(geometry.Coordinates(1, 1).is_positive())
+        self.assertTrue(geometry.Coordinates(0, 1000).is_positive())
+        self.assertTrue(geometry.Coordinates(1000, 0).is_positive())
+        self.assertTrue(geometry.Coordinates(294.1327, 1.95347).is_positive())
+        self.assertTrue(geometry.Coordinates(0, 0).is_positive())
+        self.assertFalse(geometry.Coordinates(-1, -1).is_positive())
+        self.assertFalse(geometry.Coordinates(0, -1).is_positive())
+        self.assertFalse(geometry.Coordinates(-1, 0).is_positive())
+        self.assertFalse(geometry.Coordinates(-23592, -910.02436).is_positive())
