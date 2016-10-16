@@ -14,7 +14,7 @@ class Link(BenchItem):
 
         if specs is None:
             # default link spec
-            specs = LinkSpec()
+            specs = [LinkSpec()]
 
         self.specs = specs
 
@@ -50,6 +50,14 @@ class Link(BenchItem):
         self._length = float(length)
 
     @property
+    def specs(self):
+        return self._specs
+
+    @specs.setter
+    def specs(self, specs):
+        self._specs = list(specs)
+
+    @property
     def start_pos(self):
         return self._start_pos
 
@@ -78,7 +86,7 @@ class Link(BenchItem):
         else:
             return (self.end_pos, self.start_pos)
 
-    def get_label_origin(self):        
+    def get_label_origin(self):
         return self.start_pos + (self.end_pos - self.start_pos) / 2
 
     def get_label_azimuth(self):

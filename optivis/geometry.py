@@ -30,7 +30,7 @@ class Coordinates(object):
     def __unicode__(self):
         """String representation of the coordinates"""
 
-        return "({0:.20f}, {1:.20f})".format(self.x, self.y)
+        return "({0:.3f}, {1:.3f})".format(self.x, self.y)
 
     def __str__(self):
         return unicode(self).encode('utf-8')

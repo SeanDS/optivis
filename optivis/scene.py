@@ -47,6 +47,11 @@ class Scene(object):
         return "{0}\n\tComponents:\n\t\t{1}\n\tLinks:\n\t\t{2}".format(self, \
         "\n\t\t".join(components), "\n\t\t".join(links))
 
+    def get_component_names(self):
+        """Gets a list of names of components in this scene"""
+
+        return [component.name for component in self.components]
+
     @property
     def title(self):
         return self._title
@@ -99,11 +104,6 @@ class Scene(object):
 
             # increment counter
             counter += 1
-
-    def get_component_names(self):
-        """Gets a list of names of components in this scene"""
-
-        return [component.name for component in self.components]
 
     def get_bounding_box(self):
         # list of component coordinates

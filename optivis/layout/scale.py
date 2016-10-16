@@ -1,35 +1,37 @@
+# -*- coding: utf-8 -*-
+
+"""Link length scale classes"""
+
 from __future__ import unicode_literals, division
-import numpy
 
-class ScaleFunction(object):
-    def __init__(self, coefficients=None):
-        if coefficients is None:
-            coefficients = [0, 1]
+import abc
 
+class Scale(object):
+    __metaclass__ = abc.ABCMeta
+    
+    def __init__(self, coefficients):
         self.coefficients = coefficients
 
-    def getScaledLength(self, length):
-        scaledLength = 0
+    def get_scaled_length(self, length):
+        # default scaled length
+        scaled_length = 0
 
-        for i in range(0, len(self.coefficients)):
-            scaledLength += self.coefficients[i] * length ** i
-
-        return scaledLength
-
-    def validate(self):
-        roots = numpy.roots(numpy.polyder(self.coefficients))
+        # return the sum of the higher order lengths scaled by the coefficients
+        return sum([coefficient * length ** i \
+        for (i, coefficient) in enumerate(self.coefficients)])
 
     @property
     def coefficients(self):
-        return self.__coefficients
+        return self._coefficients
 
     @coefficients.setter
     def coefficients(self, coefficients):
-        if not isinstance(coefficients, (list, tuple)):
-            raise Exception('Specified coefficients is not a list or tuple')
+        self._coefficients = list(coefficients)
 
-        self.__coefficients = coefficients
-
-class LargeLengthScaleFunction(ScaleFunction):
+class LinearScale(Scale):
     def __init__(self):
-        return super(LargeLengthScaleFunction, self).__init__(coefficients=[0, 0.3])
+        super(LinearScale, self).__init__([0, 1])
+
+class LargeLengthScale(Scale):
+    def __init__(self):
+        super(LargeLengthScale, self).__init__(coefficients=[0, 0.3])

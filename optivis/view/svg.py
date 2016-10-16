@@ -8,12 +8,13 @@ import abc
 import cairosvg
 from xml.etree import ElementTree as et
 
+from optivis.view.view import View
 import optivis.geometry
 import optivis.bench.components
 import optivis.bench.links
 import optivis.layout
 
-class Svg(optivis.view.AbstractView):
+class Svg(View):
     # supported file formats, extensions and file select filters
     __formats = ['svg', 'png', 'pdf', 'ps']
     __extensions = ['.svg', '.png', '.pdf', '.ps']

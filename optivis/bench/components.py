@@ -63,7 +63,7 @@ class Component(BenchItem):
 
     def __repr__(self):
         """Representation of the component"""
-        
+
         return unicode(self)
 
     def __eq__(self, other):
@@ -183,7 +183,7 @@ class Component(BenchItem):
         max_bound = Coordinates(max(x_coords), max(y_coords))
 
         # return bounds with respect to global position
-        return self.position + min_pos, self.position + max_pos
+        return self.position + min_bound, self.position + max_bound
 
     def get_node(self, name):
         """Gets the node with the given name
