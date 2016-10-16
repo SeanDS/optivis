@@ -7,13 +7,15 @@ from __future__ import unicode_literals, division
 from optivis.geometry import Coordinates
 
 class Node(object):
-    def __init__(self, name, component, position, aoi_offset=0):
+    def __init__(self, name, component, position, aoi_coeff=1, aoi_offset=0):
         """Instantiates a Node
 
         :param name: name of the node
         :param component: component this node is associated with
         :param position: position of node, defined with respect to the \
         component's center
+        :param aoi_coeff: coefficient to apply to angle of incidence when \
+        calculating reflection
         :param aoi_offset: azimuthal offset this node's outgoing light has \
         with respect to the component's angle of incidence
         """
@@ -22,6 +24,7 @@ class Node(object):
         self.name = name
         self.component = component
         self.position = position
+        self.aoi_coeff = aoi_coeff
         self.aoi_offset = aoi_offset
 
     def __unicode__(self):
@@ -54,6 +57,14 @@ class Node(object):
         self._position = Coordinates(position)
 
     @property
+    def aoi_coeff(self):
+        return self._aoi_coeff
+
+    @aoi_coeff.setter
+    def aoi_coeff(self, aoi_coeff):
+        self._aoi_coeff = float(aoi_coeff)
+
+    @property
     def aoi_offset(self):
         return self._aoi_offset
 
@@ -65,7 +76,7 @@ class Node(object):
         """Get azimuth of node in the output direction with respect to the \
         component"""
 
-        return self.component.aoi + self.aoi_offset
+        return self.aoi_coeff * self.component.aoi + self.aoi_offset
 
     def get_absolute_output_azimuth(self):
         """Get azimuth of node in the output direction with respect to the \

@@ -236,7 +236,7 @@ class SteeringMirror(Component):
         *args, **kwargs)
 
         self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0))
+        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
 
 class Mirror(Component):
     def __init__(self, *args, **kwargs):
@@ -248,9 +248,10 @@ class Mirror(Component):
         *args, **kwargs)
 
         self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0))
+        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
         self.add_node(name="c", position=Coordinates(-5.5, 0), aoi_offset=180)
-        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_offset=180)
+        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_coeff=-1, \
+        aoi_offset=180)
 
 class BeamSplitter(Component):
     def __init__(self, aoi=45, *args, **kwargs):
@@ -261,6 +262,7 @@ class BeamSplitter(Component):
         aoi=aoi, *args, **kwargs)
 
         self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0))
+        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
         self.add_node(name="c", position=Coordinates(-5.5, 0), aoi_offset=180)
-        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_offset=180)
+        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_coeff=-1, \
+        aoi_offset=180)

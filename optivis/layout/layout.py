@@ -140,9 +140,9 @@ Linking with straight line.".format(target_component)
             # we're done
             return
 
-        # first set target node azimuth to be the same as the reference node's
+        # first set target node azimuth to be opposite the reference's
         target_node.set_absolute_azimuth( \
-        reference_node.get_absolute_output_azimuth())
+        reference_node.get_absolute_output_azimuth() + 180)
 
         # then set the position of the target component
         target_node.set_absolute_node_pos(self.get_target_node_pos(link, \
