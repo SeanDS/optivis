@@ -136,4 +136,4 @@ class Scene(object):
     @staticmethod
     def get_default_title():
         # use the current local time
-        return datetime.datetime.now().strftime("%Y-%M-%d %H:%M")
+        return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
