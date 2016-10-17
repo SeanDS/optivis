@@ -185,6 +185,19 @@ class Component(BenchItem):
         # return bounds with respect to global position
         return self.position + min_bound, self.position + max_bound
 
+    def has_node(self, name):
+        """Checks if the node with the given name exists as part of this \
+        component
+
+        :param name: node name to search for
+        """
+
+        for node in self.nodes:
+            if node.name == name:
+                return True
+
+        return False
+
     def get_node(self, name):
         """Gets the node with the given name
 
@@ -200,15 +213,32 @@ class Component(BenchItem):
     def add_node(self, *args, **kwargs):
         """Adds a node to the component
 
-        Accepts arguments for Node
+        Accepts arguments for Node.
+
+        :return: newly added node
         """
 
-        # add new node, setting the node's component to this
-        self.nodes.append(Node(*args, component=self, **kwargs))
+        # create new node
+        node = Node(*args, component=self, **kwargs)
+
+        # set the node's component to this
+        self.nodes.append(node)
+
+        return node
 
     def get_aoi_for_constrained_node_angle(self, node1, node2, angle):
         return (angle - node1.aoi_offset - node2.aoi_offset) \
         / (node1.aoi_multiplier - node2.aoi_multiplier)
+
+    def get_node_pos(self, node):
+        """Get the position of the specified node
+
+        This is overridden by subclasses.
+
+        :param node: node to place
+        """
+
+        return node.nom_pos
 
 class Source(Component):
     """Represents a component with 1 node"""
@@ -225,9 +255,139 @@ class Laser(Source):
         **kwargs)
 
         # add output node
-        self.add_node(name="out", position=Coordinates(31, 0))
+        self.add_node(name="out", nom_pos=Coordinates(31, 0))
 
-class SteeringMirror(Component):
+class RefractiveMedium(Component):
+    """Component with a refractive index"""
+
+    # refractive index of vacuum around components
+    vacuum_n = 1
+
+    def __init__(self, n=1.35, *args, \
+    **kwargs):
+        """Instantiates a refractive medium
+
+        :param n: refractive index of medium
+        """
+
+        super(RefractiveMedium, self).__init__(*args, **kwargs)
+
+        self.n = n
+
+        # default lists of shared nodes (populated once nodes are added)
+        self.share_x = []
+        self.share_y = []
+
+    @property
+    def n(self):
+        return self._n
+
+    @n.setter
+    def n(self, n):
+        n = float(n)
+
+        if n < 0:
+            raise Exception("Refractive index must be > 0")
+
+        # check that n is >= vacuum n
+        if n < self.vacuum_n:
+            raise Exception("Refractive index must be > {0} \
+(vacuum index)".format(self.vacuum_n))
+
+        self._n = n
+
+    def set_node_reference(self, target_node, reference_node, axis):
+        """Adds a shared node
+
+        :param target_node: target_node
+        :param reference_node: reference node
+        :param axis: axis to share
+        """
+
+        # validate axis
+        if axis not in ["x", "y", "both"]:
+            raise Exception("Specified axis must be either \"x\", \"y\" or \
+\"both\"")
+
+        # check nodes aren't the same
+        if reference_node == target_node:
+            raise Exception("Share list nodes cannot be identical")
+
+        # check nodes share the same component
+        if reference_node.component != target_node.component:
+            raise Exception("Share list nodes must be attached to the same \
+component")
+
+        if axis == "x" or axis == "both":
+            self.share_x.append([reference_node, target_node])
+
+        if axis == "y" or axis == "both":
+            self.share_y.append([reference_node, target_node])
+
+    def _get_node_x_reference(self, node):
+        for sequence in self.share_x:
+            if sequence[1] == node:
+                return sequence[0]
+
+    def _get_node_y_reference(self, node):
+        for sequence in self.share_y:
+            if sequence[1] == node:
+                return sequence[0]
+
+    def get_node_pos(self, node):
+        """Get the position of the specified node
+
+        This takes into account the effect of the position of any reference \
+        nodes defined for the specified node.
+
+        :param node: node to place
+        """
+
+        # nominal position at zero aoi
+        pos = super(RefractiveMedium, self).get_node_pos(node)
+
+        # x and y references (None if not defined)
+        x_ref_node = self._get_node_x_reference(node)
+        y_ref_node = self._get_node_y_reference(node)
+
+        # offset position if necessary
+        if x_ref_node:
+            # angle of incidence in medium
+            aoi = self._snell_refraction( \
+            x_ref_node.get_relative_output_azimuth())
+
+            # distance along y-axis between nodes
+            length = pos.y - x_ref_node.nom_pos.y
+
+            # refract the node based on the length and angle of incidence
+            pos.x = x_ref_node.nom_pos.x \
+            + length * math.tan(math.degrees(aoi))
+
+        # offset position if necessary
+        if y_ref_node:
+            # angle of incidence in medium (radians)
+            aoi = self._snell_refraction( \
+            y_ref_node.get_relative_output_azimuth())
+
+            # distance along x-axis between nodes
+            length = pos.x - y_ref_node.nom_pos.x
+
+            # refract the node based on the length and angle of incidence
+            pos.y = y_ref_node.nom_pos.y + length * math.tan(aoi)
+
+        return pos
+
+    def _snell_refraction(self, low_n_aoi):
+        """Calculates the angle with respect to the normal inside the material
+
+        :param low_n_aoi: angle of incidence of light beam in outer material \
+        with respect to normal, in radians
+        """
+
+        return math.asin(self.vacuum_n * math.sin(math.radians(low_n_aoi)) \
+        / self.n)
+
+class SteeringMirror(RefractiveMedium):
     def __init__(self, *args, **kwargs):
         filename = "b-mir.svg"
         size = Coordinates(11, 29)
@@ -235,10 +395,10 @@ class SteeringMirror(Component):
         super(SteeringMirror, self).__init__(filename=filename, size=size, \
         *args, **kwargs)
 
-        self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
+        self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
+        self.add_node(name="b", nom_pos=Coordinates(5.5, 0), aoi_coeff=-1)
 
-class Mirror(Component):
+class Mirror(RefractiveMedium):
     def __init__(self, *args, **kwargs):
         filename = "b-cav-mir.svg"
         size = Coordinates(11, 29)
@@ -247,13 +407,19 @@ class Mirror(Component):
         super(Mirror, self).__init__(filename=filename, size=size, \
         *args, **kwargs)
 
-        self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
-        self.add_node(name="c", position=Coordinates(-5.5, 0), aoi_offset=180)
-        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_coeff=-1, \
+        node_a = self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
+        node_b = self.add_node(name="b", nom_pos=Coordinates(5.5, 0), \
+        aoi_coeff=-1)
+        node_c = self.add_node(name="c", nom_pos=Coordinates(-5.5, 0), \
         aoi_offset=180)
+        node_d = self.add_node(name="d", nom_pos=Coordinates(-5.5, 0), \
+        aoi_coeff=-1, aoi_offset=180)
 
-class BeamSplitter(Component):
+        # set reference nodes
+        self.set_node_reference(node_c, node_a, "y")
+        self.set_node_reference(node_d, node_b, "y")
+
+class BeamSplitter(RefractiveMedium):
     def __init__(self, aoi=45, *args, **kwargs):
         filename = "b-bsp.svg"
         size = Coordinates(11, 29)
@@ -261,8 +427,14 @@ class BeamSplitter(Component):
         super(BeamSplitter, self).__init__(filename=filename, size=size, \
         aoi=aoi, *args, **kwargs)
 
-        self.add_node(name="a", position=Coordinates(5.5, 0))
-        self.add_node(name="b", position=Coordinates(5.5, 0), aoi_coeff=-1)
-        self.add_node(name="c", position=Coordinates(-5.5, 0), aoi_offset=180)
-        self.add_node(name="d", position=Coordinates(-5.5, 0), aoi_coeff=-1, \
+        node_a = self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
+        node_b = self.add_node(name="b", nom_pos=Coordinates(5.5, 0), \
+        aoi_coeff=-1)
+        node_c = self.add_node(name="c", nom_pos=Coordinates(-5.5, 0), \
         aoi_offset=180)
+        node_d = self.add_node(name="d", nom_pos=Coordinates(-5.5, 0), \
+        aoi_coeff=-1, aoi_offset=180)
+
+        # set reference nodes
+        self.set_node_reference(node_c, node_a, "y")
+        self.set_node_reference(node_d, node_b, "y")

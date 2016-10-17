@@ -64,6 +64,7 @@ class Scene(object):
         """Adds the specified component to the scene
 
         :param component: component to add
+        :return: newly added component
         """
 
         if component in self.components:
@@ -78,10 +79,19 @@ class Scene(object):
 
         self.components.append(component)
 
+        return component
+
     def add_link(self, *args, **kwargs):
+        """Adds a new link
+
+        :return: newly added link
+        """
+
         link = Link(*args, **kwargs)
 
         self.links.append(link)
+
+        return link
 
     def get_unique_name(self, item):
         """Gets a unique name for the specified item"""

@@ -4,28 +4,31 @@
 
 from __future__ import unicode_literals, division
 
+import math
+
 from optivis.geometry import Coordinates
 
 class Node(object):
-    def __init__(self, name, component, position, aoi_coeff=1, aoi_offset=0):
+    def __init__(self, name, component, aoi_coeff=1, aoi_offset=0, \
+    nom_pos=None):
         """Instantiates a Node
 
         :param name: name of the node
         :param component: component this node is associated with
-        :param position: position of node, defined with respect to the \
-        component's center
         :param aoi_coeff: coefficient to apply to angle of incidence when \
         calculating reflection
         :param aoi_offset: azimuthal offset this node's outgoing light has \
         with respect to the component's angle of incidence
+        :param nom_pos: nominal position of node, defined with respect to the \
+        component's center
         """
 
         # set properties
         self.name = name
         self.component = component
-        self.position = position
         self.aoi_coeff = aoi_coeff
         self.aoi_offset = aoi_offset
+        self.nom_pos = nom_pos
 
     def __unicode__(self):
         """String representation of this node"""
@@ -49,12 +52,12 @@ class Node(object):
         self._name = unicode(name)
 
     @property
-    def position(self):
-        return self._position
+    def nom_pos(self):
+        return self._nom_pos
 
-    @position.setter
-    def position(self, position):
-        self._position = Coordinates(position)
+    @nom_pos.setter
+    def nom_pos(self, nom_pos):
+        self._nom_pos = Coordinates(nom_pos)
 
     @property
     def aoi_coeff(self):
@@ -72,6 +75,13 @@ class Node(object):
     def aoi_offset(self, aoi_offset):
         self._aoi_offset = float(aoi_offset)
 
+    def get_position(self):
+        """Get the position of the node, adjusted due to linked nodes if \
+        necessary"""
+
+        # get the position of the node as dictated by the component
+        return self.component.get_node_pos(self)
+
     def get_relative_output_azimuth(self):
         """Get azimuth of node in the output direction with respect to the \
         component"""
@@ -87,7 +97,7 @@ class Node(object):
     def get_relative_pos(self):
         """Get position of node with respect to component's center"""
 
-        return self.position.rotate(self.component.azimuth)
+        return self.get_position().rotate(self.component.azimuth)
 
     def get_absolute_pos(self):
         """Get position of node in global coordinate system"""
