@@ -10,7 +10,7 @@ import abc
 
 from optivis.bench.items import BenchItem
 from optivis.bench.nodes import Node
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 
 class Component(BenchItem):
     # set abstract class
@@ -21,21 +21,33 @@ class Component(BenchItem):
 
     # TODO: component name should be used instead of filename
     # TODO: size should be read from SVG file
-    def __init__(self, filename, size, name="", azimuth=0, aoi=0, \
+    def __init__(self, filename, size, name="", azimuth=0, aoi=None, \
     position=None, tooltip=None, *args, **kwargs):
         """Instantiates a component
 
-        :param azimuth: the angle this component has with respect to the \
-        positive x direction in the global coordinate system
-        :param aoi: angle of incidence of light on the component, defined with \
-        respect to the positive x direction, used by nodes to calculate the \
-        reflected light direction
+        :param filename: filename for the component's SVG drawing
+        :param size: :class:`~optivis.geometry.Vector` object \
+        representing the size of the SVG drawing (in pixels)
+        :param name: component name
+        :param azimuth: angle this component has with respect to the positive \
+        x direction in the global coordinate system
+        :param aoi: (optional) angle of incidence of light on the component, \
+        defined with respect to the positive x direction, used by nodes to \
+        calculate the reflected light direction; if None then the layout \
+        manager will decide what angle to use based on the context
+        :param position: :class:`~optivis.geometry.Vector` representing \
+        the default position
+        :param tooltip: tooltip text for GUI
         """
 
         # set position if not specified
         if position is None:
             # use origin
-            position = Coordinates.origin()
+            position = Vector.origin()
+
+        # use name as tooltip if not specified
+        if tooltip is None:
+            tooltip = name
 
         # set properties
         self.filename = filename
@@ -115,6 +127,12 @@ class Component(BenchItem):
 
     @aoi.setter
     def aoi(self, aoi):
+        if aoi is None:
+            # set None
+            self._aoi = None
+
+            return
+
         # coerce azimuth between 0 and 360
         self._aoi = Component._coerce_angle(aoi)
 
@@ -124,7 +142,7 @@ class Component(BenchItem):
 
     @position.setter
     def position(self, position):
-        self._position = Coordinates(position)
+        self._position = Vector(position)
 
     @property
     def tooltip(self):
@@ -132,6 +150,11 @@ class Component(BenchItem):
 
     @tooltip.setter
     def tooltip(self, tooltip):
+        if tooltip is None:
+            self._tooltip = ""
+
+            return
+
         self._tooltip = unicode(tooltip)
 
     @staticmethod
@@ -144,7 +167,7 @@ class Component(BenchItem):
         return float(angle) % 360
 
     def get_label_origin(self):
-        """Coordinates labels should be placed with respect to"""
+        """Vector labels should be placed with respect to"""
 
         # use the component's position
         return self.position
@@ -156,17 +179,17 @@ class Component(BenchItem):
         return self.azimuth
 
     def get_bounding_box(self):
-        """Coordinates of item's edges closest to and furthest away from \
+        """Vector of item's edges closest to and furthest away from \
         origin
 
         :return: (lower, upper) bounds
         """
 
         # get nominal corner positions
-        top_left = self.size * Coordinates(-0.5, -0.5)
-        top_right = self.size * Coordinates(0.5, -0.5)
-        bottom_left = self.size * Coordinates(-0.5, 0.5)
-        bottom_right = self.size * Coordinates(0.5, 0.5)
+        top_left = self.size * Vector(-0.5, -0.5)
+        top_right = self.size * Vector(0.5, -0.5)
+        bottom_left = self.size * Vector(-0.5, 0.5)
+        bottom_right = self.size * Vector(0.5, 0.5)
 
         # rotate corners by azimuth
         top_left = top_left.rotate(self.azimuth)
@@ -179,8 +202,8 @@ class Component(BenchItem):
         y_coords = [top_left.y, top_right.y, bottom_left.y, bottom_right.y]
 
         # find min and max coordinates to form bounds
-        min_bound = Coordinates(min(x_coords), min(y_coords))
-        max_bound = Coordinates(max(x_coords), max(y_coords))
+        min_bound = Vector(min(x_coords), min(y_coords))
+        max_bound = Vector(max(x_coords), max(y_coords))
 
         # return bounds with respect to global position
         return self.position + min_bound, self.position + max_bound
@@ -240,6 +263,12 @@ class Component(BenchItem):
 
         return node.nom_pos
 
+    def aoi_is_explicit(self):
+        """Whether this component's angle of incidence is explicitly defined"""
+
+        # None represents an unconstrained aoi
+        return self.aoi is not None
+
 class Source(Component):
     """Represents a component with 1 node"""
 
@@ -248,14 +277,14 @@ class Source(Component):
 class Laser(Source):
     def __init__(self, *args, **kwargs):
         filename = "c-laser1.svg"
-        size = Coordinates(62, 46)
+        size = Vector(62, 46)
 
         # call parent
         super(Laser, self).__init__(filename=filename, size=size, *args, \
         **kwargs)
 
         # add output node
-        self.add_node(name="out", nom_pos=Coordinates(31, 0))
+        self.add_node(name="out", nom_pos=Vector(31, 0))
 
 class RefractiveMedium(Component):
     """Component with a refractive index"""
@@ -390,29 +419,29 @@ component")
 class SteeringMirror(RefractiveMedium):
     def __init__(self, *args, **kwargs):
         filename = "b-mir.svg"
-        size = Coordinates(11, 29)
+        size = Vector(11, 29)
 
         super(SteeringMirror, self).__init__(filename=filename, size=size, \
         *args, **kwargs)
 
-        self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
-        self.add_node(name="b", nom_pos=Coordinates(5.5, 0), aoi_coeff=-1)
+        self.add_node(name="a", nom_pos=Vector(5.5, 0))
+        self.add_node(name="b", nom_pos=Vector(5.5, 0), aoi_coeff=-1)
 
 class Mirror(RefractiveMedium):
     def __init__(self, *args, **kwargs):
         filename = "b-cav-mir.svg"
-        size = Coordinates(11, 29)
+        size = Vector(11, 29)
 
         # call parent
         super(Mirror, self).__init__(filename=filename, size=size, \
         *args, **kwargs)
 
-        node_a = self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
-        node_b = self.add_node(name="b", nom_pos=Coordinates(5.5, 0), \
+        node_a = self.add_node(name="a", nom_pos=Vector(5.5, 0))
+        node_b = self.add_node(name="b", nom_pos=Vector(5.5, 0), \
         aoi_coeff=-1)
-        node_c = self.add_node(name="c", nom_pos=Coordinates(-5.5, 0), \
+        node_c = self.add_node(name="c", nom_pos=Vector(-5.5, 0), \
         aoi_offset=180)
-        node_d = self.add_node(name="d", nom_pos=Coordinates(-5.5, 0), \
+        node_d = self.add_node(name="d", nom_pos=Vector(-5.5, 0), \
         aoi_coeff=-1, aoi_offset=180)
 
         # set reference nodes
@@ -422,17 +451,17 @@ class Mirror(RefractiveMedium):
 class BeamSplitter(RefractiveMedium):
     def __init__(self, aoi=45, *args, **kwargs):
         filename = "b-bsp.svg"
-        size = Coordinates(11, 29)
+        size = Vector(11, 29)
 
         super(BeamSplitter, self).__init__(filename=filename, size=size, \
         aoi=aoi, *args, **kwargs)
 
-        node_a = self.add_node(name="a", nom_pos=Coordinates(5.5, 0))
-        node_b = self.add_node(name="b", nom_pos=Coordinates(5.5, 0), \
+        node_a = self.add_node(name="a", nom_pos=Vector(5.5, 0))
+        node_b = self.add_node(name="b", nom_pos=Vector(5.5, 0), \
         aoi_coeff=-1)
-        node_c = self.add_node(name="c", nom_pos=Coordinates(-5.5, 0), \
+        node_c = self.add_node(name="c", nom_pos=Vector(-5.5, 0), \
         aoi_offset=180)
-        node_d = self.add_node(name="d", nom_pos=Coordinates(-5.5, 0), \
+        node_d = self.add_node(name="d", nom_pos=Vector(-5.5, 0), \
         aoi_coeff=-1, aoi_offset=180)
 
         # set reference nodes

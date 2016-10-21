@@ -5,8 +5,9 @@
 from __future__ import unicode_literals, division
 
 import math
+import logging
 
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 
 class Node(object):
     def __init__(self, name, component, aoi_coeff=1, aoi_offset=0, \
@@ -57,7 +58,7 @@ class Node(object):
 
     @nom_pos.setter
     def nom_pos(self, nom_pos):
-        self._nom_pos = Coordinates(nom_pos)
+        self._nom_pos = Vector(nom_pos)
 
     @property
     def aoi_coeff(self):
@@ -86,7 +87,17 @@ class Node(object):
         """Get azimuth of node in the output direction with respect to the \
         component"""
 
-        return self.aoi_coeff * self.component.aoi + self.aoi_offset
+        # get component aoi
+        aoi = self.component.aoi
+
+        # default value for aoi
+        if aoi is None:
+            logging.getLogger("nodes").info("The aoi for %s is undefined, so \
+tentatively using 0", self.component)
+
+            aoi = 0
+
+        return self.aoi_coeff * aoi + self.aoi_offset
 
     def get_absolute_output_azimuth(self):
         """Get azimuth of node in the output direction with respect to the \

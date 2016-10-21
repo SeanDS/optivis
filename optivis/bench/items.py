@@ -20,7 +20,7 @@ class BenchItem(object):
 
     @abc.abstractmethod
     def get_label_origin(self):
-        """Coordinates labels should be placed with respect to"""
+        """Vector labels should be placed with respect to"""
         pass
 
     @abc.abstractmethod
@@ -30,7 +30,7 @@ class BenchItem(object):
 
     @abc.abstractmethod
     def get_bounding_box(self):
-        """Coordinates of item's edges closest to and furthest away from \
+        """Vector of item's edges closest to and furthest away from \
         origin
 
         :return: (lower, upper) bounds

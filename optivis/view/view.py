@@ -8,7 +8,7 @@ import abc
 import inspect
 from collections import OrderedDict
 
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 import optivis.layout.layout as layout
 
 class View(object):
@@ -37,7 +37,7 @@ class View(object):
     start_marker_radius=5, end_marker_radius=3, start_marker_color=None, \
     end_marker_color=None):
         if size is None:
-            size = Coordinates(self.default_size_x, self.default_size_y)
+            size = Vector(self.default_size_x, self.default_size_y)
 
         if layout_manager is None:
             layout_manager = layout.StandardLayout
@@ -79,7 +79,7 @@ class View(object):
 
     @size.setter
     def size(self, size):
-        self._size = Coordinates(size)
+        self._size = Vector(size)
 
     @property
     def zoom(self):

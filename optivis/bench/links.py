@@ -3,11 +3,21 @@ from __future__ import unicode_literals, division
 import math
 
 from optivis.bench.items import BenchItem
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 
 class Link(BenchItem):
     def __init__(self, output_node, input_node, length=None, specs=None, \
     *args, **kwargs):
+        """Instantiates a new link
+
+        :param output_node: output node to connect to input node
+        :param input_node: input node to connect to output node
+        :param length: (optional) length of the link; if length is None then \
+        the layout manager will decide on the length to use based on the context
+        :param specs: list of :class:`~optivis.bench.links.LinkSpec` objects \
+        representing the link specification
+        """
+
         self.output_node = output_node
         self.input_node = input_node
         self.length = length
@@ -23,8 +33,8 @@ class Link(BenchItem):
             raise Exception("Cannot link component directly to itself")
 
         # start and end position defaults (layout manager sets this properly)
-        self.start_pos = Coordinates.origin()
-        self.end_pos = Coordinates.origin()
+        self.start_pos = Vector.origin()
+        self.end_pos = Vector.origin()
 
         super(Link, self).__init__(*args, **kwargs)
 
@@ -47,6 +57,11 @@ class Link(BenchItem):
 
     @length.setter
     def length(self, length):
+        if length is None:
+            self._length = None
+
+            return
+
         self._length = float(length)
 
     @property
@@ -63,7 +78,7 @@ class Link(BenchItem):
 
     @start_pos.setter
     def start_pos(self, start_pos):
-        self._start_pos = Coordinates(start_pos)
+        self._start_pos = Vector(start_pos)
 
     @property
     def end_pos(self):
@@ -71,10 +86,10 @@ class Link(BenchItem):
 
     @end_pos.setter
     def end_pos(self, end_pos):
-        self._end_pos = Coordinates(end_pos)
+        self._end_pos = Vector(end_pos)
 
     def get_bounding_box(self):
-        """Coordinates of item's edges closest to and furthest away from \
+        """Vector of item's edges closest to and furthest away from \
         origin
 
         :return: (lower, upper) bounds
@@ -104,24 +119,14 @@ class Link(BenchItem):
     def get_components(self):
         return [self.output_node.component, self.input_node.component]
 
-#    def getNodesForCommonComponent(self, otherLink):
-#        thisOutputComponent = self.outputNode.component
-#        thisInputComponent = self.inputNode.component
-#
-#        otherOutputComponent = otherLink.outputNode.component
-#        otherInputComponent = otherLink.inputNode.component
-#
-#        # gets common component shared with other link
-#        if thisOutputComponent is otherOutputComponent:
-#            return (thisOutputComponent, self.outputNode, otherLink.outputNode)
-#        elif thisOutputComponent is otherInputComponent:
-#            return (thisOutputComponent, self.outputNode, otherLink.inputNode)
-#        elif thisInputComponent is otherOutputComponent:
-#            return (thisInputComponent, self.inputNode, otherLink.outputNode)
-#        elif thisInputComponent is otherInputComponent:
-#            return (thisInputComponent, self.inputNode, otherLink.inputNode)
-#        else:
-#            raise Exception("Specified other link does not share a common component with this link")
+    def get_other_component(self, component):
+        if component not in self.get_components():
+            raise Exception("Specified component is not part of this link")
+
+        if self.output_node.component == component:
+            return self.input_node.component
+        else:
+            return self.output_node.component
 
 class LinkSpec(object):
     def __init__(self, width=1.0, color="red", pattern=None, offset=0, \

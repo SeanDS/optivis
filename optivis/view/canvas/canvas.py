@@ -460,12 +460,12 @@ class CanvasLink(CanvasItem):
     def setGraphicsFromItem(self, startMarkerRadius=5, endMarkerRadius=3, startMarkerColor=None, endMarkerColor=None):
         for i in range(0, len(self.item.specs)):
             # create an offset coordinate
-            linePos = optivis.geometry.Coordinates(self.item.end_pos.x \
+            linePos = optivis.geometry.Vector(self.item.end_pos.x \
             - self.item.start_pos.x, self.item.end_pos.y \
             - self.item.start_pos.y)
             azimuth = linePos.azimuth
 
-            offsetPos = optivis.geometry.Coordinates(0, self.item.specs[i].offset)
+            offsetPos = optivis.geometry.Vector(0, self.item.specs[i].offset)
             offsetPos = offsetPos.rotate(azimuth)
 
             # set start/end
@@ -540,7 +540,7 @@ class CanvasLabel(CanvasItem):
         self.graphicsItem.setText(self.item.text + "\n" + "\n".join(content))
 
         ### Calculate label size and azimuth.
-        labelSize = optivis.geometry.Coordinates(self.graphicsItem.boundingRect().width(), self.graphicsItem.boundingRect().height())
+        labelSize = optivis.geometry.Vector(self.graphicsItem.boundingRect().width(), self.graphicsItem.boundingRect().height())
         labelAzimuth = self.item.item.getLabelAzimuth() + self.item.azimuth
 
         ### Draw label at the correct position and orientation.
@@ -552,7 +552,7 @@ class CanvasLabel(CanvasItem):
         labelPosition = labelPosition.translate((self.item.position * self.item.item.getSize()).rotate(self.item.item.getLabelAzimuth()))
 
         # move label such that the text is y-centered
-        labelPosition = labelPosition.translate(optivis.geometry.Coordinates(0, labelSize.y / 2).flip().rotate(labelAzimuth))
+        labelPosition = labelPosition.translate(optivis.geometry.Vector(0, labelSize.y / 2).flip().rotate(labelAzimuth))
 
         # add user-defined offset
         labelPosition = labelPosition.translate(self.item.offset.rotate(self.item.item.getLabelAzimuth()))

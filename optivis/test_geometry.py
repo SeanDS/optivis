@@ -3,33 +3,33 @@ from __future__ import unicode_literals, division
 from unittest import TestCase
 import math
 
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 
-class TestCoordinates(TestCase):
+class TestVector(TestCase):
     def setUp(self):
-        self.a = Coordinates.origin()
-        self.b = Coordinates(1.5, 8.3)
-        self.unit_vector = Coordinates(1, 1)
-        self.anti_unit_vector = Coordinates(-1, -1)
+        self.a = Vector.origin()
+        self.b = Vector(1.5, 8.3)
+        self.unit_vector = Vector(1, 1)
+        self.anti_unit_vector = Vector(-1, -1)
 
     def test_coordinates_init(self):
         # valid
-        Coordinates(-1, 2)
-        Coordinates(1, -2)
-        Coordinates(4.61, -9.01)
-        Coordinates("-3.141", "5.91")
+        Vector(-1, 2)
+        Vector(1, -2)
+        Vector(4.61, -9.01)
+        Vector("-3.141", "5.91")
 
         # not enough inputs
-        self.assertRaises(ValueError, Coordinates, "invalid")
+        self.assertRaises(ValueError, Vector, "invalid")
 
         # invalid input types
-        self.assertRaises(ValueError, Coordinates, "inv", "inv")
-        self.assertRaises(TypeError, Coordinates, [], [])
-        self.assertRaises(TypeError, Coordinates, {}, {})
+        self.assertRaises(ValueError, Vector, "inv", "inv")
+        self.assertRaises(TypeError, Vector, [], [])
+        self.assertRaises(TypeError, Vector, {}, {})
 
         # test copy constructor
-        self.assertEqual(self.a, Coordinates(self.a))
-        self.assertEqual(self.b, Coordinates(self.b))
+        self.assertEqual(self.a, Vector(self.a))
+        self.assertEqual(self.b, Vector(self.b))
 
     def test_translate(self):
         self.assertEqual(self.a + self.b, self.b)
@@ -43,9 +43,9 @@ class TestCoordinates(TestCase):
         self.assertEqual(self.b.rotate(360), self.b)
 
     def test_division(self):
-        self.assertEqual(self.b / 2, Coordinates(self.b.x / 2, self.b.y / 2))
+        self.assertEqual(self.b / 2, Vector(self.b.x / 2, self.b.y / 2))
         self.assertEqual(self.b / -3436.128115, \
-        Coordinates(self.b.x / -3436.128115, self.b.y / -3436.128115))
+        Vector(self.b.x / -3436.128115, self.b.y / -3436.128115))
 
     def test_hypot(self):
         self.assertEqual(self.a.length(), math.sqrt(self.a.x ** 2 + self.a.y ** 2))
@@ -62,7 +62,7 @@ class TestCoordinates(TestCase):
 
     def test_flip(self):
         self.assertEqual(self.unit_vector.flip(), self.anti_unit_vector)
-        self.assertEqual(self.b.flip(), Coordinates(-self.b.x, -self.b.y))
+        self.assertEqual(self.b.flip(), Vector(-self.b.x, -self.b.y))
 
     def test_vector_calculus(self):
         # (1,1) - (1,1) - (1,1) = -(1,1)
@@ -79,7 +79,7 @@ class TestCoordinates(TestCase):
         external_angle = 180 - (180 * (n - 2)) / n
 
         # side length
-        side_vec = Coordinates(10.023522718, 0)
+        side_vec = Vector(10.023522718, 0)
 
         # start vector
         vec = self.a
@@ -94,12 +94,12 @@ class TestCoordinates(TestCase):
         "{0} != {1} ({2} sided polygon)".format(vec, self.a, n))
 
     def test_is_positive(self):
-        self.assertTrue(Coordinates(1, 1).is_positive())
-        self.assertTrue(Coordinates(0, 1000).is_positive())
-        self.assertTrue(Coordinates(1000, 0).is_positive())
-        self.assertTrue(Coordinates(294.1327, 1.95347).is_positive())
-        self.assertTrue(Coordinates(0, 0).is_positive())
-        self.assertFalse(Coordinates(-1, -1).is_positive())
-        self.assertFalse(Coordinates(0, -1).is_positive())
-        self.assertFalse(Coordinates(-1, 0).is_positive())
-        self.assertFalse(Coordinates(-23592, -910.02436).is_positive())
+        self.assertTrue(Vector(1, 1).is_positive())
+        self.assertTrue(Vector(0, 1000).is_positive())
+        self.assertTrue(Vector(1000, 0).is_positive())
+        self.assertTrue(Vector(294.1327, 1.95347).is_positive())
+        self.assertTrue(Vector(0, 0).is_positive())
+        self.assertFalse(Vector(-1, -1).is_positive())
+        self.assertFalse(Vector(0, -1).is_positive())
+        self.assertFalse(Vector(-1, 0).is_positive())
+        self.assertFalse(Vector(-23592, -910.02436).is_positive())

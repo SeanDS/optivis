@@ -78,11 +78,11 @@ class Svg(View):
 
         # check size is valid, if specified
         if size is not None:
-            if not isinstance(size, optivis.geometry.Coordinates):
-                raise Exception('Specified size is not of type Coordinates.')
+            if not isinstance(size, optivis.geometry.Vector):
+                raise Exception('Specified size is not of type Vector.')
 
         # raise exception if SVG format specified along with a size
-        if fileFormat == 'svg' and isinstance(size, optivis.geometry.Coordinates):
+        if fileFormat == 'svg' and isinstance(size, optivis.geometry.Vector):
             raise Exception('Size is ignored for SVG exports.')
 
         # lay things out before doing anything else
@@ -118,8 +118,8 @@ class Svg(View):
         if size is None:
             size = sceneSize
 
-        if not isinstance(size, optivis.geometry.Coordinates):
-            raise Exception('Specified size is not of type Coordinates.')
+        if not isinstance(size, optivis.geometry.Vector):
+            raise Exception('Specified size is not of type Vector.')
 
         # scaling factor
         scaling = size / sceneSize

@@ -1,6 +1,6 @@
 from __future__ import unicode_literals, division
 
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 
 class Label(object):
     def __init__(self, text, item=None, azimuth=0, offset=None):
@@ -14,7 +14,7 @@ class Label(object):
         """
 
         if offset is None:
-            offset = Coordinates(0, 0)
+            offset = Vector(0, 0)
 
         self.text = text
         self.item = item
@@ -56,4 +56,4 @@ class Label(object):
 
     @offset.setter
     def offset(self, offset):
-        self._offset = Coordinates(offset)
+        self._offset = Vector(offset)

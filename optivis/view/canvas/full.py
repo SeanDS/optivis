@@ -181,7 +181,7 @@ class FullCanvas(Canvas):
         difference = eventPos - self.canvasLabelMousePosition
 
         # set canvas label position to original position plus the difference
-        projection = optivis.geometry.Coordinates(difference.x(), 0).rotate(canvasLabel.item.azimuth)
+        projection = optivis.geometry.Vector(difference.x(), 0).rotate(canvasLabel.item.azimuth)
 
         # set label offset
         canvasLabel.item.offset = canvasLabel.item.offset + projection

@@ -6,7 +6,7 @@ from __future__ import unicode_literals, division
 
 import datetime
 
-from optivis.geometry import Coordinates
+from optivis.geometry import Vector
 from optivis.bench.links import Link
 
 class Scene(object):
@@ -132,8 +132,8 @@ class Scene(object):
             y.append(this_upper_bound.y)
 
         # create global bounds
-        lower_bound = Coordinates(min(x), min(y))
-        upper_bound = Coordinates(max(x), max(y))
+        lower_bound = Vector(min(x), min(y))
+        upper_bound = Vector(max(x), max(y))
 
         return (lower_bound, upper_bound)
 

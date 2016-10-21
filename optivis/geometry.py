@@ -7,28 +7,28 @@ from __future__ import unicode_literals, division
 import math
 import logging
 
-class Coordinates(object):
-    """Cartesian coordinates"""
+class Vector(object):
+    """Vector in Cartesian coordinates"""
 
     # absolute and relative tolerances for comparing coordinates
     tol = 1e-10 # good enough for most applications
     rel = 1e-7
 
     def __init__(self, *args):
-        """Instantiates Cartesian coordinates
+        """Instantiates vector
 
-        :param *args: sequence of x and y coordinates, or Coordinates object
+        :param *args: sequence of x and y coordinates, or Vector object
         """
 
         # extract arguments
-        (x, y) = Coordinates._extract(*args)
+        (x, y) = Vector._extract(*args)
 
         # set coordinates
         self.x = float(x)
         self.y = float(y)
 
     def __unicode__(self):
-        """String representation of the coordinates"""
+        """String representation of the vector's coordinates"""
 
         return "({0:.3f}, {1:.3f})".format(self.x, self.y)
 
@@ -63,7 +63,7 @@ class Coordinates(object):
         + self.y * math.cos(math.radians(azimuth))
 
         # return new coordinates
-        return Coordinates(x, y)
+        return Vector(x, y)
 
     @property
     def azimuth(self):
@@ -83,7 +83,7 @@ class Coordinates(object):
         why we need this.
         """
 
-        return Coordinates(-self.x, -self.y)
+        return Vector(-self.x, -self.y)
 
     def is_positive(self):
         """Checks if the coordinates are all positive
@@ -102,8 +102,8 @@ class Coordinates(object):
         :param other: other coordinates to compare
         """
 
-        # check if other is a Coordinates object
-        if not isinstance(other, Coordinates):
+        # check if other is a Vector object
+        if not isinstance(other, Vector):
             # other object is not equal to this one
             return False
 
@@ -136,14 +136,14 @@ class Coordinates(object):
     def __mul__(self, *args):
         """Multiplies the coordinates by the specified factor
 
-        :param *args: factor(s) or Coordinates to multiply this by
+        :param *args: factor(s) or Vector to multiply this by
         """
 
-        # coerce inputs to Coordinates object
-        other = Coordinates(*args)
+        # coerce inputs to Vector object
+        other = Vector(*args)
 
-        # multiply each dimension and return as a new Coordinates object
-        return Coordinates(self.x * other.x, self.y * other.y)
+        # multiply each dimension and return as a new Vector object
+        return Vector(self.x * other.x, self.y * other.y)
 
     def __div__(self, *args):
         """Division operator
@@ -156,38 +156,38 @@ class Coordinates(object):
     def __truediv__(self, *args):
         """Performs true (non-integer) division on the coordinate
 
-        :param *args: factor(s) or Coordinates to divide this by
+        :param *args: factor(s) or Vector to divide this by
         """
 
-        # coerce inputs to Coordinates object
-        other = Coordinates(*args)
+        # coerce inputs to Vector object
+        other = Vector(*args)
 
-        # divide each dimension and return as a new Coordinates object
-        return Coordinates(self.x / other.x, self.y / other.y)
+        # divide each dimension and return as a new Vector object
+        return Vector(self.x / other.x, self.y / other.y)
 
     def __add__(self, *args):
         """Adds other coordinates to this one
 
-        :param *args: factor(s) or Coordinates to add to this
+        :param *args: factor(s) or Vector to add to this
         """
 
-        # coerce inputs to Coordinates object
-        other = Coordinates(*args)
+        # coerce inputs to Vector object
+        other = Vector(*args)
 
-        # add each dimension and return as a new Coordinates object
-        return Coordinates(self.x + other.x, self.y + other.y)
+        # add each dimension and return as a new Vector object
+        return Vector(self.x + other.x, self.y + other.y)
 
     def __sub__(self, *args):
         """Subtracts other coordinates from this one
 
-        :param *args: factor(s) or Coordinates to subtract from this
+        :param *args: factor(s) or Vector to subtract from this
         """
 
-        # coerce inputs to Coordinates object
-        other = Coordinates(*args)
+        # coerce inputs to Vector object
+        other = Vector(*args)
 
-        # subtract each dimension and return as a new Coordinates object
-        return Coordinates(self.x - other.x, self.y - other.y)
+        # subtract each dimension and return as a new Vector object
+        return Vector(self.x - other.x, self.y - other.y)
 
     @staticmethod
     def _extract(*sequence):
@@ -200,8 +200,8 @@ class Coordinates(object):
         if len(sequence) < 1:
             raise ValueError("There must be at least one input")
         elif len(sequence) == 1:
-            # check if the input is already Coordinates type
-            if isinstance(sequence[0], Coordinates):
+            # check if the input is already Vector type
+            if isinstance(sequence[0], Vector):
                 # return coordinates
                 return (sequence[0].x, sequence[0].y)
 
