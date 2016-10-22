@@ -13,6 +13,141 @@ import abc
 
 from graph import Graph
 
+class Method(object):
+    """Defines input variables, output variables and an execute method
+
+    Instances must be immutable, hashable objects.
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, name, inputs, outputs):
+        """Instantiates a new Method"""
+
+        self.name = unicode(name)
+        self.inputs = list(inputs)
+        self.outputs = list(outputs)
+
+    @abc.abstractmethod
+    def execute(self, inmap):
+        """Execute method
+
+        Returns a mapping (dict) of output variables to values, given an input
+        map that maps input variables to values (dict). The previous value of
+        the output variable should also be in inmap. If the method cannot be
+        executed, it should return an empty map.
+        """
+
+        raise NotImplementedError()
+
+    def __unicode__(self):
+        input_str = ", ".join(self.inputs)
+        output_str = ", ".join(self.outputs)
+
+        return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, output_str)
+
+    def __str__(self):
+        return unicode(self).encode("utf-8")
+
+class AddMethod(Method):
+    """Method representing addition of two variables"""
+
+    def __init__(self, a, b, c):
+        """Instantiates a new AddMethod
+
+        :param a: first input
+        :param b: second input
+        :param c: output
+        """
+
+        super(AddMethod, self).__init__("AddMethod", inputs=[a, b], outputs=[c])
+
+    def execute(self, inmap):
+        """Execute method"""
+
+        outmap = {}
+
+        a = self.inputs[0]
+        b = self.inputs[1]
+        c = self.outputs[0]
+
+        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
+            outmap[c] = inmap[a] + inmap[b]
+
+        return outmap
+
+class SubMethod(Method):
+    """Method representing subtraction of two variables"""
+
+    def __init__(self, a, b, c):
+        """Instantiates a new SubMethod
+
+        :param a: first input
+        :param b: second input
+        :param c: output
+        """
+
+        super(SubMethod, self).__init__("SubMethod", inputs=[a, b], outputs=[c])
+
+    def execute(self, inmap):
+        """Execute method"""
+
+        outmap = {}
+
+        a = self.inputs[0]
+        b = self.inputs[1]
+        c = self.outputs[0]
+
+        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
+            outmap[c] = inmap[a] - inmap[b]
+
+        return outmap
+
+class SetMethod(Method):
+    """Method representing the setting of a variable's value"""
+
+    def __init__(self, var, value):
+        """Instantiates a new SetMethod
+
+        :param var: variable name
+        :param value: any object to be associated with var
+        """
+
+        super(SetMethod, self).__init__("SetMethod", inputs=[], outputs=[var])
+
+        # set value
+        self._value = value
+
+    def execute(self, inmap):
+        """Execute method"""
+
+        return {self._outputs[0]: self._value}
+
+    def __unicode__(self):
+        return "{0}({1}={2})".format(self.name, self._outputs[0], self._value)
+
+class AssignMethod(Method):
+    """Method representing the assignment of a value to a variable"""
+
+    def __init__(self, a, b):
+        """Instantiates a new AssignMethod
+
+        :param a: first input
+        :param b: second input
+        """
+
+        self.inputs = [b]
+        self.outputs = [a]
+
+    def execute(self, inmap):
+        if self._inputs[0] in inmap:
+            return {self._outputs[0]: inmap(self._inputs[0])}
+
+        return {}
+
+    def __unicode__(self):
+        return "{0}({1}={2})".format(self.name, self._inputs[0], self._value)
+
 class MethodGraph(object):
     """A method graph
 
@@ -107,16 +242,16 @@ class MethodGraph(object):
         self._methods[met] = 1
 
         # update graph
-        for var in met.inputs():
+        for var in met.inputs:
             self.add_variable(var)
             self._graph.add_edge(var, met)
 
-        for var in met.outputs():
+        for var in met.outputs:
             self.add_variable(var)
             self._graph.add_edge(met, var)
 
         # check validity of graph
-        for var in met.outputs():
+        for var in met.outputs:
             if len(self._graph.ingoing_vertices(var)) > 1:
                 self.rem_method(met)
 
@@ -188,14 +323,14 @@ class MethodGraph(object):
         inmap = {}
         has_nones = False
 
-        for var in met.inputs():
+        for var in met.inputs:
             value = self._map[var]
 
             if value == None:
                 has_nones = True
 
             inmap[var] = value
-        for var in met.outputs():
+        for var in met.outputs:
             inmap[var] = self._map[var]
 
         # call method.execute
@@ -206,7 +341,7 @@ class MethodGraph(object):
 
         # update values in self._map
         # set output variables changed
-        for var in met.outputs():
+        for var in met.outputs:
             if var in outmap:
                 self._map[var] = outmap[var]
                 self._changed[var] = 1
@@ -216,7 +351,7 @@ class MethodGraph(object):
                     self._map[var] = None
 
         # clear change flag on input variables
-        for var in met.inputs():
+        for var in met.inputs:
             if var in self._changed:
                 del(self._changed[var])
 
@@ -229,141 +364,6 @@ class MethodGraph(object):
 
     def __str__(self):
         return unicode(self).encode("utf-8")
-
-class Method(object):
-    """Defines input variables, output variables and an execute method
-
-    Instances must be immutable, hashable objects.
-    """
-
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self, name, inputs, outputs):
-        """Instantiates a new Method"""
-
-        self.name = unicode(name)
-        self._inputs = list(inputs)
-        self._outputs = list(outputs)
-
-    @abc.abstractmethod
-    def execute(self, inmap):
-        """Execute method
-
-        Returns a mapping (dict) of output variables to values, given an input
-        map that maps input variables to values (dict). The previous value of
-        the output variable should also be in inmap. If the method cannot be
-        executed, it should return an empty map.
-        """
-
-        raise NotImplementedError()
-
-    def __unicode__(self):
-        input_str = ", ".join(self._inputs)
-        output_str = ", ".join(self._outputs)
-
-        return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, output_str)
-
-    def __str__(self):
-        return unicode(self).encode("utf-8")
-
-class AddMethod(Method):
-    """Method representing addition of two variables"""
-
-    def __init__(self, a, b, c):
-        """Instantiates a new AddMethod
-
-        :param a: first input
-        :param b: second input
-        :param c: output
-        """
-
-        super(AddMethod, self).__init__("AddMethod", inputs=[a, b], outputs=[c])
-
-    def execute(self, inmap):
-        """Execute method"""
-
-        outmap = {}
-
-        a = self._inputs[0]
-        b = self._inputs[1]
-        c = self._outputs[0]
-
-        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
-            outmap[c] = inmap[a] + inmap[b]
-
-        return outmap
-
-class SubMethod(Method):
-    """Method representing subtraction of two variables"""
-
-    def __init__(self, a, b, c):
-        """Instantiates a new SubMethod
-
-        :param a: first input
-        :param b: second input
-        :param c: output
-        """
-
-        super(SubMethod, self).__init__("SubMethod", inputs=[a, b], outputs=[c])
-
-    def execute(self, inmap):
-        """Execute method"""
-
-        outmap = {}
-
-        a = self._inputs[0]
-        b = self._inputs[1]
-        c = self._outputs[0]
-
-        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
-            outmap[c] = inmap[a] - inmap[b]
-
-        return outmap
-
-class SetMethod(Method):
-    """Method representing the setting of a variable's value"""
-
-    def __init__(self, var, value):
-        """Instantiates a new SetMethod
-
-        :param var: variable name
-        :param value: any object to be associated with var
-        """
-
-        super(SetMethod, self).__init__("SetMethod", inputs=[], outputs=[var])
-
-        # set value
-        self._value = value
-
-    def execute(self, inmap):
-        """Execute method"""
-
-        return {self._outputs[0]: self._value}
-
-    def __unicode__(self):
-        return "{0}({1}={2})".format(self.name, self._outputs[0], self._value)
-
-class AssignMethod(Method):
-    """Method representing the assignment of a value to a variable"""
-
-    def __init__(self, a, b):
-        """Instantiates a new AssignMethod
-
-        :param a: first input
-        :param b: second input
-        """
-
-        self._inputs = [b]
-        self._outputs = [a]
-
-    def execute(self, inmap):
-        if self._inputs[0] in inmap:
-            return {self._outputs[0]: inmap(self._inputs[0])}
-
-        return {}
-
-    def __unicode__(self):
-        return "{0}({1}={2})".format(self.name, self._inputs[0], self._value)
 
 class MethodGraphValidityException(Exception):
     """Error indicating operation violated MethodGraph validity"""

@@ -19,7 +19,7 @@ class MultiVariable(object):
         return "MultiVariable({0})".format(self.name)
 
     def __str__(self):
-        return self.encode('utf-8')
+        return unicode(self).encode('utf-8')
 
     def __repr__(self):
         return unicode(self)
@@ -44,22 +44,23 @@ class MultiMethod(Method):
     :class:`~.MultiVariable`.
     """
 
-    def __init__(self):
-        """Instantiate a MultiMethod
+    def __init__(self, *args, **kwargs):
+        """Instantiate a MultiMethod"""
 
-        Call this after _inputs and _outputs has been set.
-        """
+        # call parent constructor
+        super(MultiMethod, self).__init__(*args, **kwargs)
 
-        self._multi_inputs = []
+        # empty list of multi inputs
+        self.multi_inputs = []
 
-        for variable in self._inputs:
+        for variable in self.inputs:
             if isinstance(variable, MultiVariable):
-                self._multi_inputs.append(variable)
+                self.multi_inputs.append(variable)
 
-        if len(self._outputs) != 1:
+        if len(self.outputs) != 1:
             raise Exception("MultiMethod requires exactly one output")
 
-        if not isinstance(self._outputs[0], MultiVariable):
+        if not isinstance(self.outputs[0], MultiVariable):
             raise Exception("MultiMethod requires a MultiVariable output")
 
     def execute(self, inmap):
@@ -71,13 +72,13 @@ class MultiMethod(Method):
 
         base_inmap = {}
 
-        for variable in self._inputs:
-            if variable not in self._multi_inputs:
+        for variable in self.inputs:
+            if variable not in self.multi_inputs:
                 value = inmap[variable]
                 base_inmap[variable] = value
 
-        outvar = self._outputs[0]
-        values = self._recurse_execute(inmap, base_inmap, self._multi_inputs)
+        outvar = self.outputs[0]
+        values = self._recurse_execute(inmap, base_inmap, self.multi_inputs)
 
         return {outvar: values}
 
@@ -89,9 +90,22 @@ class MultiMethod(Method):
 
             for value in values:
                 base_inmap[mvar] = value
-                output.union_update(self._recurse_execute(inmap, base_inmap, \
+                output.update(self._recurse_execute(inmap, base_inmap, \
                 multi_inputs[1:]))
 
             return output
         else:
             return self.multi_execute(base_inmap)
+
+class SumProdMethod(MultiMethod):
+    """A MultiMethod that assigns the sum and product of its input to its output
+    MultiVariable"""
+
+    def __init__(self, a, b, c):
+        super(SumProdMethod, self).__init__("SumProdMethod", [a, b], [c])
+
+    def multi_execute(self, inmap):
+        a = inmap[self.inputs[0]]
+        b = inmap[self.inputs[1]]
+
+        return [a + b, a * b]
