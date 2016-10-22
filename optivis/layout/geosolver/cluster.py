@@ -132,6 +132,11 @@ class Cluster(MultiVariable):
 
         return NotImplementedError("Only available in child classes")
 
+    def __eq__(self, other):
+        """Equality test for cluster"""
+
+        return self._variable_list() == other._variable_list()
+
     @staticmethod
     def over_angles_hh(hog1, hog2):
         # determine duplicate angles
@@ -258,10 +263,8 @@ class Rigid(Cluster):
 
         # two rigids
         if other.cluster_type == Rigid.cluster_type:
-            # if they share two or more points then the intersection is also a
-            # rigid
-            if len(shared) >= 2:
-                return Rigid(shared)
+            # the intersection is also a rigid
+            return Rigid(shared)
 
         # a rigid and a balloon
         if other.cluster_type == Balloon.cluster_type:

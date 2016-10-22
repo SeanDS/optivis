@@ -255,11 +255,13 @@ class MethodGraph(object):
             if len(self._graph.ingoing_vertices(var)) > 1:
                 self.rem_method(met)
 
-                raise MethodGraphValidityException("Variable {0} determined by multiple methods".format(var))
+                raise MethodGraphDetermineException("Variable {0} determined \
+by multiple methods".format(var))
             elif len(self._graph.path(var, var)) != 0:
                 self.rem_method(met)
 
-                raise MethodGraphValidityException("Cycle in graph not allowed (variable {0})".format(var))
+                raise MethodGraphCycleException("Cycle in graph not allowed \
+(variable {0})".format(var))
 
         if prop:
             self._execute(met)
@@ -365,11 +367,11 @@ class MethodGraph(object):
     def __str__(self):
         return unicode(self).encode("utf-8")
 
-class MethodGraphValidityException(Exception):
-    """Error indicating operation violated MethodGraph validity"""
+class MethodGraphCycleException(Exception):
+    """Error indicating a cyclic connection in a MethodGraph"""
+    pass
 
-    def __unicode__(self):
-        return unicode(repr(self))
-
-    def __str__(self):
-        return unicode(self).encode("utf-8")
+class MethodGraphDetermineException(Exception):
+    """Error indicating a variable is determined by more than one method in a
+    MethodGraph"""
+    pass
