@@ -25,9 +25,8 @@ from optivis.layout.geosolver.intersections import *
 class ClusterMethod(MultiMethod):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, *args, **kwargs):
-        super(ClusterMethod, self).__init__(consistent, overconstrained, \
-        *args, **kwargs)
+    def __init__(self, consistent, overconstrained, *args, **kwargs):
+        super(ClusterMethod, self).__init__(*args, **kwargs)
 
         self.consistent = consistent
         self.overconstrained = overconstrained
@@ -415,24 +414,18 @@ class ClusterSolver(Notifier):
 
     def _add_merge(self, merge):
         # structural check that method has one output
-        if len(merge.outputs()) != 1:
+        if len(merge.outputs) != 1:
             raise Exception("merge number of outputs != 1")
 
-        output = merge.outputs()[0]
+        output = merge.outputs[0]
 
-        # remove any derives from clusters to be merged
-        #for cluster in merge.inputs():
-        #    outgoing = self.find_dependend(cluster)
-        #    derives = filter(lambda x: isinstance(x, Derive), outgoing)
-        #    for d in derives:
-        #        self._remove(d)
         # consistent merge?
         consistent = True
 
-        for i1 in range(0, len(merge.inputs())):
-            for i2 in range(i1 + 1, len(merge.inputs())):
-                c1 = merge.inputs()[i1]
-                c2 = merge.inputs()[i2]
+        for i1 in range(len(merge.inputs)):
+            for i2 in range(i1 + 1, len(merge.inputs)):
+                c1 = merge.inputs[i1]
+                c2 = merge.inputs[i2]
 
                 consistent = consistent and self._is_consistent_pair(c1, c2)
 
@@ -441,7 +434,7 @@ class ClusterSolver(Notifier):
         # overconstrained cluster?
         overconstrained = not consistent
 
-        for cluster in merge.inputs():
+        for cluster in merge.inputs:
             overconstrained = overconstrained and cluster.overconstrained
 
         output.overconstrained = overconstrained
@@ -451,7 +444,7 @@ class ClusterSolver(Notifier):
         self._add_method(merge)
 
         # remove inputs from toplevel
-        for cluster in merge.inputs():
+        for cluster in merge.inputs:
             self._rem_top_level(cluster)
 
         # add prototype selection method
@@ -461,7 +454,7 @@ class ClusterSolver(Notifier):
         self._add_solution_selector(merge)
 
     def _add_prototype_selector(self, merge):
-        incluster = merge.outputs()[0]
+        incluster = merge.outputs[0]
         constraints = merge.prototype_constraints()
 
         if len(constraints) == 0:
@@ -506,10 +499,10 @@ class ClusterSolver(Notifier):
 
         self._add_to_group("_methods", method)
 
-        for obj in method.inputs():
+        for obj in method.inputs:
             self._add_dependency(obj, method)
 
-        for obj in method.outputs():
+        for obj in method.outputs:
             self._add_dependency(method, obj)
             self._add_dependency(obj, method)
 
@@ -1118,7 +1111,7 @@ class ClusterSolver(Notifier):
         logging.getLogger("clustersolver").debug("_merge_point_cluster %s, \
 %s", pointc, cluster)
 
-        #create new cluster and method
+        # create new cluster and method
         allvars = set(pointc.vars).union(cluster.vars)
 
         newcluster = Rigid(allvars)
@@ -1384,7 +1377,7 @@ class ClusterSolver(Notifier):
             return cluster
         else:
             method = self._determining_method(cluster)
-            inputs = method.inputs()
+            inputs = method.inputs
             down = filter(lambda x: self._contains_constraint(x, constraint), \
             inputs)
 
@@ -2388,9 +2381,9 @@ class SubHog(Derive):
 def is_information_increasing(method):
     infinc = True
     connected = set()
-    output = method.outputs()[0]
+    output = method.outputs[0]
 
-    for cluster in method.inputs():
+    for cluster in method.inputs:
         if num_constraints(cluster.intersection(output)) >= num_constraints(output):
             infinc = False
             break

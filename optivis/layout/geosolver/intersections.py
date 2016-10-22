@@ -8,7 +8,7 @@ from __future__ import unicode_literals, division
 import logging
 import math
 
-import optivis.layout.geosolver.vector
+import optivis.layout.geosolver.vector as vector
 from optivis.layout.geosolver.matfunc import Mat, Vec
 from optivis.layout.geosolver.tolerance import *
 

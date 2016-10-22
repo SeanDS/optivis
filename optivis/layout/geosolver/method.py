@@ -41,8 +41,8 @@ class Method(object):
         raise NotImplementedError()
 
     def __unicode__(self):
-        input_str = ", ".join(self.inputs)
-        output_str = ", ".join(self.outputs)
+        input_str = ", ".join([unicode(_input) for _input in self.inputs])
+        output_str = ", ".join([unicode(output) for output in self.outputs])
 
         return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, output_str)
 
