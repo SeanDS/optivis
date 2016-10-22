@@ -7,7 +7,7 @@ from __future__ import unicode_literals, division
 
 import abc
 
-from multimethod import MultiVariable
+from optivis.layout.geosolver.multimethod import MultiVariable
 
 class Distance(object):
     """Represents a known distance"""

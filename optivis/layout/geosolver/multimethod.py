@@ -4,7 +4,9 @@
 
 from __future__ import unicode_literals, division
 
-from method import Method, MethodGraph
+import abc
+
+from optivis.layout.geosolver.method import Method, MethodGraph
 
 class MultiVariable(object):
     """Represents multi-valued variables"""
@@ -43,6 +45,8 @@ class MultiMethod(Method):
     multi-execute are collected and stored in the output \
     :class:`~.MultiVariable`.
     """
+
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, *args, **kwargs):
         """Instantiate a MultiMethod"""

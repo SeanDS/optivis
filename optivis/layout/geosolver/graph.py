@@ -25,7 +25,7 @@ quickly find sources, sinks, etc."""
 
 from __future__ import unicode_literals, division
 
-from notify import Notifier
+from optivis.layout.geosolver.notify import Notifier
 
 class Graph(Notifier):
     """A weighted directed graph"""

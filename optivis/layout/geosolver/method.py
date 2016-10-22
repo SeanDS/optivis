@@ -11,7 +11,7 @@ from __future__ import unicode_literals, division
 
 import abc
 
-from graph import Graph
+from optivis.layout.geosolver.graph import Graph
 
 class Method(object):
     """Defines input variables, output variables and an execute method

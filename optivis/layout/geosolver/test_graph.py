@@ -2,7 +2,7 @@ from __future__ import unicode_literals, division
 
 from unittest import TestCase
 
-from graph import FanGraph
+from optivis.layout.geosolver.graph import FanGraph
 
 class TestGraph(TestCase):
     def setUp(self):

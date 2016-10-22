@@ -2,7 +2,7 @@ from __future__ import unicode_literals, division
 
 from unittest import TestCase
 
-from cluster import Rigid, Balloon, Hedgehog
+from optivis.layout.geosolver.cluster import Rigid, Balloon, Hedgehog
 
 class TestCluster(TestCase):
     def setUp(self):

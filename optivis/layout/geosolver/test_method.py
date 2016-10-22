@@ -2,8 +2,8 @@ from __future__ import unicode_literals, division
 
 from unittest import TestCase
 
-from method import MethodGraph, AddMethod, MethodGraphCycleException, \
-MethodGraphDetermineException
+from optivis.layout.geosolver.method import MethodGraph, AddMethod, \
+MethodGraphCycleException, MethodGraphDetermineException
 
 class TestMethods(TestCase):
     def setUp(self):

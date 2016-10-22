@@ -9,111 +9,109 @@ problems and solutions are represented by a Configuration for each cluster.
 
 from __future__ import unicode_literals, division
 
-from graph import Graph
-from method import Method, MethodGraph
-from diagnostic import diag_print
-from notify import Notifier
-from sets import Set, ImmutableSet
-from multimethod import MultiVariable, MultiMethod
-from cluster import *
-from configuration import Configuration
-from selconstr import NotCounterClockwiseConstraint, NotClockwiseConstraint, \
-NotAcuteConstraint, NotObtuseConstraint
-from intersections import *
+import abc
+
+from optivis.layout.geosolver.graph import Graph
+from optivis.layout.geosolver.method import Method, MethodGraph
+from optivis.layout.geosolver.notify import Notifier
+from optivis.layout.geosolver.multimethod import MultiVariable, \
+MultiMethod
+from optivis.layout.geosolver.cluster import *
+from optivis.layout.geosolver.configuration import Configuration
+from optivis.layout.geosolver.selconstr import NotCounterClockwiseConstraint, \
+NotClockwiseConstraint, NotAcuteConstraint, NotObtuseConstraint
+from optivis.layout.geosolver.intersections import *
 
 class ClusterMethod(MultiMethod):
-    def __init__(self):
-        self.consistent = None
-        self.overconstrained = None
-        MultiMethod.__init__(self)
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, *args, **kwargs):
+        super(ClusterMethod, self).__init__(consistent, overconstrained, \
+        *args, **kwargs)
+
+        self.consistent = consistent
+        self.overconstrained = overconstrained
 
     def prototype_constraints(self):
         return []
 
     def status_str(self):
-        s = ""
-        if self.consistent == True:
-            s += "consistent "
-        elif self.consistent == False:
-            s += "inconsistent "
-        if self.overconstrained == True:
-            s += "overconstrained"
-        elif self.overconstrained == False:
-            s += "wellconstrained"
-        return s
+        if self.consistent:
+            consistent_status = "consistent"
+        else:
+            consistent_status = "inconsistent"
 
+        if self.overconstrained:
+            constrained_status = "overconstrained"
+        else:
+            constrained_status = "well constrained"
+
+        return "{0}, {1}".format(consistent_status, constrained_status)
 
 class PrototypeMethod(MultiMethod):
-    """A PrototypeMethod selects those solutions of a cluster for which
-       the protoype and the solution satisfy the same constraints.
-    """
+    """A PrototypeMethod selects those solutions of a cluster for which the \
+    protoype and the solution satisfy the same constraints."""
 
     def __init__(self, incluster, selclusters, outcluster, constraints):
-        self._inputs = [incluster]+selclusters
-        self._outputs = [outcluster]
-        self._constraints = constraints
-        MultiMethod.__init__(self)
+        # call parent constructor
+        super(PrototypeMethod, self).__init__("PrototypeMethod", \
+        [incluster] + selclusters, [outcluster])
+
+        # set constraints
+        self.constraints = list(constraints)
 
     def multi_execute(self, inmap):
-        diag_print("PrototypeMethod.multi_execute called","clmethods")
-        incluster = self._inputs[0]
+        logging.getLogger("clustersolver").debug( \
+"PrototypeMethod.multi_execute called")
+
+        incluster = self.inputs[0]
         selclusters = []
-        for i in range(1,len(self._inputs)):
-            selclusters.append(self._inputs[i])
-        diag_print("input clusters"+str(incluster), "PrototypeMethod.multi_execute")
-        diag_print("selection clusters"+str(selclusters), "PrototypeMethod.multi_execute")
+
+        for i in range(1, len(self.inputs)):
+            selclusters.append(self.inputs[i])
+
+        logging.getLogger("clustersolver").debug("input clusters %s", incluster)
+        logging.getLogger("clustersolver").debug("selection clusters %s", \
+        selclusters)
+
         # get confs
         inconf = inmap[incluster]
         selmap = {}
+
         for cluster in selclusters:
             conf = inmap[cluster]
             assert len(conf.vars()) == 1
             var = conf.vars()[0]
             selmap[var] = conf.map[var]
+
         selconf = Configuration(selmap)
         sat = True
-        diag_print("input configuration = "+str(inconf), "PrototypeMethod.multi_execute")
-        diag_print("selection configuration = "+str(selconf), "PrototypeMethod.multi_execute")
-        for con in self._constraints:
+
+        logging.getLogger("clustersolver").debug("input configuration = \
+%s", inconf)
+        logging.getLogger("clustersolver").debug("selection configuration = \
+%s", selconf)
+
+        for con in self.constraints:
             satcon = con.satisfied(inconf.map) != con.satisfied(selconf.map)
-            diag_print("constraint = "+str(con), "PrototypeMethod.multi_execute")
-            diag_print("constraint satisfied? "+str(satcon), "PrototypeMethod.multi_execute")
+
+            logging.getLogger("clustersolver").debug("constraint = %s", con)
+            logging.getLogger("clustersolver").debug("constraint satisfied? \
+%s", satcon)
             sat = sat and satcon
-        diag_print("prototype satisfied? "+str(sat), "PrototypeMethod.multi_execute")
+
+        logging.getLogger("clustersolver").debug("prototype satisfied? %s", \
+sat)
+
         if sat:
             return [inconf]
         else:
             return []
 
-def is_information_increasing(method):
-    infinc = True
-    connected = Set()
-    output = method.outputs()[0]
-    for cluster in method.inputs():
-        if num_constraints(cluster.intersection(output)) >= num_constraints(output):
-            infinc = False
-            break
-    return infinc
-
-class Merge(ClusterMethod):
-    """A merge is a method such that a single output cluster satisfies
-    all constraints in several input clusters. The output cluster
-    replaces the input clusters in the constriant problem"""
-
-    def __init__(self):
-        ClusterMethod.__init__(self)
-
-class Derive(ClusterMethod):
-    """A derive is a method such that a single ouput cluster is a
-    subconstraint of a single input cluster."""
-
-    def __init__(self):
-        ClusterMethod.__init__(self)
-
 class ClusterSolver(Notifier):
-    """A generic 2D geometric constraint solver.
+    """A generic 2D geometric constraint solver
 
-    Finds a generic solution for problems formulated by cluster-constraints.
+    Finds a generic solution for problems formulated by cluster constraints.
 
     Constraints are Clusters: Rigids, Hedgehogs and Balloons.
     Cluster are added and removed using the add and remove methods.
@@ -122,12 +120,13 @@ class ClusterSolver(Notifier):
 
     For each Cluster a set of Configurations can be set using the
     set method. Configurations are propagated via Methods and can
-    be retrieved with the get method.
-    """
+    be retrieved with the get method."""
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Create a new empty solver"""
-        Notifier.__init__(self)
+
+        super(ClusterSolver, self).__init__(*args, **kwargs)
+
         self._graph = Graph()
         self._graph.add_vertex("_root")
         self._graph.add_vertex("_toplevel")
@@ -184,7 +183,9 @@ class ClusterSolver(Notifier):
            arguments:
               cluster: A Rigid
            """
-        diag_print("add_cluster "+str(cluster), "clsolver")
+
+        logging.getLogger("clustersolver").debug("add_cluster %s", cluster)
+
         self._add_cluster(cluster)
         self._process_new()
 
@@ -192,6 +193,7 @@ class ClusterSolver(Notifier):
         """Remove a cluster.
            All dependend objects are also removed.
         """
+
         self._remove(cluster)
         self._process_new()
 
@@ -260,22 +262,26 @@ class ClusterSolver(Notifier):
         if object in self._new:
             self._new.remove(object)
 
-    def _remove(self, object):
+    def _remove(self, obj):
         # find all indirectly dependend objects
-        todelete = [object]+self._find_descendend(object)
-        torestore = Set()
+        todelete = [obj] + self._find_descendend(obj)
+
+        torestore = set()
         # remove all objects
         for item in todelete:
             # if merge removed items from toplevel then add them back to top level
             if hasattr(item, "restore_toplevel"):
                 for cluster in item.restore_toplevel:
                     torestore.add(cluster)
+
             # delete it from graph
-            diag_print("deleting "+str(item),"clsolver.remove")
+            logging.getLogger("clustersolver").debug("deleting %s", item)
             self._graph.rem_vertex(item)
+
             # remove from _new list
             if item in self._new:
                 self._new.remove(item)
+
             # remove from methodgraph
             if isinstance(item, Method):
                 # note: method may have been removed because variable removed
@@ -285,17 +291,15 @@ class ClusterSolver(Notifier):
                     pass
             elif isinstance(item, MultiVariable):
                 self._mg.rem_variable(item)
+
             # notify listeners
             self.send_notify(("remove", item))
+
         # restore toplevel (also added to _new)
         for cluster in torestore:
             if self._graph.has_vertex(cluster):
                 self._add_top_level(cluster)
-        # debug
-        # print "after remove, drplan:"
-        # print self
-        # print "after remove, toplevel:"
-        # print self.top_level()
+
         # re-solve
         self._process_new()
 
@@ -303,16 +307,16 @@ class ClusterSolver(Notifier):
         """find all descendend objects of v (dirdctly or indirectly dependend"""
         front = [v]
         result = {}
+
         while len(front) > 0:
             x = front.pop()
             if x not in result:
                 result[x] = 1
                 front += self.find_dependend(x)
-        del result[v]
+
+        del(result[v])
+
         return list(result)
-
-
-    # -- add object types
 
     def _add_variable(self, var):
         """Add a variable if not already in system
@@ -320,8 +324,9 @@ class ClusterSolver(Notifier):
            arguments:
               var: any hashable object
         """
+
         if not self._graph.has_vertex(var):
-            diag_print("_add_variable "+str(var), "clsolver")
+            logging.getLogger("clustersolver").debug("_add_variable %s", var)
             self._add_to_group("_variables", var)
 
     def _add_cluster(self, cluster):
@@ -332,71 +337,89 @@ class ClusterSolver(Notifier):
         elif isinstance(cluster, Balloon):
             self._add_balloon(cluster)
         else:
-            raise StandardError, "unsupported type", type(cluster)
+            raise Exception("unsupported type {0}".format(type(cluster)))
 
     def _add_rigid(self, newcluster):
         """add a rigid cluster if not already in system"""
-        diag_print("_add_rigid "+str(newcluster),"clsolver")
+
+        logging.getLogger("clustersolver").debug("_add_rigid %s", newcluster)
+
         # check if not already exists
         if self._graph.has_vertex(newcluster):
-            raise StandardError, "rigid already in clsolver"
+            raise Exception("rigid already in clsolver")
+
         # update graph
         self._add_to_group("_rigids", newcluster)
+
         for var in newcluster.vars:
             self._add_variable(var)
             self._add_dependency(var, newcluster)
+
         # if there is no root cluster, this one will be it
         if len(self._graph.outgoing_vertices("_root")) == 0:
             self._graph.add_edge("_root", newcluster)
+
         # add to top level
         self._add_top_level(newcluster)
         # add to methodgraph
         self._mg.add_variable(newcluster)
         # notify
         self.send_notify(("add", newcluster))
-    #end def _add_rigid
 
     def _add_hog(self, hog):
-        diag_print("_add_hog:"+str(hog), "clsolver")
+        logging.getLogger("clustersolver").debug("_add_hog: %s", hog)
+
         # check if not already exists
         if self._graph.has_vertex(hog):
-            raise StandardError, "hedgehog already in clsolver"
+            raise Exception("hedgehog already in clsolver")
+
         # update graph
         self._add_to_group("_hedgehogs",hog)
-        for var in list(hog.xvars)+[hog.cvar]:
+
+        for var in list(hog.xvars) + [hog.cvar]:
             self._add_variable(var)
             self._add_dependency(var, hog)
+
         # add to top level
         self._add_top_level(hog)
+
         # add to methodgraph
         self._mg.add_variable(hog)
+
         # notify
         self.send_notify(("add", hog))
 
     def _add_balloon(self, newballoon):
         """add a cluster if not already in system"""
-        diag_print("_add_balloon "+str(newballoon),"clsolver")
+        logging.getLogger("clustersolver").debug("_add_balloon %s", newballoon)
+
         # check if not already exists
         if self._graph.has_vertex(newballoon):
             raise StandardError, "balloon already in clsolver"
+
         # update graph
         self._add_to_group("_balloons", newballoon)
+
         for var in newballoon.vars:
             self._add_variable(var)
             self._add_dependency(var, newballoon)
+
         # add to top level
         self._add_top_level(newballoon)
+
          # add to methodgraph
         self._mg.add_variable(newballoon)
+
         # notify
         self.send_notify(("add", newballoon))
-    #end def _add_balloon
 
     def _add_merge(self, merge):
         # structural check that method has one output
         if len(merge.outputs()) != 1:
-            raise StandardError, "merge number of outputs != 1"
+            raise Exception("merge number of outputs != 1")
+
         output = merge.outputs()[0]
+
         # remove any derives from clusters to be merged
         #for cluster in merge.inputs():
         #    outgoing = self.find_dependend(cluster)
@@ -405,82 +428,105 @@ class ClusterSolver(Notifier):
         #        self._remove(d)
         # consistent merge?
         consistent = True
+
         for i1 in range(0, len(merge.inputs())):
-            for i2 in range(i1+1, len(merge.inputs())):
+            for i2 in range(i1 + 1, len(merge.inputs())):
                 c1 = merge.inputs()[i1]
                 c2 = merge.inputs()[i2]
+
                 consistent = consistent and self._is_consistent_pair(c1, c2)
+
         merge.consistent = consistent
+
         # overconstrained cluster?
         overconstrained = not consistent
+
         for cluster in merge.inputs():
             overconstrained = overconstrained and cluster.overconstrained
+
         output.overconstrained = overconstrained
+
         # add to graph
         self._add_cluster(output)
         self._add_method(merge)
+
         # remove inputs from toplevel
         for cluster in merge.inputs():
             self._rem_top_level(cluster)
+
         # add prototype selection method
         self._add_prototype_selector(merge)
+
         # add solution selection method
         self._add_solution_selector(merge)
 
     def _add_prototype_selector(self, merge):
         incluster = merge.outputs()[0]
         constraints = merge.prototype_constraints()
+
         if len(constraints) == 0:
             return
-        vars = Set()
+
+        vars = set()
+
         for con in constraints:
-            vars.union_update(con.variables())
+            vars.update(con.variables())
+
         selclusters = []
+
         for var in vars:
             clusters = self._graph.outgoing_vertices(var)
             clusters = filter(lambda c: isinstance(c, Rigid), clusters)
             clusters = filter(lambda c: len(c.vars) == 1, clusters)
+
             if len(clusters) != 1:
-                raise StandardError, "no prototype cluster for variable "+str(v)
+                raise Exception("no prototype cluster for variable \
+{0}".format(v))
+
             selclusters.append(clusters[0])
+
         outcluster = incluster.copy()
+
         # Rick 20090519 - copy does not copy structural overconstrained flag?
         outcluster.overconstrained = incluster.overconstrained
+
         selector = PrototypeMethod(incluster, selclusters, outcluster, constraints)
+
         self._add_cluster(outcluster)
         self._add_method(selector)
         self._rem_top_level(incluster)
+
         return
 
     def _add_solution_selector(self, merge):
         return
 
     def _add_method(self, method):
-        diag_print("new "+str(method),"clsolver")
+        logging.getLogger("clustersolver").debug("new %s", method)
+
         self._add_to_group("_methods", method)
+
         for obj in method.inputs():
             self._add_dependency(obj, method)
+
         for obj in method.outputs():
             self._add_dependency(method, obj)
             self._add_dependency(obj, method)
+
         self._mg.add_method(method)
         self.send_notify(("add", method))
-
-
-    # --------------
-    # search methods
-    # --------------
 
     def _process_new(self):
         while len(self._new) > 0:
             newobject = self._new.pop()
-            diag_print ("search from "+str(newobject), "clsolver")
-            succes = self._search(newobject)
-            if succes and self.is_top_level(newobject):
+            logging.getLogger("clustersolver").debug("search from %s", \
+            newobject)
+
+            success = self._search(newobject)
+
+            if success and self.is_top_level(newobject):
                 # maybe more rules applicable.... push back on stack
                 self._new.append(newobject)
-        # while
-    #end def
 
     def _search(self, newcluster):
         if isinstance(newcluster, Rigid):
@@ -490,8 +536,7 @@ class ClusterSolver(Notifier):
         elif isinstance(newcluster, Balloon):
             self._search_from_balloon(newcluster)
         else:
-            raise StandardError, "don't know how to search from "+str(newcluster)
-    # end _search
+            raise Exception("don't know how to search from {0}".format(newcluster))
 
     def _search_from_balloon(self, balloon):
         if self._search_absorb_from_balloon(balloon):
@@ -501,7 +546,6 @@ class ClusterSolver(Notifier):
         if self._search_cluster_from_balloon(balloon):
             return
         self._search_hogs_from_balloon(balloon)
-    #end def _search_from_baloon
 
     def _search_from_hog(self, hog):
         if self._search_absorb_from_hog(hog):
@@ -511,7 +555,6 @@ class ClusterSolver(Notifier):
         if self._search_balloon_from_hog(hog):
             return
         self._search_hogs_from_hog(hog)
-    #end def _search_from_hog
 
     def _search_from_rigid(self, cluster):
         if self._search_absorb_from_cluster(cluster):
@@ -521,17 +564,16 @@ class ClusterSolver(Notifier):
         if self._search_merge_from_cluster(cluster):
             return
         self._search_hogs_from_cluster(cluster)
-    # end def _search_from_cluster
-
-    # ------ Absorb hogs -------
 
     def _search_absorb_from_balloon(self, balloon):
         for cvar in balloon.vars:
             # find all incident hogs
             hogs = self._find_hogs(cvar)
+
             # determine shared vertices per hog
             for hog in hogs:
-                shared = Set(hog.xvars).intersection(balloon.vars)
+                shared = set(hog.xvars).intersection(balloon.vars)
+
                 if len(shared) == len(hog.xvars):
                     return self._merge_balloon_hog(balloon, hog)
 
@@ -539,251 +581,339 @@ class ClusterSolver(Notifier):
         for cvar in cluster.vars:
             # find all incident hogs
             hogs = self._find_hogs(cvar)
+
             # determine shared vertices per hog
             for hog in hogs:
-                shared = Set(hog.xvars).intersection(cluster.vars)
+                shared = set(hog.xvars).intersection(cluster.vars)
+
                 if len(shared) == len(hog.xvars):
                     return self._merge_cluster_hog(cluster, hog)
 
     def _search_absorb_from_hog(self, hog):
         dep = self.find_dependend(hog.cvar)
+
         # case BH (overconstrained):
-        balloons = filter(lambda x: isinstance(x,Balloon) and self.is_top_level(x), dep)
-        sharecx = filter(lambda x: len(Set(hog.xvars).intersection(x.vars)) >=1, balloons)
+        balloons = filter(lambda x: isinstance(x,Balloon) \
+        and self.is_top_level(x), dep)
+        sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) \
+        >= 1, balloons)
+
         for balloon in sharecx:
-            sharedcx = Set(balloon.vars).intersection(hog.xvars)
+            sharedcx = set(balloon.vars).intersection(hog.xvars)
+
             if len(sharedcx) == len(hog.xvars):
                 return self._merge_balloon_hog(balloon, hog)
+
         # case CH (overconstrained)
-        clusters = filter(lambda x: isinstance(x,Rigid) and self.is_top_level(x), dep)
-        sharecx = filter(lambda x: len(Set(hog.xvars).intersection(x.vars)) >=1, clusters)
+        clusters = filter(lambda x: isinstance(x,Rigid) \
+        and self.is_top_level(x), dep)
+        sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) \
+        >= 1, clusters)
+
         for cluster in sharecx:
-            sharedcx = Set(cluster.vars).intersection(hog.xvars)
+            sharedcx = set(cluster.vars).intersection(hog.xvars)
+
             if len(sharedcx) == len(hog.xvars):
                 return self._merge_cluster_hog(cluster, hog)
 
-    # ------- DEALING WITH BALLOONS  ---------
-
     def _find_balloons(self, variables):
-        balloons = Set()
+        balloons = set()
+
         for var in variables:
             deps = self.find_dependend(var)
-            balls = filter(lambda x: isinstance(x,Balloon), deps)
+            balls = filter(lambda x: isinstance(x, Balloon), deps)
             balloons = balloons.intersection(balls)
+
         return balloons
 
     def _make_balloon(self, var1, var2, var3, hog1, hog2):
-        diag_print("_make_balloon "+str(var1)+","+str(var2)+","+str(var3),"clsolver")
+        logging.getLogger("clustersolver").debug("_make_balloon %s, %s, %s", \
+        var1, var2, var3)
+
         # derive sub-hogs if nessecairy
-        vars = Set([var1, var2, var3])
+        vars = set([var1, var2, var3])
+
         subvars1 = vars.intersection(hog1.xvars)
+
         if len(hog1.xvars) > 2:
             hog1 = self._derive_subhog(hog1, subvars1)
+
         subvars2 = vars.intersection(hog2.xvars)
+
         if len(hog2.xvars) > 2:
             hog2 = self._derive_subhog(hog2, subvars2)
+
         # create balloon and method
         balloon = Balloon([var1, var2, var3])
         balloonmethod = BalloonFromHogs(hog1, hog2, balloon)
+
         self._add_merge(balloonmethod)
+
         return balloon
 
     def _search_balloon_from_hog(self,hog):
         newballoons = []
+
         var1 = hog.cvar
+
         for var2 in hog.xvars:
             hogs = self._find_hogs(var2)
+
             for hog2 in hogs:
                 if var1 in hog2.xvars:
                     for var3 in hog2.xvars:
                         if var3 != var2 and var3 in hog.xvars:
                             if not self._known_angle(var1, var3, var2):
-                                newballoons.append(self._make_balloon(var1, var2, var3, hog, hog2))
+                                newballoons.append(self._make_balloon(var1, \
+                                var2, var3, hog, hog2))
+
         if len(newballoons) > 0:
             return newballoons
-        else:
-            return None
+
+        return None
 
     def _search_balloon_from_balloon(self, balloon):
         map = {}    # map from adjacent balloons to variables shared with input balloon
+
         for var in balloon.vars:
             deps = self.find_dependend(var)
+
             balloons = filter(lambda x: isinstance(x,Balloon), deps)
             balloons = filter(lambda x: self.is_top_level(x), balloons)
+
             for bal2 in balloons:
                 if bal2 != balloon:
                     if bal2 in map:
-                        map[bal2].union_update([var])
+                        map[bal2].update([var])
                     else:
-                        map[bal2] = Set([var])
+                        map[bal2] = set([var])
+
         for bal2 in map:
             nvars = len(map[bal2])
+
             if nvars >= 2:
                 return self._merge_balloons(balloon, bal2)
+
         return None
 
     def _search_cluster_from_balloon(self, balloon):
-        diag_print("_search_cluster_from_balloon", "clsolver")
+        logging.getLogger("clustersolver").debug("_search_cluster_from_balloon")
+
         map = {}    # map from adjacent clusters to variables shared with input balloon
+
         for var in balloon.vars:
             deps = self.find_dependend(var)
+
             clusters = filter(lambda x: isinstance(x,Rigid) or isinstance(x,Distance), deps)
             clusters = filter(lambda x: self.is_top_level(x), clusters)
+
             for c in clusters:
                 if c in map:
-                    map[c].union_update([var])
+                    map[c].update([var])
                 else:
-                    map[c] = Set([var])
+                    map[c] = set([var])
+
         for cluster in map:
             nvars = len(map[cluster])
+
             if nvars >= 2:
                 return self._merge_balloon_cluster(balloon, cluster)
+
         return None
 
     def _search_balloonclustermerge_from_cluster(self, rigid):
-        diag_print("_search_balloonclustermerge_from_cluster", "clsolver")
+        logging.getLogger("clustersolver").debug( \
+        "_search_balloonclustermerge_from_cluster")
+
         map = {}    # map from adjacent clusters to variables shared with input balloon
+
         for var in rigid.vars:
             deps = self.find_dependend(var)
+
             balloons = filter(lambda x: isinstance(x,Balloon), deps)
             balloons = filter(lambda x: self.is_top_level(x), balloons)
+
             for b in balloons:
                 if b in map:
-                    map[b].union_update([var])
+                    map[b].update([var])
                 else:
-                    map[b] = Set([var])
+                    map[b] = set([var])
+
         for balloon in map:
             nvars = len(map[balloon])
+
             if nvars >= 2:
                 return self._merge_balloon_cluster(balloon, rigid)
+
         return None
 
     def _merge_balloons(self, bal1, bal2):
         # create new balloon and merge method
-        vars = Set(bal1.vars).union(bal2.vars)
+        vars = set(bal1.vars).union(bal2.vars)
+
         newballoon = Balloon(vars)
-        merge = BalloonMerge(bal1,bal2,newballoon)
+
+        merge = BalloonMerge(bal1, bal2, newballoon)
+
         self._add_merge(merge)
+
         return newballoon
 
     def _merge_balloon_cluster(self, balloon, cluster):
         # create new cluster and method
-        vars = Set(balloon.vars).union(cluster.vars)
+        vars = set(balloon.vars).union(cluster.vars)
+
         newcluster = Rigid(list(vars))
-        merge = BalloonRigidMerge(balloon,cluster,newcluster)
+
+        merge = BalloonRigidMerge(balloon, cluster, newcluster)
+
         self._add_merge(merge)
+
         return newcluster
-
-
-    # ------- DEALING WITH HEDEGHOGS ---------
 
     def _find_hogs(self, cvar):
         deps = self.find_dependend(cvar)
+
         hogs = filter(lambda x: isinstance(x,Hedgehog), deps)
         hogs = filter(lambda x: x.cvar == cvar, hogs)
         hogs = filter(lambda x: self.is_top_level(x), hogs)
+
         return hogs
 
     def _make_hog_from_cluster(self, cvar, cluster):
-        xvars = Set(cluster.vars)
+        xvars = set(cluster.vars)
         xvars.remove(cvar)
-        hog = Hedgehog(cvar,xvars)
+
+        hog = Hedgehog(cvar, xvars)
+
         self._add_hog(hog)
+
         method = Rigid2Hog(cluster, hog)
+
         self._add_method(method)
+
         return hog
 
     def _make_hog_from_balloon(self, cvar, balloon):
-        xvars = Set(balloon.vars)
+        xvars = set(balloon.vars)
+
         xvars.remove(cvar)
-        hog = Hedgehog(cvar,xvars)
+
+        hog = Hedgehog(cvar, xvars)
+
         self._add_hog(hog)
+
         method = Balloon2Hog(balloon, hog)
+
         self._add_method(method)
+
         return hog
 
     def _search_hogs_from_balloon(self, newballoon):
-        #diag_print("_search_hogs_from_balloon "+str(newballoon),"clsolver")
         if len(newballoon.vars) <= 2:
             return None
+
         # create/merge hogs
         for cvar in newballoon.vars:
             # potential new hog
-            xvars = Set(newballoon.vars)
+            xvars = set(newballoon.vars)
+
             xvars.remove(cvar)
+
             # find all incident hogs
             hogs = self._find_hogs(cvar)
+
             # determine shared vertices per hog
             for hog in hogs:
-                shared = Set(hog.xvars).intersection(xvars)
-                if len(shared) >= 1 and len(shared) < len(hog.xvars) and len(shared) < len(xvars):
+                shared = set(hog.xvars).intersection(xvars)
+                if len(shared) >= 1 and len(shared) \
+                < len(hog.xvars) and len(shared) < len(xvars):
                     tmphog = Hedgehog(cvar, xvars)
                     if not self._graph.has_vertex(tmphog):
-                        newhog = self._make_hog_from_balloon(cvar,newballoon)
+                        newhog = self._make_hog_from_balloon(cvar, newballoon)
                         self._merge_hogs(hog, newhog)
-            #end for
-        #end for
 
     def _search_hogs_from_cluster(self, newcluster):
-        #diag_print("_search_hogs_from_cluster "+str(newcluster),"clsolver")
         if len(newcluster.vars) <= 2:
             return None
+
         # create/merge hogs
         for cvar in newcluster.vars:
             # potential new hog
-            xvars = Set(newcluster.vars)
+            xvars = set(newcluster.vars)
             xvars.remove(cvar)
+
             # find all incident hogs
             hogs = self._find_hogs(cvar)
+
             # determine shared vertices per hog
             for hog in hogs:
-                shared = Set(hog.xvars).intersection(xvars)
-                if len(shared) >= 1 and len(shared) < len(hog.xvars) and len(shared) < len(xvars):
+                shared = set(hog.xvars).intersection(xvars)
+
+                if len(shared) >= 1 and len(shared) \
+                < len(hog.xvars) and len(shared) < len(xvars):
                     tmphog = Hedgehog(cvar, xvars)
                     if not self._graph.has_vertex(tmphog):
-                        newhog = self._make_hog_from_cluster(cvar,newcluster)
+                        newhog = self._make_hog_from_cluster(cvar, newcluster)
                         self._merge_hogs(hog, newhog)
-            #end for
-        #end for
 
     def _search_hogs_from_hog(self, newhog):
-        #diag_print("_search_hogs_from_hog "+str(newhog),"newhog")
-
         # find adjacent clusters
         dep = self.find_dependend(newhog.cvar)
+
         top = filter(lambda c: self.is_top_level(c), dep)
         clusters = filter(lambda x: isinstance(x,Rigid), top)
         balloons = filter(lambda x: isinstance(x,Balloon), top)
         hogs = self._find_hogs(newhog.cvar)
+
         tomerge = []
+
         for cluster in clusters:
             if len(cluster.vars) < 3:
                 continue
+
             # determine shared vars
-            xvars = Set(cluster.vars)
+            xvars = set(cluster.vars)
             xvars.remove(newhog.cvar)
-            shared = Set(newhog.xvars).intersection(xvars)
-            if len(shared) >= 1 and len(shared) < len(xvars) and len(shared) < len(newhog.xvars):
+
+            shared = set(newhog.xvars).intersection(xvars)
+
+            if len(shared) >= 1 and len(shared) < len(xvars) \
+            and len(shared) < len(newhog.xvars):
                 tmphog = Hedgehog(newhog.cvar, xvars)
+
                 if not self._graph.has_vertex(tmphog):
-                    newnewhog = self._make_hog_from_cluster(newhog.cvar, cluster)
+                    newnewhog = self._make_hog_from_cluster(newhog.cvar, \
+                    cluster)
+
                     tomerge.append(newnewhog)
+
         for balloon in balloons:
             # determine shared vars
-            xvars = Set(balloon.vars)
+            xvars = set(balloon.vars)
             xvars.remove(newhog.cvar)
-            shared = Set(newhog.xvars).intersection(xvars)
-            if len(shared) >= 1 and len(shared) < len(xvars) and len(shared) < len(newhog.xvars):
+
+            shared = set(newhog.xvars).intersection(xvars)
+
+            if len(shared) >= 1 and len(shared) \
+            < len(xvars) and len(shared) < len(newhog.xvars):
                 tmphog = Hedgehog(newhog.cvar, xvars)
+
                 if not self._graph.has_vertex(tmphog):
-                    newnewhog = self._make_hog_from_balloon(newhog.cvar, balloon)
+                    newnewhog = self._make_hog_from_balloon(newhog.cvar, \
+                    balloon)
+
                     tomerge.append(newnewhog)
+
         for hog in hogs:
             if hog == newhog:
                 continue
+
             # determine shared vars
-            shared = Set(newhog.xvars).intersection(hog.xvars)
-            if len(shared) >= 1 and len(shared) < len(hog.xvars) and len(shared) < len(newhog.xvars):
+            shared = set(newhog.xvars).intersection(hog.xvars)
+
+            if len(shared) >= 1 and len(shared) \
+            < len(hog.xvars) and len(shared) < len(newhog.xvars):
                 # if mergeable, then create new hog
                 tomerge.append(hog)
 
@@ -791,74 +921,90 @@ class ClusterSolver(Notifier):
             return None
         else:
             lasthog = newhog
+
             for hog in tomerge:
                 lasthog = self._merge_hogs(lasthog, hog)
+
             return lasthog
 
-    # end def
-
     def _merge_hogs(self, hog1, hog2):
-        diag_print("merging "+str(hog1)+"+"+str(hog2), "clsolver")
+        logging.getLogger("clustersolver").debug("merging %s + %s", hog1, hog2)
+
         # create new hog and method
-        xvars = Set(hog1.xvars).union(hog2.xvars)
+        xvars = set(hog1.xvars).union(hog2.xvars)
+
         mergedhog = Hedgehog(hog1.cvar, xvars)
+
         method = MergeHogs(hog1, hog2, mergedhog)
+
         self._add_merge(method)
+
         return mergedhog
 
-    # end def _merge_hogs
-
-    # ------ DEALING WITH CLUSTER MERGES -------
-
-
     def _search_merge_from_hog(self, hog):
-
         # case CH (overconstrained)
         dep = self.find_dependend(hog.cvar)
+
         clusters = filter(lambda x: isinstance(x,Rigid) and self.is_top_level(x), dep)
-        sharecx = filter(lambda x: len(Set(hog.xvars).intersection(x.vars)) >=1, clusters)
+        sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) >=1, clusters)
+
         for cluster in sharecx:
-            sharedcx = Set(cluster.vars).intersection(hog.xvars)
+            sharedcx = set(cluster.vars).intersection(hog.xvars)
+
             if len(sharedcx) == len(hog.xvars):
                 return self._merge_cluster_hog(cluster, hog)
 
         # case CHC
         for i in range(len(sharecx)):
             c1 = sharecx[i]
-            for j in range(i+1, len(sharecx)):
+
+            for j in range(i + 1, len(sharecx)):
                 c2 = sharecx[j]
+
                 return self._merge_cluster_hog_cluster(c1, hog, c2)
 
         # case CCH
-        sharex = Set()
+        sharex = set()
+
         for var in hog.xvars:
             dep = self.find_dependend(var)
-            sharex.union_update(filter(lambda x: isinstance(x,Rigid) and self.is_top_level(x), dep))
+
+            sharex.union_update(filter(lambda x: isinstance(x,Rigid) \
+            and self.is_top_level(x), dep))
+
         for c1 in sharecx:
             for c2 in sharex:
                 if c1 == c2: continue
-                shared12 = Set(c1.vars).intersection(c2.vars)
-                sharedh2 = Set(hog.xvars).intersection(c2.vars)
+
+                shared12 = set(c1.vars).intersection(c2.vars)
+                sharedh2 = set(hog.xvars).intersection(c2.vars)
                 shared2 = shared12.union(sharedh2)
-                if len(shared12) >= 1 and len(sharedh2) >= 1 and len(shared2) == 2:
+
+                if len(shared12) >= 1 and len(sharedh2) >= 1 \
+                and len(shared2) == 2:
                     return self._merge_cluster_cluster_hog(c1, c2, hog)
+
         return None
 
-
     def _search_merge_from_cluster(self, newcluster):
-        diag_print ("_search_merge "+str(newcluster), "clsolver")
+        logging.getLogger("clustersolver").debug("_search_merge %s", newcluster)
+
         # find clusters overlapping with new cluster
         overlap = {}
         for var in newcluster.vars:
             # get dependent objects
             dep = self._graph.outgoing_vertices(var)
+
             # only clusters
             dep = filter(lambda c: self._graph.has_edge("_rigids",c), dep)
+
             # only top level
             dep = filter(lambda c: self.is_top_level(c), dep)
+
             # remove newcluster
             if newcluster in dep:
                 dep.remove(newcluster)
+
             for cluster in dep:
                 if cluster in overlap:
                     overlap[cluster].append(var)
@@ -875,131 +1021,173 @@ class ClusterSolver(Notifier):
 
         # two cluster merge (overconstrained)
         for cluster in overlap:
-            if len(overlap[cluster]) >= 2: # dimension = 2
+            if len(overlap[cluster]) >= 2:
                 return self._merge_cluster_pair(cluster, newcluster)
 
         # three cluster merge
         clusterlist = overlap.keys()
+
         for i in range(len(clusterlist)):
             c1 = clusterlist[i]
-            for j in range(i+1, len(clusterlist)):
+            for j in range(i + 1, len(clusterlist)):
                 c2 = clusterlist[j]
-                shared12 = Set(c1.vars).intersection(c2.vars)
-                shared13 = Set(c1.vars).intersection(newcluster.vars)
-                shared23 = Set(c2.vars).intersection(newcluster.vars)
+
+                shared12 = set(c1.vars).intersection(c2.vars)
+                shared13 = set(c1.vars).intersection(newcluster.vars)
+                shared23 = set(c2.vars).intersection(newcluster.vars)
                 shared1 = shared12.union(shared13)
                 shared2 = shared12.union(shared23)
                 shared3 = shared13.union(shared23)
+
                 if len(shared1) == 2 and len(shared1) == 2 and \
-                   len(shared2) == 2: # dimension = 2
+                   len(shared2) == 2:
                     return self._merge_cluster_triple(c1, c2, newcluster)
 
         # merge with an angle, case 1
         for cluster in overlap:
             ovars = overlap[cluster]
+
             if len(ovars) == 1:
                 cvar = ovars[0]
             else:
-                raise StandardError, "unexpected case"
+                raise Exception("unexpected case")
+
             hogs = self._find_hogs(cvar)
+
             for hog in hogs:
-                sharedch = Set(cluster.vars).intersection(hog.xvars)
-                sharednh = Set(newcluster.vars).intersection(hog.xvars)
+                sharedch = set(cluster.vars).intersection(hog.xvars)
+                sharednh = set(newcluster.vars).intersection(hog.xvars)
                 sharedh = sharedch.union(sharednh)
-                if len(sharedch) >= 1 and len(sharednh) >= 1 and len(sharedh) >= 2:
-                    return self._merge_cluster_hog_cluster(cluster, hog, newcluster)
+
+                if len(sharedch) >= 1 and len(sharednh) >= 1 \
+                and len(sharedh) >= 2:
+                    return self._merge_cluster_hog_cluster(cluster, hog, \
+                    newcluster)
 
         # merge with an angle, case 2
-        #print "case c2"
         for var in newcluster.vars:
             hogs = self._find_hogs(var)
+
             for hog in hogs:
-                sharednh = Set(newcluster.vars).intersection(hog.xvars)
+                sharednh = set(newcluster.vars).intersection(hog.xvars)
+
                 if len(sharednh) < 1:
                     continue
+
                 for cluster in overlap:
-                    sharednc = Set(newcluster.vars).intersection(cluster.vars)
+                    sharednc = set(newcluster.vars).intersection(cluster.vars)
+
                     if len(sharednc) != 1:
-                        raise StandardError, "unexpected case"
+                        raise Exception("unexpected case")
+
                     if hog.cvar in cluster.vars:
-                        #raise StandardError, "unexpected case"
                         continue
-                    sharedch = Set(cluster.vars).intersection(hog.xvars)
+
+                    sharedch = set(cluster.vars).intersection(hog.xvars)
                     sharedc = sharedch.union(sharednc)
+
                     if len(sharedch) >= 1 and len(sharedc) >= 2:
-                        return self._merge_cluster_cluster_hog(newcluster, cluster, hog)
-        #print "end case 2"
+                        return self._merge_cluster_cluster_hog(newcluster, \
+                        cluster, hog)
 
         # merge with an angle, case 3
-        #print "case c3"
         for cluster in overlap:
-            sharednc = Set(newcluster.vars).intersection(cluster.vars)
+            sharednc = set(newcluster.vars).intersection(cluster.vars)
+
             if len(sharednc) != 1:
-                raise StandardError, "unexpected case"
+                raise Exception("unexpected case")
+
             for var in cluster.vars:
                 hogs = self._find_hogs(var)
+
                 for hog in hogs:
                     if hog.cvar in newcluster.vars:
-                        # raise StandardError, "unexpected case"
                         continue
-                    sharedhc = Set(newcluster.vars).intersection(hog.xvars)
-                    sharedhn = Set(cluster.vars).intersection(hog.xvars)
+
+                    sharedhc = set(newcluster.vars).intersection(hog.xvars)
+                    sharedhn = set(cluster.vars).intersection(hog.xvars)
                     sharedh = sharedhn.union(sharedhc)
                     sharedc = sharedhc.union(sharednc)
-                    if len(sharedhc) >= 1 and len(sharedhn) >= 1 and len(sharedh) >= 2 and len(sharedc) == 2:
-                        return self._merge_cluster_cluster_hog(cluster, newcluster, hog)
-        #print "end case 3"
-    # end def _search_merge
+
+                    if len(sharedhc) >= 1 and len(sharedhn) >= 1 \
+                    and len(sharedh) >= 2 and len(sharedc) == 2:
+                        return self._merge_cluster_cluster_hog(cluster, \
+                        newcluster, hog)
 
     def _merge_point_cluster(self, pointc, cluster):
-        diag_print("_merge_point_cluster "+str(pointc)+","+str(cluster),"clsolver")
+        logging.getLogger("clustersolver").debug("_merge_point_cluster %s, \
+%s", pointc, cluster)
+
         #create new cluster and method
-        allvars = Set(pointc.vars).union(cluster.vars)
+        allvars = set(pointc.vars).union(cluster.vars)
+
         newcluster = Rigid(allvars)
-        merge = Merge1C(pointc,cluster,newcluster)
+
+        merge = Merge1C(pointc, cluster, newcluster)
+
         self._add_merge(merge)
+
         return newcluster
-    #def
 
     def _merge_cluster_pair(self, c1, c2):
         """Merge a pair of clusters, structurally overconstrained.
            Rigid which contains root is used as origin.
            Returns resulting cluster.
         """
-        diag_print("_merge_cluster_pair "+str(c1)+","+str(c2),"clsolver")
+
+        logging.getLogger("clustersolver").debug("_merge_cluster_pair %s, %s", \
+        c1, c2)
+
         # always use root cluster as first cluster, swap if needed
         if not self._contains_root(c1) and not self._contains_root(c2):
-            #raise "StandardError", "no root cluster"
             pass
+
         elif self._contains_root(c1) and self._contains_root(c2):
-            raise "StandardError", "two root clusters"
+            raise Exception("two root clusters")
         elif self._contains_root(c2):
-            diag_print("swap cluster order","clsolver")
+            logging.getLogger("clustersolver").debug("swap cluster order")
+
             return self._merge_cluster_pair(c2, c1)
-        #create new cluster and merge
-        allvars = Set(c1.vars).union(c2.vars)
+
+        # create new cluster and merge
+        allvars = set(c1.vars).union(c2.vars)
+
         newcluster = Rigid(allvars)
+
         merge = Merge2C(c1,c2,newcluster)
+
         self._add_merge(merge)
+
         return newcluster
-    #def
 
     def _merge_cluster_hog(self, cluster, hog):
         """merge cluster and hog (absorb hog, overconstrained)"""
-        diag_print("_merge_cluster_hog "+str(cluster)+","+str(hog),"clsolver")
-        #create new cluster and merge
+
+        logging.getLogger("clustersolver").debug("_merge_cluster_hog %s, %s", \
+        cluster, hog)
+
+        # create new cluster and merge
         newcluster = Rigid(cluster.vars)
-        merge = MergeCH(cluster,hog, newcluster)
+
+        merge = MergeCH(cluster, hog, newcluster)
+
         self._add_merge(merge)
+
         return newcluster
 
     def _merge_balloon_hog(self, balloon, hog):
         """merge balloon and hog (absorb hog, overconstrained)"""
-        diag_print("_merge_balloon_hog "+str(balloon)+","+str(hog),"clsolver")
-        #create new balloon and merge
+
+        logging.getLogger("clustersolver").debug("_merge_balloon_hog %s, %s", \
+        balloon, hog)
+
+        # create new balloon and merge
         newballoon = Balloon(balloon.vars)
+
         merge = MergeBH(balloon, hog, newballoon)
+
         self._add_merge(merge)
+
         return newballoon
 
     def _merge_cluster_triple(self, c1, c2, c3):
@@ -1007,72 +1195,105 @@ class ClusterSolver(Notifier):
            Rigid which contains root is used as origin.
            Returns resulting cluster.
         """
-        diag_print("_merge_cluster_triple "+str(c1)+","+str(c2)+","+str(c3),"clsolver")
+
+        logging.getLogger("clustersolver").debug("_merge_cluster_triple %s, \
+%s, %s", c1, c2, c3)
+
         # always use root cluster as first cluster, swap if needed
         if self._contains_root(c2):
-            diag_print("swap cluster order","clsolver")
+            logging.getLogger("clustersolver").debug("swap cluster order")
+
             return self._merge_cluster_triple(c2, c1, c3)
         elif self._contains_root(c3):
-            diag_print("swap cluster order","clsolver")
+            logging.getLogger("clustersolver").debug("swap cluster order")
+
             return self._merge_cluster_triple(c3, c1, c2)
-        #create new cluster and method
-        allvars = Set(c1.vars).union(c2.vars).union(c3.vars)
+
+        # create new cluster and method
+        allvars = set(c1.vars).union(c2.vars).union(c3.vars)
+
         newcluster = Rigid(allvars)
+
         merge = Merge3C(c1,c2,c3,newcluster)
+
         self._add_merge(merge)
+
         return newcluster
-    #def
 
     def _merge_cluster_hog_cluster(self, c1, hog, c2):
         """merge c1 and c2 with a hog, with hog center in c1 and c2"""
-        diag_print("_merge_cluster_hog_cluster "+str(c1)+","+str(hog)+","+str(c2),"clsolver")
+        logging.getLogger("clustersolver").debug("_merge_cluster_hog_cluster \
+%s, %s, %s", c1, hog, c2)
+
         # always use root cluster as first cluster, swap if needed
         if self._contains_root(c2):
-            diag_print("swap cluster order","clsolver")
+            logging.getLogger("clustersolver").debug("swap cluster order")
+
             return self._merge_cluster_hog_cluster(c2, hog, c1)
+
         # derive sub-hog if nessecairy
-        allvars = Set(c1.vars).union(c2.vars)
-        xvars = Set(hog.xvars).intersection(allvars)
+        allvars = set(c1.vars).union(c2.vars)
+        xvars = set(hog.xvars).intersection(allvars)
+
         if len(xvars) < len(hog.xvars):
-            diag_print("deriving sub-hog","clsolver")
+            logging.getLogger("clustersolver").debug("deriving sub-hog")
+
             hog = self._derive_subhog(hog, xvars)
+
         #create new cluster and merge
-        allvars = Set(c1.vars).union(c2.vars)
+        allvars = set(c1.vars).union(c2.vars)
+
         newcluster = Rigid(allvars)
+
         merge = MergeCHC(c1,hog,c2,newcluster)
+
         self._add_merge(merge)
+
         return newcluster
 
     def _derive_subhog(self, hog, xvars):
-        subvars = Set(hog.xvars).intersection(xvars)
+        subvars = set(hog.xvars).intersection(xvars)
+
         assert len(subvars) == len(xvars)
+
         subhog = Hedgehog(hog.cvar, xvars)
         method = SubHog(hog, subhog)
+
         self._add_hog(subhog)
         self._add_method(method)
+
         return subhog
 
     def _merge_cluster_cluster_hog(self, c1, c2, hog):
         """merge c1 and c2 with a hog, with hog center only in c1"""
-        diag_print("_merge_cluster_cluster_hog "+str(c1)+","+str(c2)+","+str(hog),"clsolver")
+
+        logging.getLogger("clustersolver").debug("_merge_cluster_cluster_hog \
+%s, %s, %s", c1, c2, hog)
+
         # always use root cluster as first cluster, swap if needed
         if self._contains_root(c1) and self._contains_root(c2):
-            raise StandardError, "two root clusters!"
+            raise Exception("two root clusters!")
         elif not self._contains_root(c1) and not self._contains_root(c2):
-            #raise StandardError, "no root cluster"
             pass
         elif self._contains_root(c2):
             return self._merge_cluster_cluster_hog(c2, c1, hog)
-        # derive subhog if nessecairy
-        allvars = Set(c1.vars).union(c2.vars)
-        xvars = Set(hog.xvars).intersection(allvars)
+
+        # derive subhog if necessary
+        allvars = set(c1.vars).union(c2.vars)
+        xvars = set(hog.xvars).intersection(allvars)
+
         if len(xvars) < len(hog.xvars):
-            diag_print("deriving sub-hog","clsolver")
+            logging.getLogger("clustersolver").debug("deriving sub-hog")
+
             hog = self._derive_subhog(hog, xvars)
+
         # create new cluster and method
         newcluster = Rigid(allvars)
+
         merge = MergeCCH(c1,c2,hog,newcluster)
+
         self._add_merge(merge)
+
         return newcluster
 
     def _contains_root(self, input_cluster):
@@ -1084,7 +1305,7 @@ class ClusterSolver(Notifier):
         #  - no more merges -> False
 
         if len(self._graph.outgoing_vertices("_root")) > 1:
-            raise StandardError, "more than one root cluster"
+            raise Exception("more than one root cluster")
         if len(self._graph.outgoing_vertices("_root")) == 1:
             cluster = self._graph.outgoing_vertices("_root")[0]
         else:
@@ -1092,33 +1313,47 @@ class ClusterSolver(Notifier):
         while (cluster != None):
             if cluster is input_cluster:
                 return True
+
             fr = self._graph.outgoing_vertices(cluster)
+
             me = filter(lambda x: isinstance(x, Merge), fr)
             me = filter(lambda x: cluster in x.outputs(), me)
+
             if len(me) > 1:
-                raise StandardError, "root cluster merged more than once"
+                raise Exception("root cluster merged more than once")
             elif len(me) == 0:
                 cluster = None
             elif len(me[0].outputs()) != 1:
-                raise StandardError, "a merge with number of outputs != 1"
+                raise Exception("a merge with number of outputs != 1")
             else:
                 cluster = me[0].outputs()[0]
-        #while
+
         return False
-    #def
 
     def _is_consistent_pair(self, object1, object2):
-        diag_print("in is_consistent_pair "+str(object1)+" "+str(object2),"clsolver")
+        logging.getLogger("clustersolver").debug("in is_consistent_pair %s, \
+%s", object1, object2)
+
         oc = over_constraints(object1, object2)
-        diag_print("over_constraints: "+str(map(str,oc)),"clsolver")
+
+        logging.getLogger("clustersolver").debug("over_constraints: %s", \
+        map(str, oc))
+
         consistent = True
+
         for con in oc:
-            consistent = consistent and self._consistent_overconstraint_in_pair(con, object1, object2)
-        diag_print("global consistent? "+str(consistent),"clsolver")
+            consistent = consistent \
+            and self._consistent_overconstraint_in_pair(con, object1, object2)
+
+        logging.getLogger("clustersolver").debug("global consistent? %s", \
+        consistent)
+
         return consistent
 
-    def _consistent_overconstraint_in_pair(self, overconstraint, object1, object2):
-        diag_print("consistent "+str(overconstraint)+" in "+str(object1)+" and "+str(object2)+" ?", "clsolver")
+    def _consistent_overconstraint_in_pair(self, overconstraint, object1, \
+    object2):
+        logging.getLogger("clustersolver").debug("consistent %s in %s and \
+%s?", overconstraint, object1, object2)
 
         # get sources for constraint in given clusters
         s1 = self._source_constraint_in_cluster(overconstraint, object1)
@@ -1137,55 +1372,48 @@ class ClusterSolver(Notifier):
                 consistent = False
             else:
                 consistent = True
-            #c1to2 = constraits_from_s1_in_s2(s1, s2)
-            #if solve(c1to2) contains overconstraint then consistent
-            #c2to1 = constraits_from_s1_in_s2(s2, s1)
-            #if solve(c2to1) contains overconstraint then consistent
-            #raise StandardError, "not yet implemented"
 
-        diag_print("consistent? "+str(consistent), "clsolver")
+        logging.getLogger("clustersolver").debug("consistent? %s", consistent)
+
         return consistent
 
     def _source_constraint_in_cluster(self, constraint, cluster):
         if not self._contains_constraint(cluster, constraint):
-            raise StandardError, "constraint not in cluster"
+            raise Exception("constraint not in cluster")
         elif self._is_atomic(cluster):
             return cluster
         else:
             method = self._determining_method(cluster)
             inputs = method.inputs()
-            down = filter(lambda x: self._contains_constraint(x, constraint), inputs)
+            down = filter(lambda x: self._contains_constraint(x, constraint), \
+            inputs)
+
             if len(down) == 0:
                 return cluster
             elif len(down) > 1:
                 if method.consistent == True:
-                    return self._source_constraint_in_cluster(constraint, down[0])
+                    return self._source_constraint_in_cluster(constraint, \
+                    down[0])
                 else:
-                    diag_print("Warning: source is inconsistent","clsolver")
+                    logging.getLogger("clustersolver").warning("Source is \
+inconsistent")
                     return None
             else:
                 return self._source_constraint_in_cluster(constraint, down[0])
 
-
     def _is_atomic(self, object):
-        method = self._determining_method(object)
-        if method == None:
-            return True
-        #elif isinstance(method, Distance2Rigid) or isinstance(method, Angle2Hog):
-        #    return True
-        else:
-            return False
+        return self._determining_method(object) is None
 
     def _determining_method(self, object):
         depends = self.find_depends(object)
         methods = filter(lambda x: isinstance(x, Method), depends)
+
         if len(methods) == 0:
             return None
         elif len(methods) > 1:
-            raise "object determined by more than one method"
+            raise Exception("object determined by more than one method")
         else:
             return methods[0]
-
 
     def _contains_constraint(self, object, constraint):
         if isinstance(constraint, Distance):
@@ -1193,13 +1421,15 @@ class ClusterSolver(Notifier):
         elif isinstance(constraint, Angle):
             return self._contains_angle(object, constraint)
         else:
-            raise StandardError, "unexpected case"
+            raise Exception("unexpected case")
 
     def _contains_distance(self,object, distance):
         if isinstance(object, Rigid):
-            return (distance.vars[0] in object.vars and distance.vars[1] in object.vars)
+            return (distance.vars[0] in object.vars and distance.vars[1] \
+            in object.vars)
         elif isinstance(object, Distance):
-            return (distance.vars[0] in object.vars and distance.vars[1] in object.vars)
+            return (distance.vars[0] in object.vars and distance.vars[1] \
+            in object.vars)
         else:
             return False
 
@@ -1219,81 +1449,91 @@ class ClusterSolver(Notifier):
         else:
             return False
 
-
-    # --------- special methods ------
+    def __unicode__(self):
+        return "{0}\n{1}\n{2}\n{3}\n{4}\n{5}".format(\
+        [unicode(x) for x in self.distances()], \
+        [unicode(x) for x in self.angles()], \
+        [unicode(x) for x in self.rigids()], \
+        [unicode(x) for x in self.hedgehogs()], \
+        [unicode(x) for x in self.balloons()], \
+        [unicode(x) for x in self.methods()])
 
     def __str__(self):
-        s = ""
-        for x in self.distances():
-            s += str(x) + "\n"
-        for x in self.angles():
-            s += str(x) + "\n"
-        for x in self.rigids():
-            s += str(x) + "\n"
-        for x in self.hedgehogs():
-            s += str(x) + "\n"
-        for x in self.balloons():
-            s += str(x) + "\n"
-        for x in self.methods():
-            s += str(x) + "\n"
-        return s
+        return unicode(self).encode("utf-8")
 
-    def _known_angle(self,a,b,c):
+    def _known_angle(self, a, b, c):
         """returns Balloon, Rigid or Hedgehog that contains angle(a, b, c)"""
-        if a==b or a==c or b==c:
-            raise StandardError, "all vars in angle must be different"
+
+        if a == b or a == c or b == c:
+            raise Exception("all vars in angle must be different")
+
         # get objects dependend on a, b and c
         dep_a = self._graph.outgoing_vertices(a)
         dep_b = self._graph.outgoing_vertices(b)
         dep_c = self._graph.outgoing_vertices(c)
+
         dependend = []
+
         for obj in dep_a:
             if obj in dep_b and obj in dep_c:
                 dependend.append(obj)
+
         # find a hedgehog
         hogs = filter(lambda x: isinstance(x,Hedgehog), dependend)
         hogs = filter(lambda hog: hog.cvar == b, hogs)
         hogs = filter(lambda x: self.is_top_level(x), hogs)
+
         if len(hogs) == 1: return hogs[0]
-        if len(hogs) > 1: raise "error: angle in more than one hedgehogs"
+        if len(hogs) > 1: raise Exception("angle in more than one hedgehog")
+
         # or find a cluster
         clusters = filter(lambda x: isinstance(x,Rigid), dependend)
         clusters = filter(lambda x: self.is_top_level(x), clusters)
+
         if len(clusters) == 1: return clusters[0]
-        if len(clusters) > 1: raise "error: angle in more than one Rigids"
+        if len(clusters) > 1: raise Exception("angle in more than one Rigid")
+
         # or find a balloon
         balloons = filter(lambda x: isinstance(x,Balloon), dependend)
         balloons = filter(lambda x: self.is_top_level(x), balloons)
+
         if len(balloons) == 1: return balloons[0]
-        if len(balloons) > 1: raise "error: angle in more than one Balloons"
-        # or return None
+        if len(balloons) > 1: raise Exception("angle in more than one Balloon")
+
         return None
+
+class Merge(ClusterMethod):
+    """A merge is a method such that a single output cluster satisfies
+    all constraints in several input clusters. The output cluster
+    replaces the input clusters in the constriant problem"""
+
+    __metaclass__ = abc.ABCMeta
 
 class Merge1C(Merge):
     """Represents a merging of a one-point cluster with any other cluster
        The first cluster determines the orientation of the resulting
        cluster
     """
+
     def __init__(self, in1, in2, out):
-        self._inputs = [in1, in2]
-        self._outputs = [out]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+        super(Merge1C, self).__init__(name="Merge1C", inputs=[in1, in2], \
+        outputs=[out], overconstrained=False, consistent=True)
 
     def __str__(self):
-        s =  "merge1C("+str(self._inputs[0])+"+"+str(self._inputs[1])+"->"+str(self._outputs[0])+")"
+        s =  "merge1C("+str(self.inputs[0])+"+"+str(self.inputs[1])+"->"+str(self.outputs[0])+")"
         s += "[" + self.status_str()+"]"
+
         return s
 
     def multi_execute(self, inmap):
-        diag_print("Merge1C.multi_execute called","clmethods")
-        c1 = self._inputs[0]
-        c2 = self._inputs[1]
+        logging.getLogger("clustersolver").debug("Merge1C.multi_execute called")
+
+        c1 = self.inputs[0]
+        c2 = self.inputs[1]
+
         conf1 = inmap[c1]
         conf2 = inmap[c2]
-        #res = conf1.merge(conf2)
-        #return [res]
+
         if len(c1.vars) == 1:
             return [conf2.copy()]
         else:
@@ -1302,44 +1542,44 @@ class Merge1C(Merge):
 class Merge2C(Merge):
     """Represents a merging of two clusters (overconstrained)
        The first cluster determines the orientation of the resulting
-       cluster
-    """
+       cluster"""
+
     def __init__(self, in1, in2, out):
+        super(Merge2C, self).__init__(name="Merge2C", inputs=[in1, in2], \
+        outputs=[out], overconstrained=True, consistent=True)
+
         self.input1 = in1
         self.input2 = in2
         self.output = out
-        self._inputs = [in1, in2]
-        self._outputs = [out]
-        self.overconstrained = True
-        self.consistent = True
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s =  "merge2C("+str(self.input1)+"+"+str(self.input2)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
+
         return s
 
     def multi_execute(self, inmap):
-        diag_print("Merge2C.multi_execute called","clmethods")
-        c1 = self._inputs[0]
-        c2 = self._inputs[1]
+        logging.getLogger("clustersolver").debug("Merge2C.multi_execute called")
+
+        c1 = self.inputs[0]
+        c2 = self.inputs[1]
+
         conf1 = inmap[c1]
         conf2 = inmap[c2]
+
         return [conf1.merge(conf2)]
 
 class MergeCH(Merge):
     """Represents a merging of a cluster and a hog (where
-       the hog is absorbed by the cluster). Overconstrained.
-    """
+       the hog is absorbed by the cluster). Overconstrained."""
+
     def __init__(self, cluster, hog, out):
+        super(MergeCH, self).__init__(name="MergeCH", inputs=[cluster, hog], \
+        outputs=[out], overconstrained=True, consistent=True)
+
         self.cluster = cluster
         self.hog = hog
         self.output = out
-        self._inputs = [cluster, hog]
-        self._outputs = [out]
-        self.overconstrained = True
-        self.consistent = True
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s =  "mergeCH("+str(self.cluster)+"+"+str(self.hog)+"->"+str(self.output)+")"
@@ -1347,24 +1587,24 @@ class MergeCH(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("MergeCH.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("MergeCH.multi_execute called")
+
         conf1 = inmap[self.cluster]
-        #conf2 = inmap[self.hog]
+
         return [conf1.copy()]
 
 class MergeBH(Merge):
     """Represents a merging of a balloon and a hog (where
        the hog is absorbed by the balloon). Overconstrained.
     """
+
     def __init__(self, balloon, hog, out):
+        super(MergeBH, self).__init__(name="MergeBH", inputs=[balloon, hog], \
+        outputs=[out], overconstrained=True, consistent=True)
+
         self.balloon = balloon
         self.hog = hog
         self.output = out
-        self._inputs = [balloon, hog]
-        self._outputs = [out]
-        self.overconstrained = True
-        self.consistent = True
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s =  "mergeBH("+str(self.balloon)+"+"+str(self.hog)+"->"+str(self.output)+")"
@@ -1372,63 +1612,73 @@ class MergeBH(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("MergeBH.multi_execute called","clmethods")
-        conf1 = inmap[self.balloon]
-        #conf2 = inmap[self.hog]
-        return [conf1.copy()]
+        logging.getLogger("clustersolver").debug("MergeBH.multi_execute called")
 
+        conf1 = inmap[self.balloon]
+
+        return [conf1.copy()]
 
 class Merge3C(Merge):
     """Represents a merging of three clusters
        The first cluster determines the orientation of the resulting
        cluster
     """
+
     def __init__(self, c1, c2, c3, out):
+        super(Merge3C, self).__init__(name="Merge3C", inputs=[c1, c2, c3], \
+        outputs=[out], overconstrained=False, consistent=True)
+
         self.input1 = c1
         self.input2 = c2
         self.input3 = c3
         self.output = out
-        self._inputs = [c1, c2, c3]
-        self._outputs = [out]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+
         # check coincidence
-        shared12 = Set(c1.vars).intersection(c2.vars)
-        shared13 = Set(c1.vars).intersection(c3.vars)
-        shared23 = Set(c2.vars).intersection(c3.vars)
+        shared12 = set(c1.vars).intersection(c2.vars)
+        shared13 = set(c1.vars).intersection(c3.vars)
+        shared23 = set(c2.vars).intersection(c3.vars)
         shared1 = shared12.union(shared13)
         shared2 = shared12.union(shared23)
         shared3 = shared13.union(shared23)
+
         if len(shared12) < 1:
-            raise StandardError, "underconstrained c1 and c2"
+            raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            diag_print("overconstrained CCC - c1 and c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c1 \
+and c2")
+
             self.overconstrained = True
         if len(shared13) < 1:
-            raise StandardError, "underconstrained c1 and c3"
+            raise Exception("underconstrained c1 and c3")
         elif len(shared13) > 1:
-            diag_print("overconstrained CCC - c1 and c3", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c1 \
+and c3")
+
             self.overconstrained = True
         if len(shared23) < 1:
-            raise StandardError, "underconstrained c2 and c3"
+            raise Exception("underconstrained c2 and c3")
         elif len(shared23) > 1:
-            diag_print("overconstrained CCC - c2 and c3", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c2 \
+and c3", "clmethods")
+
             self.overconstrained = True
         if len(shared1) < 2:
-            raise StandardError, "underconstrained c1"
+            raise Exception("underconstrained c1")
         elif len(shared1) > 2:
-            diag_print("overconstrained CCC - c1", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c1")
+
             self.overconstrained = True
         if len(shared2) < 2:
-            raise StandardError, "underconstrained c2"
+            raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            diag_print("overconstrained CCC - c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c2")
+
             self.overconstrained = True
         if len(shared3) < 2:
-            raise StandardError, "underconstrained c3"
+            raise Exception("underconstrained c3")
         elif len(shared3) > 2:
-            diag_print("overconstrained CCC - c3", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCC - c3")
+
             self.overconstrained = True
 
     def __str__(self):
@@ -1437,62 +1687,84 @@ class Merge3C(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("Merge3C.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("Merge3C.multi_execute called")
+
         c1 = inmap[self._inputs[0]]
         c2 = inmap[self._inputs[1]]
         c3 = inmap[self._inputs[2]]
-        shared12 = Set(c1.vars()).intersection(c2.vars()).difference(c3.vars())
-        shared13 = Set(c1.vars()).intersection(c3.vars()).difference(c2.vars())
-        shared23 = Set(c2.vars()).intersection(c3.vars()).difference(c1.vars())
+
+        shared12 = set(c1.vars()).intersection(c2.vars()).difference(c3.vars())
+        shared13 = set(c1.vars()).intersection(c3.vars()).difference(c2.vars())
+        shared23 = set(c2.vars()).intersection(c3.vars()).difference(c1.vars())
+
         v1 = list(shared12)[0]
         v2 = list(shared13)[0]
         v3 = list(shared23)[0]
+
         assert v1 != v2
         assert v1 != v3
         assert v2 != v3
+
         p11 = c1.get(v1)
         p21 = c1.get(v2)
-        d12 = vector.norm(p11-p21)
+        d12 = vector.norm(p11 - p21)
         p23 = c3.get(v2)
         p33 = c3.get(v3)
-        d23 = vector.norm(p23-p33)
+        d23 = vector.norm(p23 - p33)
         p32 = c2.get(v3)
         p12 = c2.get(v1)
-        d31 = vector.norm(p32-p12)
-        ddds = solve_ddd(v1,v2,v3,d12,d23,d31)
+        d31 = vector.norm(p32 - p12)
+
+        ddds = solve_ddd(v1, v2, v3, d12, d23, d31)
+
         solutions = []
+
         for s in ddds:
             solution = c1.merge(s).merge(c2).merge(c3)
+
             solutions.append(solution)
+
         return solutions
 
     def prototype_constraints(self):
         c1 = self._inputs[0]
         c2 = self._inputs[1]
         c3 = self._inputs[2]
-        shared12 = Set(c1.vars).intersection(c2.vars).difference(c3.vars)
-        shared13 = Set(c1.vars).intersection(c3.vars).difference(c2.vars)
-        shared23 = Set(c2.vars).intersection(c3.vars).difference(c1.vars)
+
+        shared12 = set(c1.vars).intersection(c2.vars).difference(c3.vars)
+        shared13 = set(c1.vars).intersection(c3.vars).difference(c2.vars)
+        shared23 = set(c2.vars).intersection(c3.vars).difference(c1.vars)
+
         v1 = list(shared12)[0]
         v2 = list(shared13)[0]
         v3 = list(shared23)[0]
+
         assert v1 != v2
         assert v1 != v3
         assert v2 != v3
+
         constraints = []
-        constraints.append(NotCounterClockwiseConstraint(v1,v2,v3))
-        constraints.append(NotClockwiseConstraint(v1,v2,v3))
+
+        constraints.append(NotCounterClockwiseConstraint(v1, v2, v3))
+        constraints.append(NotClockwiseConstraint(v1, v2, v3))
+
         return constraints
 
-def solve_ddd(v1,v2,v3,d12,d23,d31):
-    diag_print("solve_ddd: %s %s %s %f %f %f"%(v1,v2,v3,d12,d23,d31),"clmethods")
-    p1 = vector.vector([0.0,0.0])
-    p2 = vector.vector([d12,0.0])
-    p3s = cc_int(p1,d31,p2,d23)
+def solve_ddd(v1, v2, v3, d12, d23, d31):
+    logging.getLogger("clustersolver").debug("solve_ddd: %s %s %s %f %f %f", \
+    v1, v2, v3, d12, d23, d31)
+
+    p1 = vector.vector([0.0, 0.0])
+    p2 = vector.vector([d12, 0.0])
+    p3s = cc_int(p1, d31, p2, d23)
+
     solutions = []
+
     for p3 in p3s:
         solution = Configuration({v1:p1, v2:p2, v3:p3})
+
         solutions.append(solution)
+
     return solutions
 
 class MergeCHC(Merge):
@@ -1500,54 +1772,67 @@ class MergeCHC(Merge):
        The first cluster determines the orientation of the resulting
        cluster
     """
+
     def __init__(self, c1, hog, c2, out):
+        super(MergeCHC, self).__init__(name="MergeCHC", inputs=[c1, hog, c2], \
+        outputs=[out], overconstrained=False, consistent=True)
+
         self.c1 = c1
         self.hog = hog
         self.c2 = c2
         self.output = out
-        self._inputs = [c1, hog, c2]
-        self._outputs = [out]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+
         # check coincidence
         if not (hog.cvar in c1.vars and hog.cvar in c2.vars):
-            raise StandardError, "hog.cvar not in c1.vars and c2.vars"
-        shared12 = Set(c1.vars).intersection(c2.vars)
-        shared1h = Set(c1.vars).intersection(hog.xvars)
-        shared2h = Set(c2.vars).intersection(hog.xvars)
+            raise Exception("hog.cvar not in c1.vars and c2.vars")
+
+        shared12 = set(c1.vars).intersection(c2.vars)
+        shared1h = set(c1.vars).intersection(hog.xvars)
+        shared2h = set(c2.vars).intersection(hog.xvars)
+
         shared1 = shared12.union(shared1h)
         shared2 = shared12.union(shared2h)
         sharedh = shared1h.union(shared2h)
+
         if len(shared12) < 1:
-            raise StandardError, "underconstrained c1 and c2"
+            raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            diag_print("overconstrained CHC - c1 and c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - c1 \
+and c2")
+
             self.overconstrained = True
         if len(shared1h) < 1:
-            raise StandardError, "underconstrained c1 and hog"
+            raise Exception("underconstrained c1 and hog")
         elif len(shared1h) > 1:
-            diag_print("overconstrained CHC - c1 and hog", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - c1 \
+and hog")
+
             self.overconstrained = True
         if len(shared2h) < 1:
-            raise StandardError, "underconstrained c2 and hog"
+            raise Exception("underconstrained c2 and hog")
         elif len(shared2h) > 1:
-            diag_print("overconstrained CHC - c2 and hog", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - c2 \
+and hog")
+
             self.overconstrained = True
         if len(shared1) < 2:
-            raise StandardError, "underconstrained c1"
+            raise Exception("underconstrained c1")
         elif len(shared1) > 2:
-            diag_print("overconstrained CHC - c1", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - c1")
+
             self.overconstrained = True
         if len(shared2) < 2:
-            raise StandardError, "underconstrained c2"
+            raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            diag_print("overconstrained CHC - c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - c2")
+
             self.overconstrained = True
         if len(sharedh) < 2:
-            raise StandardError, "underconstrained hog"
+            raise Exception("underconstrained hog")
         elif len(shared1) > 2:
-            diag_print("overconstrained CHC - hog", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CHC - \
+hog")
+
             self.overconstrained = True
 
     def __str__(self):
@@ -1556,47 +1841,61 @@ class MergeCHC(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("MergeCHC.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("MergeCHC.multi_execute called")
+
         # determine vars
-        shared1 = Set(self.hog.xvars).intersection(self.c1.vars)
-        shared2 = Set(self.hog.xvars).intersection(self.c2.vars)
+        shared1 = set(self.hog.xvars).intersection(self.c1.vars)
+        shared2 = set(self.hog.xvars).intersection(self.c2.vars)
+
         v1 = list(shared1)[0]
         v2 = self.hog.cvar
         v3 = list(shared2)[0]
+
         # get configs
         conf1 = inmap[self.c1]
         confh = inmap[self.hog]
         conf2 = inmap[self.c2]
+
         # determine angle
         p1h = confh.get(v1)
         p2h = confh.get(v2)
         p3h = confh.get(v3)
         a123 = angle_3p(p1h, p2h, p3h)
+
         # d1c
         p11 = conf1.get(v1)
         p21 = conf1.get(v2)
         d12 = distance_2p(p11,p21)
+
         # d2c
         p32 = conf2.get(v3)
         p22 = conf2.get(v2)
         d23 = distance_2p(p32,p22)
+
         # solve
-        dads = solve_dad(v1,v2,v3,d12,a123,d23)
+        dads = solve_dad(v1, v2, v3, d12, a123, d23)
         solutions = []
+
         for s in dads:
             solution = conf1.merge(s).merge(conf2)
             solutions.append(solution)
+
         return solutions
 
-def solve_dad(v1,v2,v3,d12,a123,d23):
-    diag_print("solve_dad: %s %s %s %f %f %f"%(v1,v2,v3,d12,a123,d23),"clmethods")
+def solve_dad(v1, v2, v3, d12, a123, d23):
+    logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
+    v1, v2, v3, d12, a123, d23)
+
     p2 = vector.vector([0.0, 0.0])
     p1 = vector.vector([d12, 0.0])
-    p3s = [ vector.vector([d23*math.cos(a123), d23*math.sin(a123)]) ]
+    p3s = [vector.vector([d23 * math.cos(a123), d23 * math.sin(a123)])]
+
     solutions = []
+
     for p3 in p3s:
-        solution = Configuration({v1:p1, v2:p2, v3:p3})
+        solution = Configuration({v1: p1, v2: p2, v3: p3})
         solutions.append(solution)
+
     return solutions
 
 class MergeCCH(Merge):
@@ -1605,59 +1904,68 @@ class MergeCCH(Merge):
        cluster
     """
     def __init__(self, c1, c2, hog, out):
-        # init
+        super(MergeCCH, self).__init__(name="MergeCCH", inputs=[c1, c2, hog], \
+        outputs=[out], overconstrained=False, consistent=True)
+
         self.c1 = c1
         self.c2 = c2
         self.hog = hog
         self.output = out
-        self._inputs = [c1, c2, hog]
-        self._outputs = [out]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+
         # check coincidence
         if hog.cvar not in c1.vars:
-            raise StandardError, "hog.cvar not in c1.vars"
+            raise Exception("hog.cvar not in c1.vars")
         if hog.cvar in c2.vars:
-            raise StandardError, "hog.cvar in c2.vars"
-        shared12 = Set(c1.vars).intersection(c2.vars)
-        shared1h = Set(c1.vars).intersection(hog.xvars)
-        shared2h = Set(c2.vars).intersection(hog.xvars)
+            raise Exception("hog.cvar in c2.vars")
+
+        shared12 = set(c1.vars).intersection(c2.vars)
+        shared1h = set(c1.vars).intersection(hog.xvars)
+        shared2h = set(c2.vars).intersection(hog.xvars)
+
         shared1 = shared12.union(shared1h)
         shared2 = shared12.union(shared2h)
         sharedh = shared1h.union(shared2h)
+
         if len(shared12) < 1:
-            raise StandardError, "underconstrained c1 and c2"
+            raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            diag_print("overconstrained CCH - c1 and c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCH - c1 \
+and c2")
+
             self.overconstrained = True
         if len(shared1h) < 1:
-            raise StandardError, "underconstrained c1 and hog"
+            raise Exception("underconstrained c1 and hog")
         elif len(shared1h) > 1:
-            diag_print("overconstrained CCH - c1 and hog", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCH - c1 \
+and hog")
+
             self.overconstrained = True
         if len(shared2h) < 1:
-            raise StandardError, "underconstrained c2 and hog"
+            raise Exception("underconstrained c2 and hog")
         elif len(shared2h) > 2:
-            diag_print("overconstrained CCH - c2 and hog", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCH - c2 \
+and hog")
+
             self.overconstrained = True
         if len(shared1) < 1:
-            raise StandardError, "underconstrained c1"
+            raise Exception("underconstrained c1")
         elif len(shared1) > 1:
-            diag_print("overconstrained CCH - c1", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCH - c1")
+
             self.overconstrained = True
         if len(shared2) < 2:
-            raise StandardError, "underconstrained c2"
+            raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            diag_print("overconstrained CCH - c2", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained CCH - c2")
+
             self.overconstrained = True
         if len(sharedh) < 2:
-            raise StandardError, "underconstrained hog"
+            raise Exception("underconstrained hog")
         elif len(sharedh) > 2:
-            diag_print("overconstrained CCH - hog", "clmethods")
-            self.overconstrained = True
+            logging.getLogger("clustersolver").debug("overconstrained CCH - \
+hog")
 
-    #end __init__
+            self.overconstrained = True
 
     def __str__(self):
         s = "mergeCCH("+str(self.c1)+"+"+str(self.c2)+"+"+str(self.hog)+"->"+str(self.output)+")"
@@ -1665,7 +1973,8 @@ class MergeCCH(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("MergeCCH.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("MergeCCH.multi_execute called")
+
         # assert hog.cvar in c1
         if self.hog.cvar in self.c1.vars:
             c1 = self.c1
@@ -1673,45 +1982,61 @@ class MergeCCH(Merge):
         else:
             c1 = self.c2
             c2 = self.c1
+
         # get v1
         v1 = self.hog.cvar
+
         # get v2
-        candidates2 = Set(self.hog.xvars).intersection(c1.vars).intersection(c2.vars)
+        candidates2 = set(self.hog.xvars).intersection(c1.vars).intersection(c2.vars)
+
         assert len(candidates2) >= 1
+
         v2 = list(candidates2)[0]
+
         # get v3
-        candidates3 = Set(self.hog.xvars).intersection(c2.vars).difference([v1, v2])
+        candidates3 = set(self.hog.xvars).intersection(c2.vars).difference([v1, v2])
+
         assert len(candidates3) >= 1
+
         v3 = list(candidates3)[0]
+
         # check
         assert v1 != v2
         assert v1 != v3
         assert v2 != v3
+
         # get configs
         confh = inmap[self.hog]
         conf1 = inmap[c1]
         conf2 = inmap[c2]
+
         # get angle
         p1h = confh.get(v1)
         p2h = confh.get(v2)
         p3h = confh.get(v3)
         a312 = angle_3p(p3h, p1h, p2h)
+
         # get distance d12
         p11 = conf1.get(v1)
         p21 = conf1.get(v2)
         d12 = distance_2p(p11, p21)
+
         # get distance d23
         p22 = conf2.get(v2)
         p32 = conf2.get(v3)
         d23 = distance_2p(p22, p32)
-        adds = solve_add(v1,v2,v3,a312,d12,d23)
+        adds = solve_add(v1, v2, v3, a312, d12, d23)
+
         solutions = []
+
         # do merge (note, order c1 c2 restored)
         conf1 = inmap[self.c1]
         conf2 = inmap[self.c2]
+
         for s in adds:
             solution = conf1.merge(s).merge(conf2)
             solutions.append(solution)
+
         return solutions
 
     def prototype_constraints(self):
@@ -1722,31 +2047,45 @@ class MergeCCH(Merge):
         else:
             c1 = self.c2
             c2 = self.c1
-        shared1h = Set(self.hog.xvars).intersection(c1.vars).difference([self.hog.cvar])
-        shared2h = Set(self.hog.xvars).intersection(c2.vars).difference(shared1h)
+
+        shared1h = set(self.hog.xvars).intersection(c1.vars).difference([self.hog.cvar])
+        shared2h = set(self.hog.xvars).intersection(c2.vars).difference(shared1h)
+
         # get vars
         v1 = self.hog.cvar
         v2 = list(shared1h)[0]
         v3 = list(shared2h)[0]
+
         assert v1 != v2
         assert v1 != v3
         assert v2 != v3
+
         constraints = []
-        constraints.append(NotAcuteConstraint(v2,v3,v1))
-        constraints.append(NotObtuseConstraint(v2,v3,v1))
+
+        constraints.append(NotAcuteConstraint(v2, v3, v1))
+        constraints.append(NotObtuseConstraint(v2, v3, v1))
+
         return constraints
 
 def solve_add(a,b,c, a_cab, d_ab, d_bc):
-    diag_print("solve_dad: %s %s %s %f %f %f"%(a,b,c,a_cab,d_ab,d_bc),"clmethods")
-    p_a = vector.vector([0.0,0.0])
-    p_b = vector.vector([d_ab,0.0])
-    dir = vector.vector([math.cos(-a_cab),math.sin(-a_cab)])
+    logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
+    a, b, c, a_cab, d_ab, d_bc)
+
+    p_a = vector.vector([0.0, 0.0])
+    p_b = vector.vector([d_ab, 0.0])
+
+    dir = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
+
     solutions = cr_int(p_b, d_bc, p_a, dir)
+
     rval = []
+
     for s in solutions:
         p_c = s
-        map = {a:p_a, b:p_b, c:p_c}
+        map = {a: p_a, b: p_b, c: p_c}
+
         rval.append(Configuration(map))
+
     return rval
 
 class BalloonFromHogs(Merge):
@@ -1759,22 +2098,23 @@ class BalloonFromHogs(Merge):
             hog2 - a Hedehog
             balloon - a Balloon instance
         """
+
+        super(BalloonFromHogs, self).__init__(name="BalloonFromHogs", \
+        inputs=[hog1, hog2], outputs=[balloon], overconstrained=False, \
+        consistent=True)
+
         self.hog1 = hog1
         self.hog2 = hog2
         self.balloon = balloon
-        self._inputs = [hog1, hog2]
-        self._outputs = [balloon]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+
         # check coincidence
         if hog1.cvar == hog2.cvar:
-            raise StandardError, "hog1.cvar is hog2.cvar"
-        shared12 = Set(hog1.xvars).intersection(hog2.xvars)
+            raise Exception("hog1.cvar is hog2.cvar")
+
+        shared12 = set(hog1.xvars).intersection(hog2.xvars)
+
         if len(shared12) < 1:
-            raise StandardError, "underconstrained"
-        #elif len(shared12) > 1:
-        #    raise StandardError, "overconstrained"
+            raise Exception("underconstrained")
 
     def __str__(self):
         s = "hog2balloon("+str(self.hog1)+"+"+str(self.hog2)+"->"+str(self.balloon)+")"
@@ -1782,74 +2122,96 @@ class BalloonFromHogs(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("BalloonFromHogs.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug( \
+        "BalloonFromHogs.multi_execute called")
+
         v1 = self.hog1.cvar
         v2 = self.hog2.cvar
-        shared = Set(self.hog1.xvars).intersection(self.hog2.xvars).difference([v1,v2])
+
+        shared = set(self.hog1.xvars).intersection(self.hog2.xvars).difference([v1,v2])
+
         v3 = list(shared)[0]
+
         assert v1 != v2
         assert v1 != v3
         assert v2 != v3
+
         # determine angle312
         conf1 = inmap[self.hog1]
+
         p31 = conf1.get(v3)
         p11 = conf1.get(v1)
         p21 = conf1.get(v2)
         a312 = angle_3p(p31,p11,p21)
+
         # determine distance d12
         d12 = 1.0
+
         # determine angle123
         conf2 = inmap[self.hog2]
         p12 = conf2.get(v1)
         p22 = conf2.get(v2)
         p32 = conf2.get(v3)
         a123 = angle_3p(p12,p22,p32)
+
         # solve
-        return solve_ada(v1,v2,v3, a312, d12, a123)
+        return solve_ada(v1, v2, v3, a312, d12, a123)
 
 def solve_ada(a, b, c, a_cab, d_ab, a_abc):
-    diag_print("solve_ada: %s %s %s %f %f %f"%(a,b,c,a_cab,d_ab,a_abc),"clmethods")
-    p_a = vector.vector([0.0,0.0])
+    logging.getLogger("clustersolver").debug("solve_ada: %s %s %s %f %f %f", \
+    a, b, c, a_cab, d_ab, a_abc)
+
+    p_a = vector.vector([0.0, 0.0])
     p_b = vector.vector([d_ab, 0.0])
-    dir_ac = vector.vector([math.cos(-a_cab),math.sin(-a_cab)])
-    dir_bc = vector.vector([-math.cos(-a_abc),math.sin(-a_abc)])
+
+    dir_ac = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
+    dir_bc = vector.vector([-math.cos(-a_abc), math.sin(-a_abc)])
+
     if tol_eq(math.sin(a_cab), 0.0) and tol_eq(math.sin(a_abc),0.0):
-        m = d_ab/2 + math.cos(-a_cab)*d_ab - math.cos(-a_abc)*d_ab
-        p_c = vector.vector([m,0.0])
-        # p_c = (p_a + p_b) / 2
-        map = {a:p_a, b:p_b, c:p_c}
-        cluster = _Configuration(map)
+        m = d_ab / 2 + math.cos(-a_cab) * d_ab - math.cos(-a_abc) * d_ab
+
+        p_c = vector.vector([m, 0.0])
+
+        map = {a: p_a, b: p_b, c: p_c}
+
+        cluster = Configuration(map)
         cluster.underconstrained = True
+
         rval = [cluster]
     else:
-        solutions = rr_int(p_a,dir_ac,p_b,dir_bc)
+        solutions = rr_int(p_a, dir_ac, p_b, dir_bc)
+
         rval = []
+
         for s in solutions:
             p_c = s
-            map = {a:p_a, b:p_b, c:p_c}
+            map = {a: p_a, b: p_b, c: p_c}
+
             rval.append(Configuration(map))
-    #endif
+
     return rval
 
 class BalloonMerge(Merge):
-    """Represents a merging of two balloons
-    """
+    """Represents a merging of two balloons"""
+
     def __init__(self, in1, in2, out):
+        super(BalloonMerge, self).__init__(name="BalloonMerge", \
+        inputs=[in1, in2], outputs=[out], overconstrained=False, \
+        consistent=True)
+
         self.input1 = in1
         self.input2 = in2
         self.output = out
-        self.shared = list(Set(self.input1.vars).intersection(self.input2.vars))
-        self._inputs = [in1, in2]
-        self._outputs = [out]
-        self.consistent = True
-        MultiMethod.__init__(self)
-        # check coincidence
-        self.overconstrained = False
-        shared = Set(in1.vars).intersection(in2.vars)
+        self.shared = list(set(self.input1.vars).intersection(self.input2.vars))
+
+        shared = set(in1.vars).intersection(in2.vars)
+
         if len(shared) < 2:
-            raise StandardError, "underconstrained"
+            raise Exception("underconstrained")
         elif len(shared) > 2:
-            diag_print("overconstrained balloon merge", "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained balloon \
+merge")
+
             self.overconstrained = True
 
     def __str__(self):
@@ -1858,32 +2220,39 @@ class BalloonMerge(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("BalloonMerge.multi_execute called","clmethods")
-        c1 = self._inputs[0]
-        c2 = self._inputs[1]
+        logging.getLogger("clustersolver").debug("BalloonMerge.multi_execute \
+called")
+
+        c1 = self.inputs[0]
+        c2 = self.inputs[1]
+
         conf1 = inmap[c1]
         conf2 = inmap[c2]
+
         return [conf1.merge_scale_2D(conf2)]
 
 class BalloonRigidMerge(Merge):
-    """Represents a merging of a balloon and a cluster
-    """
+    """Represents a merging of a balloon and a cluster"""
+
     def __init__(self, balloon, cluster, output):
+        super(BalloonRigidMerge, self).__init__(name="BalloonRigidMerge", \
+        inputs=[balloon, cluster], outputs=[output], overconstrained=False, \
+        consistent=True)
+
         self.balloon = balloon
         self.cluster= cluster
         self.output = output
-        self.shared = list(Set(self.balloon.vars).intersection(self.cluster.vars))
-        self._inputs = [balloon, cluster]
-        self._outputs = [output]
-        self.overconstrained = False
-        self.consistent = True
-        MultiMethod.__init__(self)
+        self.shared = list(set(self.balloon.vars).intersection(self.cluster.vars))
+
         # check coincidence
-        shared = Set(balloon.vars).intersection(cluster.vars)
+        shared = set(balloon.vars).intersection(cluster.vars)
+
         if len(shared) < 2:
-            raise StandardError, "underconstrained balloon-cluster merge"
+            raise Exception("underconstrained balloon-cluster merge")
         elif len(shared) > 2:
-            diag_print("overconstrained merge "+str(balloon)+"&"+str(cluster), "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained merge %s \
++ %s", balloon, cluster)
+
             self.overconstrained = True
 
     def __str__(self):
@@ -1892,32 +2261,36 @@ class BalloonRigidMerge(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("BalloonRigidMerge.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug( \
+"BalloonRigidMerge.multi_execute called")
+
         rigid = inmap[self.cluster]
         balloon = inmap[self.balloon]
+
         return [rigid.merge_scale_2D(balloon)]
-        #return [balloon.copy()]
 
 class MergeHogs(Merge):
-    """Represents a merging of two hogs to form a new hog
-    """
+    """Represents a merging of two hogs to form a new hog"""
+
     def __init__(self, hog1, hog2, output):
+        super(MergeHogs, self).__init__(name="MergeHogs", inputs=[hog1, hog2], \
+        outputs=[output], overconstrained=False, consistent=True)
+
         self.hog1 = hog1
         self.hog2 = hog2
         self.output = output
-        self._inputs = [hog1, hog2]
-        self._outputs = [output]
-        self.consistent = True
-        MultiMethod.__init__(self)
-        # check coincidence
-        self.overconstrained = False
+
         if hog1.cvar != hog2.cvar:
-            raise StandardError, "hog1.cvar != hog2.cvar"
-        shared = Set(hog1.xvars).intersection(hog2.xvars)
+            raise Exception("hog1.cvar != hog2.cvar")
+
+        shared = set(hog1.xvars).intersection(hog2.xvars)
+
         if len(shared) < 1:
-            raise StandardError, "underconstrained balloon-cluster merge"
+            raise Exception("underconstrained balloon-cluster merge")
         elif len(shared) > 1:
-            diag_print("overconstrained merge "+str(hog1)+"&"+str(hog2), "clmethods")
+            logging.getLogger("clustersolver").debug("overconstrained merge \
+%s + %s", hog1, hog2)
+
             self.overconstrained = True
 
     def __str__(self):
@@ -1926,110 +2299,100 @@ class MergeHogs(Merge):
         return s
 
     def multi_execute(self, inmap):
-        diag_print("MergeHogs.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("MergeHogs.multi_execute \
+called")
+
         conf1 = inmap[self._inputs[0]]
         conf2 = inmap[self._inputs[1]]
-        shared = Set(self.hog1.xvars).intersection(self.hog2.xvars)
+
+        shared = set(self.hog1.xvars).intersection(self.hog2.xvars)
+
         conf12 = conf1.merge_scale_2D(conf2, [self.hog1.cvar, list(shared)[0]])
+
         return [conf12]
 
+class Derive(ClusterMethod):
+    """A derive is a method such that a single ouput cluster is a
+    subconstraint of a single input cluster."""
 
-# ---------- derive methods -------
+    __metaclass__ = abc.ABCMeta
 
 class Rigid2Hog(Derive):
-    """Represents a derivation of a hog from a c)luster
-    """
+    """Represents a derivation of a hog from a cluster"""
+
     def __init__(self, cluster, hog):
+        super(Rigid2Hog, self).__init__(name="Rigid2Hog", inputs=[cluster], \
+        outputs=[hog])
+
         self.cluster = cluster
         self.hog = hog
-        self._inputs = [cluster]
-        self._outputs = [hog]
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s = "rigid2hog("+str(self.cluster)+"->"+str(self.hog)+")"
         return s
 
     def multi_execute(self, inmap):
-        diag_print("Rigid2Hog.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("Rigid2Hog.multi_execute \
+called")
+
         conf1 = inmap[self._inputs[0]]
         vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
         conf = conf1.select(vars)
+
         return [conf]
 
 class Balloon2Hog(Derive):
     """Represents a derivation of a hog from a balloon
     """
     def __init__(self, balloon, hog):
+        super(Balloon2Hog, self).__init__(name="Balloon2Hog", \
+        inputs=[balloon], outputs=[hog])
+
         self.balloon = balloon
         self.hog = hog
-        self._inputs = [balloon]
-        self._outputs = [hog]
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s = "balloon2hog("+str(self.balloon)+"->"+str(self.hog)+")"
         return s
 
     def multi_execute(self, inmap):
-        diag_print("Balloon2Hog.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("Balloon2Hog.multi_execute \
+called")
+
         conf1 = inmap[self._inputs[0]]
         vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
         conf = conf1.select(vars)
+
         return [conf]
 
 class SubHog(Derive):
     def __init__(self, hog, sub):
+        super(SubHog, self).__init__(name="SubHog", inputs=[hog], outputs=[sub])
+
         self.hog = hog
         self.sub = sub
-        self._inputs = [hog]
-        self._outputs = [sub]
-        MultiMethod.__init__(self)
 
     def __str__(self):
         s = "subhog("+str(self.hog)+"->"+str(self.sub)+")"
         return s
 
     def multi_execute(self, inmap):
-        diag_print("SubHog.multi_execute called","clmethods")
+        logging.getLogger("clustersolver").debug("SubHog.multi_execute called")
+
         conf1 = inmap[self._inputs[0]]
         vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
         conf = conf1.select(vars)
+
         return [conf]
 
-class PrototypeMethod(MultiMethod):
-    def __init__(self, incluster, selclusters, outcluster, constraints):
-        self._inputs = [incluster]+selclusters
-        self._outputs = [outcluster]
-        self._constraints = constraints
-        MultiMethod.__init__(self)
+def is_information_increasing(method):
+    infinc = True
+    connected = set()
+    output = method.outputs()[0]
 
-    def multi_execute(self, inmap):
-        diag_print("PrototypeMethod.multi_execute called","clmethods")
-        incluster = self._inputs[0]
-        selclusters = []
-        for i in range(1,len(self._inputs)):
-            selclusters.append(self._inputs[i])
-        print "incluster", incluster
-        print "selclusters", map(str, selclusters)
-        # get confs
-        inconf = inmap[incluster]
-        selmap = {}
-        for cluster in selclusters:
-            conf = inmap[cluster]
-            assert len(conf.vars()) == 1
-            var = conf.vars()[0]
-            selmap[var] = conf.map[var]
-        selconf = Configuration(selmap)
-        sat = True
-        print "inconf:",inconf
-        print "selconf:",selconf
-        for con in self._constraints:
-            print "con:",con,
-            if con.satisfied(inconf.map) != con.satisfied(selconf.map):
-                sat = False
-            print sat
-        if sat:
-            return [inconf]
-        else:
-            return []
+    for cluster in method.inputs():
+        if num_constraints(cluster.intersection(output)) >= num_constraints(output):
+            infinc = False
+            break
+
+    return infinc

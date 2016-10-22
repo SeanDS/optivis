@@ -2,8 +2,8 @@ from __future__ import unicode_literals, division
 
 from unittest import TestCase
 
-from multimethod import MultiVariable, SumProdMethod
-from method import MethodGraph
+from optivis.layout.geosolver.multimethod import MultiVariable, SumProdMethod
+from optivis.layout.geosolver.method import MethodGraph
 
 class TestSumProdMethod(TestCase):
     def setUp(self):
