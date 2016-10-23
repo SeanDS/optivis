@@ -34,6 +34,13 @@ class ClusterMethod(MultiMethod):
     def prototype_constraints(self):
         return []
 
+    def __unicode__(self):
+        # get parent unicode
+        string = super(ClusterMethod, self).__unicode()
+
+        # add status and return
+        return string + "[{0}]".format(self.status_str())
+
     def status_str(self):
         if self.consistent:
             consistent_status = "consistent"
@@ -53,8 +60,8 @@ class PrototypeMethod(MultiMethod):
 
     def __init__(self, incluster, selclusters, outcluster, constraints):
         # call parent constructor
-        super(PrototypeMethod, self).__init__("PrototypeMethod", \
-        [incluster] + selclusters, [outcluster])
+        super(PrototypeMethod, self).__init__(name="PrototypeMethod", \
+        inputs=[incluster]+selclusters, outputs=[outcluster])
 
         # set constraints
         self.constraints = list(constraints)
@@ -104,8 +111,8 @@ sat)
 
         if sat:
             return [inconf]
-        else:
-            return []
+
+        return []
 
 class ClusterSolver(Notifier):
     """A generic 2D geometric constraint solver
@@ -266,6 +273,7 @@ class ClusterSolver(Notifier):
         todelete = [obj] + self._find_descendend(obj)
 
         torestore = set()
+
         # remove all objects
         for item in todelete:
             # if merge removed items from toplevel then add them back to top level
@@ -1512,7 +1520,7 @@ class Merge1C(Merge):
         super(Merge1C, self).__init__(name="Merge1C", inputs=[in1, in2], \
         outputs=[out], overconstrained=False, consistent=True)
 
-    def __str__(self):
+    def __unicode__(self):
         s =  "merge1C("+str(self.inputs[0])+"+"+str(self.inputs[1])+"->"+str(self.outputs[0])+")"
         s += "[" + self.status_str()+"]"
 
