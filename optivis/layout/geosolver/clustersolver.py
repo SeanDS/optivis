@@ -2320,7 +2320,7 @@ called")
         return [conf12]
 
 class Derive(ClusterMethod):
-    """A derive is a method such that a single ouput cluster is a
+    """A derive is a method such that a single output cluster is a
     subconstraint of a single input cluster."""
 
     __metaclass__ = abc.ABCMeta
@@ -2394,13 +2394,11 @@ class SubHog(Derive):
         return [conf]
 
 def is_information_increasing(method):
-    infinc = True
-    connected = set()
     output = method.outputs[0]
 
     for cluster in method.inputs:
         if num_constraints(cluster.intersection(output)) >= num_constraints(output):
-            infinc = False
-            break
+            # method's output doesn't remove a constraint from an input
+            return False
 
-    return infinc
+    return True
