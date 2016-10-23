@@ -132,11 +132,6 @@ class Cluster(MultiVariable):
 
         return NotImplementedError("Only available in child classes")
 
-    def __eq__(self, other):
-        """Equality test for cluster"""
-
-        return self._variable_list() == other._variable_list()
-
     @staticmethod
     def over_angles_hh(hog1, hog2):
         # determine duplicate angles

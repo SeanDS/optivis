@@ -298,7 +298,7 @@ class GeometricSolver(Listener):
         toplevel = self.dr.top_level()
 
         if len(toplevel) > 1:
-            return "underconstrained"
+            return "under-constrained"
 
         elif len(toplevel) == 1:
             cluster = toplevel[0]
@@ -309,11 +309,11 @@ class GeometricSolver(Listener):
                 if configurations == None:
                     return "unsolved"
                 elif len(configurations) > 0:
-                    return "well constrained"
+                    return "well-constrained"
                 else:
-                    return "overconstrained"
+                    return "over-constrained"
             else:
-                return "underconstrained"
+                return "under-constrained"
         elif len(toplevel) == 0:
             return "error"
 
@@ -540,8 +540,8 @@ class GeometricSolver(Listener):
             angle = con.get_parameter()
 
             # create points representing the constraint
-            p0 = vector([1.0,0.0])
-            p1 = vector([0.0,0.0])
+            p0 = vector([1.0, 0.0])
+            p1 = vector([0.0, 0.0])
             p2 = vector([math.cos(angle), math.sin(angle)])
 
             # create configuration
