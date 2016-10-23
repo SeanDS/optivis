@@ -25,34 +25,8 @@ from optivis.layout.geosolver.intersections import *
 class ClusterMethod(MultiMethod):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, consistent, overconstrained, *args, **kwargs):
-        super(ClusterMethod, self).__init__(*args, **kwargs)
-
-        self.consistent = consistent
-        self.overconstrained = overconstrained
-
     def prototype_constraints(self):
         return []
-
-    def __unicode__(self):
-        # get parent unicode
-        string = super(ClusterMethod, self).__unicode__()
-
-        # add status and return
-        return string + "[{0}]".format(self.status_str())
-
-    def status_str(self):
-        if self.consistent:
-            consistent_status = "consistent"
-        else:
-            consistent_status = "inconsistent"
-
-        if self.overconstrained:
-            constrained_status = "overconstrained"
-        else:
-            constrained_status = "well constrained"
-
-        return "{0}, {1}".format(consistent_status, constrained_status)
 
 class PrototypeMethod(MultiMethod):
     """A PrototypeMethod selects those solutions of a cluster for which the \
@@ -970,7 +944,7 @@ class ClusterSolver(Notifier):
         for var in hog.xvars:
             dep = self.find_dependend(var)
 
-            sharex.union_update(filter(lambda x: isinstance(x,Rigid) \
+            sharex.update(filter(lambda x: isinstance(x,Rigid) \
             and self.is_top_level(x), dep))
 
         for c1 in sharecx:
@@ -1509,6 +1483,32 @@ class Merge(ClusterMethod):
     replaces the input clusters in the constriant problem"""
 
     __metaclass__ = abc.ABCMeta
+
+    def __init__(self, consistent, overconstrained, *args, **kwargs):
+        super(Merge, self).__init__(*args, **kwargs)
+
+        self.consistent = consistent
+        self.overconstrained = overconstrained
+
+    def __unicode__(self):
+        # get parent unicode
+        string = super(Merge, self).__unicode__()
+
+        # add status and return
+        return string + "[{0}]".format(self.status_str())
+
+    def status_str(self):
+        if self.consistent:
+            consistent_status = "consistent"
+        else:
+            consistent_status = "inconsistent"
+
+        if self.overconstrained:
+            constrained_status = "overconstrained"
+        else:
+            constrained_status = "well constrained"
+
+        return "{0}, {1}".format(consistent_status, constrained_status)
 
 class Merge1C(Merge):
     """Represents a merging of a one-point cluster with any other cluster

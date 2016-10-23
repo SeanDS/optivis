@@ -28,10 +28,10 @@ class Distance(object):
         return hash(frozenset(self.vars))
 
     def __eq__(self, other):
-	if isinstance(other, Distance):
-		return frozenset(self.vars) == frozenset(other.vars)
-	else:
-		return False
+        if isinstance(other, Distance):
+            return frozenset(self.vars) == frozenset(other.vars)
+
+        return False
 
 
 class Angle(object):
