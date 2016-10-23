@@ -36,7 +36,7 @@ class ClusterMethod(MultiMethod):
 
     def __unicode__(self):
         # get parent unicode
-        string = super(ClusterMethod, self).__unicode()
+        string = super(ClusterMethod, self).__unicode__()
 
         # add status and return
         return string + "[{0}]".format(self.status_str())
@@ -1318,16 +1318,16 @@ class ClusterSolver(Notifier):
             fr = self._graph.outgoing_vertices(cluster)
 
             me = filter(lambda x: isinstance(x, Merge), fr)
-            me = filter(lambda x: cluster in x.outputs(), me)
+            me = filter(lambda x: cluster in x.outputs, me)
 
             if len(me) > 1:
                 raise Exception("root cluster merged more than once")
             elif len(me) == 0:
                 cluster = None
-            elif len(me[0].outputs()) != 1:
+            elif len(me[0].outputs) != 1:
                 raise Exception("a merge with number of outputs != 1")
             else:
-                cluster = me[0].outputs()[0]
+                cluster = me[0].outputs[0]
 
         return False
 

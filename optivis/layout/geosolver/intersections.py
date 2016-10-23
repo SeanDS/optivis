@@ -243,7 +243,7 @@ def make_hcs_2d_scaled (a, b):
 def cs_transform_matrix(from_cs, to_cs):
     """returns a transform matrix from from_cs to to_cs"""
     transform = to_cs.mmul(from_cs.inverse())
-    return trnsform
+    return transform
 
 def translate_2D(dx,dy):
 	mat = Mat([
