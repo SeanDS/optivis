@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # a python vector class
 # A. Pletzer 5 Jan 00/11 April 2002
 #

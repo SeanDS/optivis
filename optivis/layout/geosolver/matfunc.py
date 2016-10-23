@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''Basic Table, Matrix and Vector functions for Python 2.2
    License:  Public Domain     Author:   Raymond Hettinger email:  python@rcn.com
    Updates and documentation:  http://users.rcn.com/python/download/python.htm

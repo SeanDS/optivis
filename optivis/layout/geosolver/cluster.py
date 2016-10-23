@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 """Clusters are generalised constraints on sets of points in R^n. Cluster
 types are Rigids, Hedgehogs and Balloons. """
 
-from sets import Set, ImmutableSet
+from __future__ import unicode_literals, division
+
 from multimethod import MultiVariable
 
 class Distance(object):
@@ -22,11 +25,11 @@ class Distance(object):
             +str(self.vars[1])+")"
 
     def __hash__(self):
-        return hash(ImmutableSet(self.vars))
+        return hash(frozenset(self.vars))
 
     def __eq__(self, other):
 	if isinstance(other, Distance):
-		return ImmutableSet(self.vars) == ImmutableSet(other.vars)
+		return frozenset(self.vars) == frozenset(other.vars)
 	else:
 		return False
 
@@ -46,13 +49,13 @@ class Angle(object):
 
     def __eq__(self, other):
 	if isinstance(other, Angle):
-		return self.vars[2] == other.vars[2] and ImmutableSet(self.vars) == ImmutableSet(other.vars)
+		return self.vars[2] == other.vars[2] and frozenset(self.vars) == frozenset(other.vars)
 	else:
 		return False
 
 
     def __hash__(self):
-        return hash(ImmutableSet(self.vars))
+        return hash(frozenset(self.vars))
 
     def __str__(self):
         return "ang("\
@@ -121,7 +124,7 @@ class Cluster(MultiVariable):
         and self._variable_list() == other._variable_list()
 
     def intersection(self, other):
-        shared = Set(self.vars).intersection(other.vars)
+        shared = set(self.vars).intersection(other.vars)
         # note, a one point cluster is never returned
         #because it is not a constraint
         if len(shared) < 2:
@@ -138,7 +141,7 @@ class Cluster(MultiVariable):
                 else:
                     return None
             elif isinstance(other, Hedgehog):
-                xvars = Set(shared) - Set([other.cvar])
+                xvars = set(shared) - set([other.cvar])
                 if other.cvar in self.vars and len(xvars) >= 2:
                     return Hedgehog(other.cvar,xvars)
                 else:
@@ -150,20 +153,20 @@ class Cluster(MultiVariable):
                 else:
                     return None
             elif isinstance(other, Hedgehog):
-                xvars = Set(shared) - Set([other.cvar])
+                xvars = set(shared) - set([other.cvar])
                 if other.cvar in self.vars and len(xvars) >= 2:
                     return Hedgehog(other.cvar,xvars)
                 else:
                     return None
         elif isinstance(self, Hedgehog):
             if isinstance(other, Rigid) or isinstance(other, Balloon):
-                xvars = Set(shared) - Set([self.cvar])
+                xvars = set(shared) - set([self.cvar])
                 if self.cvar in other.vars and len(xvars) >= 2:
                     return Hedgehog(self.cvar,xvars)
                 else:
                     return None
             elif isinstance(other, Hedgehog):
-                xvars = Set(self.xvars).intersection(other.xvars)
+                xvars = set(self.xvars).intersection(other.xvars)
                 if self.cvar == other.cvar and len(xvars) >= 2:
                     return Hedgehog(self.cvar,xvars)
                 else:
@@ -291,10 +294,10 @@ def over_angles(c1, c2):
 def over_distances(c1, c2):
         """determine set of distances in c1 and c2"""
         if not (isinstance(c1, Rigid) and isinstance(c2, Rigid)):
-            return Set()
+            return set()
         else:
-            shared = list(Set(c1.vars).intersection(c2.vars))
-            overdists = Set()
+            shared = list(set(c1.vars).intersection(c2.vars))
+            overdists = set()
             for i in range(len(shared)):
                 for j in range(i):
                     v1 = shared[i]
@@ -304,10 +307,10 @@ def over_distances(c1, c2):
 
 def over_angles_hh(hog1, hog2):
         # determine duplicate angles
-        shared = list(Set(hog1.xvars).intersection(hog2.xvars))
+        shared = list(set(hog1.xvars).intersection(hog2.xvars))
         if not hog1.cvar == hog2.cvar:
-            return Set()
-        overangles = Set()
+            return set()
+        overangles = set()
         for i in range(len(shared)):
             for j in range(i):
                 v1 = shared[i]
@@ -317,8 +320,8 @@ def over_angles_hh(hog1, hog2):
 
 def over_angles_bb(b1, b2):
         # determine duplicate angles
-        shared = list(Set(b1.vars).intersection(b2.vars))
-        overangles = Set()
+        shared = list(set(b1.vars).intersection(b2.vars))
+        overangles = set()
         for i in range(len(shared)):
             for j in range(i+1, len(shared)):
                 for k in range(j+1, len(shared)):
@@ -333,8 +336,8 @@ def over_angles_bb(b1, b2):
 def over_angles_cb(cluster, balloon):
         # determine duplicate angles
         # note: identical to over_angles_bb and (non-existent) over_angles_cc
-        shared = list(Set(cluster.vars).intersection(balloon.vars))
-        overangles = Set()
+        shared = list(set(cluster.vars).intersection(balloon.vars))
+        overangles = set()
         for i in range(len(shared)):
             for j in range(i+1, len(shared)):
                 for k in range(j+1, len(shared)):
@@ -348,10 +351,10 @@ def over_angles_cb(cluster, balloon):
 
 def over_angles_bh(balloon, hog):
         # determine duplicate angles
-        shared = list(Set(balloon.vars).intersection(hog.xvars))
+        shared = list(set(balloon.vars).intersection(hog.xvars))
         if hog.cvar not in balloon.vars:
-            return Set()
-        overangles = Set()
+            return set()
+        overangles = set()
         for i in range(len(shared)):
             for j in range(i+1,len(shared)):
                 v1 = shared[i]
@@ -361,10 +364,10 @@ def over_angles_bh(balloon, hog):
 
 def over_angles_ch(cluster, hog):
         # determine duplicate angles
-        shared = list(Set(cluster.vars).intersection(hog.xvars))
+        shared = list(set(cluster.vars).intersection(hog.xvars))
         if hog.cvar not in cluster.vars:
-            return Set()
-        overangles = Set()
+            return set()
+        overangles = set()
         for i in range(len(shared)):
             for j in range(i+1,len(shared)):
                 v1 = shared[i]
