@@ -4,7 +4,7 @@ types are Rigids, Hedgehogs and Balloons. """
 from sets import Set, ImmutableSet
 from multimethod import MultiVariable
 
-class Distance:
+class Distance(object):
     """A Distance represents a known distance"""
 
     def __init__(self, a, b):
@@ -31,7 +31,7 @@ class Distance:
 		return False
 
 
-class Angle:
+class Angle(object):
     """A Angle represents a known angle"""
 
     def __init__(self, a, b, c):
@@ -100,7 +100,6 @@ class Cluster(MultiVariable):
     def __str__(self):
         return unicode(self).encode("utf-8")
 
-
     def _variable_list(self):
         """Variable list for the :class:`~.Cluster`
 
@@ -108,6 +107,18 @@ class Cluster(MultiVariable):
         """
 
         return list(self.vars)
+
+    def __eq__(self, other):
+        """Equality operator for clusters
+
+        Clusters are considered equal if their types are the same and their
+        variable lists are the same
+
+        :param other: other cluster to compare
+        """
+
+        return self.cluster_type == other.cluster_type \
+        and self._variable_list() == other._variable_list()
 
     def intersection(self, other):
         shared = Set(self.vars).intersection(other.vars)
