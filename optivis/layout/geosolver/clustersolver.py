@@ -60,7 +60,9 @@ class PrototypeMethod(MultiMethod):
 
         for cluster in selclusters:
             conf = inmap[cluster]
+
             assert len(conf.vars()) == 1
+
             var = conf.vars()[0]
             selmap[var] = conf.map[var]
 
@@ -117,8 +119,10 @@ class ClusterSolver(Notifier):
         self._graph.add_vertex("_hedgehogs")
         self._graph.add_vertex("_balloons")
         self._graph.add_vertex("_methods")
+
         # queue of new objects to process
         self._new = []
+
         # methodgraph
         self._mg = MethodGraph()
 
@@ -194,30 +198,26 @@ class ClusterSolver(Notifier):
         self._graph.rem_vertex("_root")
         self._graph.add_edge("_root", rigid)
 
-    def find_dependend(self, object):
+    def find_dependent(self, obj):
         """Return a list of objects that depend on given object directly."""
-        l = self._graph.outgoing_vertices(object)
-        return filter(lambda x: self._graph.get(object,x) == "dependency", l)
+        l = self._graph.outgoing_vertices(obj)
+        return filter(lambda x: self._graph.get(obj, x) == "dependency", l)
 
-    def find_depends(self, object):
+    def find_depends(self, obj):
         """Return a list of objects that the given object depends on directly"""
-        l = self._graph.ingoing_vertices(object)
-        return filter(lambda x: self._graph.get(x,object) == "dependency", l)
+        l = self._graph.ingoing_vertices(obj)
+        return filter(lambda x: self._graph.get(x, obj) == "dependency", l)
 
     def contains(self, obj):
         return self._graph.has_vertex(obj)
-
-    # ------------ INTERNALLY USED METHODS --------
-
-    # -- general house hold
 
     def _add_dependency(self, on, dependend):
         """Add a dependence for second object on first object"""
         self._graph.add_edge(on, dependend, "dependency")
 
-    def _add_to_group(self, group, object):
+    def _add_to_group(self, group, obj):
         """Add object to group"""
-        self._graph.add_edge(group, object, "contains")
+        self._graph.add_edge(group, obj, "contains")
 
     def _add_needed_by(self, needed, by):
         """Add relation 'needed' object is needed 'by'"""
@@ -225,35 +225,36 @@ class ClusterSolver(Notifier):
 
     def _objects_that_need(self, needed):
         """Return objects needed by given object"""
-        l = self._graph.outgoing_vertices(needed)
-        return filter(lambda x: self._graph.get(needed,x) == "needed_by", l)
+        return filter(lambda x: self._graph.get(needed,x) == "needed_by", \
+        self._graph.outgoing_vertices(needed))
 
     def _objects_needed_by(self, needer):
         """Return objects needed by given object"""
-        l = self._graph.ingoing_vertices(needer)
-        return filter(lambda x: self._graph.get(x,needer) == "needed_by", l)
+        return filter(lambda x: self._graph.get(x,needer) == "needed_by", \
+        self._graph.ingoing_vertices(needer))
 
-    def _add_top_level(self, object):
-        self._graph.add_edge("_toplevel",object)
-        self._new.append(object)
+    def _add_top_level(self, obj):
+        self._graph.add_edge("_toplevel", obj)
+        self._new.append(obj)
 
-    def _rem_top_level(self, object):
-        self._graph.rem_edge("_toplevel",object)
-        if object in self._new:
-            self._new.remove(object)
+    def _rem_top_level(self, obj):
+        self._graph.rem_edge("_toplevel", obj)
+
+        if obj in self._new:
+            self._new.remove(obj)
 
     def _remove(self, obj):
         # find all indirectly dependend objects
-        todelete = [obj] + self._find_descendend(obj)
+        to_delete = [obj] + self._find_descendent(obj)
 
-        torestore = set()
+        to_restore = set()
 
         # remove all objects
-        for item in todelete:
+        for item in to_delete:
             # if merge removed items from toplevel then add them back to top level
             if hasattr(item, "restore_toplevel"):
                 for cluster in item.restore_toplevel:
-                    torestore.add(cluster)
+                    to_restore.add(cluster)
 
             # delete it from graph
             logging.getLogger("clustersolver").debug("deleting %s", item)
@@ -276,24 +277,26 @@ class ClusterSolver(Notifier):
             # notify listeners
             self.send_notify(("remove", item))
 
-        # restore toplevel (also added to _new)
-        for cluster in torestore:
-            if self._graph.has_vertex(cluster):
-                self._add_top_level(cluster)
+        # restore top level (also added to _new)
+        map(lambda x: self._add_top_level(x), [cluster for cluster \
+        in to_restore if self._graph.has_vertex(cluster)])
 
         # re-solve
         self._process_new()
 
-    def _find_descendend(self,v):
-        """find all descendend objects of v (dirdctly or indirectly dependend"""
+    def _find_descendent(self,v):
+        """find all descendend objects of v (directly or indirectly \
+        dependent)"""
+
         front = [v]
         result = {}
 
         while len(front) > 0:
             x = front.pop()
+
             if x not in result:
                 result[x] = 1
-                front += self.find_dependend(x)
+                front += self.find_dependent(x)
 
         del(result[v])
 
@@ -308,6 +311,7 @@ class ClusterSolver(Notifier):
 
         if not self._graph.has_vertex(var):
             logging.getLogger("clustersolver").debug("_add_variable %s", var)
+
             self._add_to_group("_variables", var)
 
     def _add_cluster(self, cluster):
@@ -342,8 +346,10 @@ class ClusterSolver(Notifier):
 
         # add to top level
         self._add_top_level(newcluster)
+
         # add to methodgraph
         self._mg.add_variable(newcluster)
+
         # notify
         self.send_notify(("add", newcluster))
 
@@ -376,7 +382,7 @@ class ClusterSolver(Notifier):
 
         # check if not already exists
         if self._graph.has_vertex(newballoon):
-            raise StandardError, "balloon already in clsolver"
+            raise Exception("balloon already in clsolver")
 
         # update graph
         self._add_to_group("_balloons", newballoon)
@@ -399,11 +405,13 @@ class ClusterSolver(Notifier):
         if len(merge.outputs) != 1:
             raise Exception("merge number of outputs != 1")
 
+        # get only output of merge
         output = merge.outputs[0]
 
         # consistent merge?
         consistent = True
 
+        # check if all combinations of the inputs are consistent
         for i1 in range(len(merge.inputs)):
             for i2 in range(i1 + 1, len(merge.inputs)):
                 c1 = merge.inputs[i1]
@@ -411,23 +419,20 @@ class ClusterSolver(Notifier):
 
                 consistent = consistent and self._is_consistent_pair(c1, c2)
 
+        # set merge consistency
         merge.consistent = consistent
 
-        # overconstrained cluster?
-        overconstrained = not consistent
-
-        for cluster in merge.inputs:
-            overconstrained = overconstrained and cluster.overconstrained
-
-        output.overconstrained = overconstrained
+        # merge is overconstrained if all of the inputs are overconstrained and
+        # the merge is not consistent
+        output.overconstrained = reduce(lambda x, y: x and y, merge.inputs) \
+        and not consistent
 
         # add to graph
         self._add_cluster(output)
         self._add_method(merge)
 
         # remove inputs from toplevel
-        for cluster in merge.inputs:
-            self._rem_top_level(cluster)
+        map(lambda x: self._rem_top_level(x), merge.inputs)
 
         # add prototype selection method
         self._add_prototype_selector(merge)
@@ -442,14 +447,13 @@ class ClusterSolver(Notifier):
         if len(constraints) == 0:
             return
 
-        vars = set()
+        variables = set()
 
-        for con in constraints:
-            vars.update(con.variables())
+        map(lambda x: variables.update(x.variables()), constraints)
 
         selclusters = []
 
-        for var in vars:
+        for var in variables:
             clusters = self._graph.outgoing_vertices(var)
             clusters = filter(lambda c: isinstance(c, Rigid), clusters)
             clusters = filter(lambda c: len(c.vars) == 1, clusters)
@@ -465,13 +469,12 @@ class ClusterSolver(Notifier):
         # Rick 20090519 - copy does not copy structural overconstrained flag?
         outcluster.overconstrained = incluster.overconstrained
 
-        selector = PrototypeMethod(incluster, selclusters, outcluster, constraints)
+        selector = PrototypeMethod(incluster, selclusters, outcluster, \
+        constraints)
 
         self._add_cluster(outcluster)
         self._add_method(selector)
         self._rem_top_level(incluster)
-
-        return
 
     def _add_solution_selector(self, merge):
         return
@@ -493,25 +496,26 @@ class ClusterSolver(Notifier):
 
     def _process_new(self):
         while len(self._new) > 0:
-            newobject = self._new.pop()
+            new_obj = self._new.pop()
             logging.getLogger("clustersolver").debug("search from %s", \
-            newobject)
+            new_obj)
 
-            success = self._search(newobject)
+            # do search
+            search = self._search(new_obj)
 
-            if success and self.is_top_level(newobject):
+            if search and self.is_top_level(new_obj):
                 # maybe more rules applicable.... push back on stack
-                self._new.append(newobject)
+                self._new.append(new_obj)
 
-    def _search(self, newcluster):
-        if isinstance(newcluster, Rigid):
-            self._search_from_rigid(newcluster)
-        elif isinstance(newcluster, Hedgehog):
-            self._search_from_hog(newcluster)
-        elif isinstance(newcluster, Balloon):
-            self._search_from_balloon(newcluster)
+    def _search(self, new_cluster):
+        if isinstance(new_cluster, Rigid):
+            self._search_from_rigid(new_cluster)
+        elif isinstance(new_cluster, Hedgehog):
+            self._search_from_hog(new_cluster)
+        elif isinstance(new_cluster, Balloon):
+            self._search_from_balloon(new_cluster)
         else:
-            raise Exception("don't know how to search from {0}".format(newcluster))
+            raise Exception("don't know how to search from {0}".format(new_cluster))
 
     def _search_from_balloon(self, balloon):
         if self._search_absorb_from_balloon(balloon):
@@ -542,10 +546,10 @@ class ClusterSolver(Notifier):
 
     def _search_absorb_from_balloon(self, balloon):
         for cvar in balloon.vars:
-            # find all incident hogs
+            # find all incident hedgehogs
             hogs = self._find_hogs(cvar)
 
-            # determine shared vertices per hog
+            # determine shared vertices per hedgehog
             for hog in hogs:
                 shared = set(hog.xvars).intersection(balloon.vars)
 
@@ -554,10 +558,10 @@ class ClusterSolver(Notifier):
 
     def _search_absorb_from_cluster(self, cluster):
         for cvar in cluster.vars:
-            # find all incident hogs
+            # find all incident hedgehogs
             hogs = self._find_hogs(cvar)
 
-            # determine shared vertices per hog
+            # determine shared vertices per hedgehog
             for hog in hogs:
                 shared = set(hog.xvars).intersection(cluster.vars)
 
@@ -565,10 +569,10 @@ class ClusterSolver(Notifier):
                     return self._merge_cluster_hog(cluster, hog)
 
     def _search_absorb_from_hog(self, hog):
-        dep = self.find_dependend(hog.cvar)
+        dep = self.find_dependent(hog.cvar)
 
         # case BH (overconstrained):
-        balloons = filter(lambda x: isinstance(x,Balloon) \
+        balloons = filter(lambda x: isinstance(x, Balloon) \
         and self.is_top_level(x), dep)
         sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) \
         >= 1, balloons)
@@ -580,7 +584,7 @@ class ClusterSolver(Notifier):
                 return self._merge_balloon_hog(balloon, hog)
 
         # case CH (overconstrained)
-        clusters = filter(lambda x: isinstance(x,Rigid) \
+        clusters = filter(lambda x: isinstance(x, Rigid) \
         and self.is_top_level(x), dep)
         sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) \
         >= 1, clusters)
@@ -595,7 +599,7 @@ class ClusterSolver(Notifier):
         balloons = set()
 
         for var in variables:
-            deps = self.find_dependend(var)
+            deps = self.find_dependent(var)
             balls = filter(lambda x: isinstance(x, Balloon), deps)
             balloons = balloons.intersection(balls)
 
@@ -605,29 +609,28 @@ class ClusterSolver(Notifier):
         logging.getLogger("clustersolver").debug("_make_balloon %s, %s, %s", \
         var1, var2, var3)
 
-        # derive sub-hogs if nessecairy
-        vars = set([var1, var2, var3])
-
-        subvars1 = vars.intersection(hog1.xvars)
+        # derive sub-hogs if necessary
+        variables = set([var1, var2, var3])
 
         if len(hog1.xvars) > 2:
-            hog1 = self._derive_subhog(hog1, subvars1)
-
-        subvars2 = vars.intersection(hog2.xvars)
+            hog1 = self._derive_subhog(hog1, variables.intersection(hog1.xvars))
 
         if len(hog2.xvars) > 2:
-            hog2 = self._derive_subhog(hog2, subvars2)
+            hog2 = self._derive_subhog(hog2, variables.intersection(hog2.xvars))
 
-        # create balloon and method
+        # create balloon
         balloon = Balloon([var1, var2, var3])
-        balloonmethod = BalloonFromHogs(hog1, hog2, balloon)
 
-        self._add_merge(balloonmethod)
+        # create balloon method
+        balloon_method = BalloonFromHogs(hog1, hog2, balloon)
+
+        # add the new merge
+        self._add_merge(balloon_method)
 
         return balloon
 
-    def _search_balloon_from_hog(self,hog):
-        newballoons = []
+    def _search_balloon_from_hog(self, hog):
+        new_balloons = []
 
         var1 = hog.cvar
 
@@ -639,34 +642,33 @@ class ClusterSolver(Notifier):
                     for var3 in hog2.xvars:
                         if var3 != var2 and var3 in hog.xvars:
                             if not self._known_angle(var1, var3, var2):
-                                newballoons.append(self._make_balloon(var1, \
+                                new_balloons.append(self._make_balloon(var1, \
                                 var2, var3, hog, hog2))
 
-        if len(newballoons) > 0:
-            return newballoons
+        if len(new_balloons) > 0:
+            return new_balloons
 
         return None
 
     def _search_balloon_from_balloon(self, balloon):
-        map = {}    # map from adjacent balloons to variables shared with input balloon
+        # map from adjacent balloons to variables shared with input balloon
+        mapping = {}
 
         for var in balloon.vars:
-            deps = self.find_dependend(var)
+            deps = self.find_dependent(var)
 
-            balloons = filter(lambda x: isinstance(x,Balloon), deps)
+            balloons = filter(lambda x: isinstance(x, Balloon), deps)
             balloons = filter(lambda x: self.is_top_level(x), balloons)
 
             for bal2 in balloons:
                 if bal2 != balloon:
-                    if bal2 in map:
-                        map[bal2].update([var])
+                    if bal2 in mapping:
+                        mapping[bal2].update([var])
                     else:
-                        map[bal2] = set([var])
+                        mapping[bal2] = set([var])
 
-        for bal2 in map:
-            nvars = len(map[bal2])
-
-            if nvars >= 2:
+        for bal2 in mapping:
+            if len(mapping[bal2]) >= 2:
                 return self._merge_balloons(balloon, bal2)
 
         return None
@@ -674,24 +676,24 @@ class ClusterSolver(Notifier):
     def _search_cluster_from_balloon(self, balloon):
         logging.getLogger("clustersolver").debug("_search_cluster_from_balloon")
 
-        map = {}    # map from adjacent clusters to variables shared with input balloon
+        # map from adjacent clusters to variables shared with input balloon
+        mapping = {}
 
         for var in balloon.vars:
-            deps = self.find_dependend(var)
+            deps = self.find_dependent(var)
 
-            clusters = filter(lambda x: isinstance(x,Rigid) or isinstance(x,Distance), deps)
+            clusters = filter(lambda x: isinstance(x, Rigid) \
+            or isinstance(x, Distance), deps)
             clusters = filter(lambda x: self.is_top_level(x), clusters)
 
             for c in clusters:
-                if c in map:
-                    map[c].update([var])
+                if c in mapping:
+                    mapping[c].update([var])
                 else:
-                    map[c] = set([var])
+                    mapping[c] = set([var])
 
-        for cluster in map:
-            nvars = len(map[cluster])
-
-            if nvars >= 2:
+        for cluster in mapping:
+            if len(mapping[cluster]) >= 2:
                 return self._merge_balloon_cluster(balloon, cluster)
 
         return None
@@ -700,72 +702,79 @@ class ClusterSolver(Notifier):
         logging.getLogger("clustersolver").debug( \
         "_search_balloonclustermerge_from_cluster")
 
-        map = {}    # map from adjacent clusters to variables shared with input balloon
+        # map from adjacent clusters to variables shared with input balloon
+        mapping = {}
 
         for var in rigid.vars:
-            deps = self.find_dependend(var)
+            deps = self.find_dependent(var)
 
-            balloons = filter(lambda x: isinstance(x,Balloon), deps)
+            balloons = filter(lambda x: isinstance(x, Balloon), deps)
             balloons = filter(lambda x: self.is_top_level(x), balloons)
 
             for b in balloons:
-                if b in map:
-                    map[b].update([var])
+                if b in mapping:
+                    mapping[b].update([var])
                 else:
-                    map[b] = set([var])
+                    mapping[b] = set([var])
 
-        for balloon in map:
-            nvars = len(map[balloon])
-
-            if nvars >= 2:
+        for balloon in mapping:
+            if len(mapping[balloon]) >= 2:
                 return self._merge_balloon_cluster(balloon, rigid)
 
         return None
 
-    def _merge_balloons(self, bal1, bal2):
+    def _merge_balloons(self, balloon_a, balloon_b):
         # create new balloon and merge method
-        vars = set(bal1.vars).union(bal2.vars)
 
-        newballoon = Balloon(vars)
+        # get variables in both balloons
+        variables = set(balloon_a.vars).union(balloon_b.vars)
 
-        merge = BalloonMerge(bal1, bal2, newballoon)
+        # create new balloon cluster
+        new_balloon = Balloon(variables)
 
-        self._add_merge(merge)
+        # add new balloon merge
+        self._add_merge(BalloonMerge(balloon_a, balloon_b, new_balloon))
 
-        return newballoon
+        return new_balloon
 
     def _merge_balloon_cluster(self, balloon, cluster):
         # create new cluster and method
-        vars = set(balloon.vars).union(cluster.vars)
 
-        newcluster = Rigid(list(vars))
+        # get variables in both the balloon and the cluster
+        variables = set(balloon.vars).union(cluster.vars)
 
-        merge = BalloonRigidMerge(balloon, cluster, newcluster)
+        # create new rigid cluster
+        new_cluster = Rigid(list(variables))
 
-        self._add_merge(merge)
+        # add new balloon-rigid merge
+        self._add_merge(BalloonRigidMerge(balloon, cluster, new_cluster))
 
-        return newcluster
+        return new_cluster
 
     def _find_hogs(self, cvar):
-        deps = self.find_dependend(cvar)
+        deps = self.find_dependent(cvar)
 
-        hogs = filter(lambda x: isinstance(x,Hedgehog), deps)
+        hogs = filter(lambda x: isinstance(x, Hedgehog), deps)
         hogs = filter(lambda x: x.cvar == cvar, hogs)
         hogs = filter(lambda x: self.is_top_level(x), hogs)
 
         return hogs
 
     def _make_hog_from_cluster(self, cvar, cluster):
+        # outer variables of hedgehog are the rigid's variables
         xvars = set(cluster.vars)
+
+        # remove the central value of the hedgehog from the list
         xvars.remove(cvar)
 
+        # create the new hedgehog from the central and outer variables
         hog = Hedgehog(cvar, xvars)
 
+        # add the hedgehog
         self._add_hog(hog)
 
-        method = Rigid2Hog(cluster, hog)
-
-        self._add_method(method)
+        # add new rigid-to-hedgehog method
+        self._add_method(Rigid2Hog(cluster, hog))
 
         return hog
 
@@ -834,7 +843,7 @@ class ClusterSolver(Notifier):
 
     def _search_hogs_from_hog(self, newhog):
         # find adjacent clusters
-        dep = self.find_dependend(newhog.cvar)
+        dep = self.find_dependent(newhog.cvar)
 
         top = filter(lambda c: self.is_top_level(c), dep)
         clusters = filter(lambda x: isinstance(x,Rigid), top)
@@ -918,7 +927,7 @@ class ClusterSolver(Notifier):
 
     def _search_merge_from_hog(self, hog):
         # case CH (overconstrained)
-        dep = self.find_dependend(hog.cvar)
+        dep = self.find_dependent(hog.cvar)
 
         clusters = filter(lambda x: isinstance(x,Rigid) and self.is_top_level(x), dep)
         sharecx = filter(lambda x: len(set(hog.xvars).intersection(x.vars)) >=1, clusters)
@@ -942,7 +951,7 @@ class ClusterSolver(Notifier):
         sharex = set()
 
         for var in hog.xvars:
-            dep = self.find_dependend(var)
+            dep = self.find_dependent(var)
 
             sharex.update(filter(lambda x: isinstance(x,Rigid) \
             and self.is_top_level(x), dep))
@@ -1089,20 +1098,20 @@ class ClusterSolver(Notifier):
                         return self._merge_cluster_cluster_hog(cluster, \
                         newcluster, hog)
 
-    def _merge_point_cluster(self, pointc, cluster):
+    def _merge_point_cluster(self, point, cluster):
         logging.getLogger("clustersolver").debug("_merge_point_cluster %s, \
-%s", pointc, cluster)
+%s", point, cluster)
 
-        # create new cluster and method
-        allvars = set(pointc.vars).union(cluster.vars)
+        # get variables from point and rigid
+        variables = set(point.vars).union(cluster.vars)
 
-        newcluster = Rigid(allvars)
+        # create new rigid from variables
+        new_cluster = Rigid(variables)
 
-        merge = Merge1C(pointc, cluster, newcluster)
+        # add new point-to-rigid merge
+        self._add_merge(Merge1C(point, cluster, new_cluster))
 
-        self._add_merge(merge)
-
-        return newcluster
+        return new_cluster
 
     def _merge_cluster_pair(self, c1, c2):
         """Merge a pair of clusters, structurally overconstrained.
@@ -1116,7 +1125,6 @@ class ClusterSolver(Notifier):
         # always use root cluster as first cluster, swap if needed
         if not self._contains_root(c1) and not self._contains_root(c2):
             pass
-
         elif self._contains_root(c1) and self._contains_root(c2):
             raise Exception("two root clusters")
         elif self._contains_root(c2):
@@ -1125,30 +1133,29 @@ class ClusterSolver(Notifier):
             return self._merge_cluster_pair(c2, c1)
 
         # create new cluster and merge
-        allvars = set(c1.vars).union(c2.vars)
+        variables = set(c1.vars).union(c2.vars)
 
-        newcluster = Rigid(allvars)
+        # create new rigid cluster from variables
+        new_cluster = Rigid(variables)
 
-        merge = Merge2C(c1,c2,newcluster)
+        # add new two-rigid merge
+        self._add_merge(Merge2C(c1, c2, new_cluster))
 
-        self._add_merge(merge)
-
-        return newcluster
+        return new_cluster
 
     def _merge_cluster_hog(self, cluster, hog):
-        """merge cluster and hog (absorb hog, overconstrained)"""
+        """merge rigid and hog (absorb hog, overconstrained)"""
 
         logging.getLogger("clustersolver").debug("_merge_cluster_hog %s, %s", \
         cluster, hog)
 
-        # create new cluster and merge
-        newcluster = Rigid(cluster.vars)
+        # create new rigid from variables
+        new_cluster = Rigid(cluster.vars)
 
-        merge = MergeCH(cluster, hog, newcluster)
+        # add new rigid-hedgehog merge
+        self._add_merge(MergeCH(cluster, hog, new_cluster))
 
-        self._add_merge(merge)
-
-        return newcluster
+        return new_cluster
 
     def _merge_balloon_hog(self, balloon, hog):
         """merge balloon and hog (absorb hog, overconstrained)"""
@@ -1285,6 +1292,7 @@ class ClusterSolver(Notifier):
             cluster = self._graph.outgoing_vertices("_root")[0]
         else:
             cluster = None
+
         while (cluster != None):
             if cluster is input_cluster:
                 return True
@@ -1312,13 +1320,12 @@ class ClusterSolver(Notifier):
         oc = over_constraints(object1, object2)
 
         logging.getLogger("clustersolver").debug("over_constraints: %s", \
-        map(str, oc))
+        map(unicode, oc))
 
-        consistent = True
-
-        for con in oc:
-            consistent = consistent \
-            and self._consistent_overconstraint_in_pair(con, object1, object2)
+        # calculate consistency (True if no overconstraints)
+        consistent = reduce(lambda x, y: x and y, \
+        [self._consistent_overconstraint_in_pair(con, object1, object2) \
+        for con in oc], True)
 
         logging.getLogger("clustersolver").debug("global consistent? %s", \
         consistent)
@@ -1690,9 +1697,9 @@ and c3", "clmethods")
     def multi_execute(self, inmap):
         logging.getLogger("clustersolver").debug("Merge3C.multi_execute called")
 
-        c1 = inmap[self._inputs[0]]
-        c2 = inmap[self._inputs[1]]
-        c3 = inmap[self._inputs[2]]
+        c1 = inmap[self.inputs[0]]
+        c2 = inmap[self.inputs[1]]
+        c3 = inmap[self.inputs[2]]
 
         shared12 = set(c1.vars()).intersection(c2.vars()).difference(c3.vars())
         shared13 = set(c1.vars()).intersection(c3.vars()).difference(c2.vars())
@@ -1728,9 +1735,9 @@ and c3", "clmethods")
         return solutions
 
     def prototype_constraints(self):
-        c1 = self._inputs[0]
-        c2 = self._inputs[1]
-        c3 = self._inputs[2]
+        c1 = self.inputs[0]
+        c2 = self.inputs[1]
+        c3 = self.inputs[2]
 
         shared12 = set(c1.vars).intersection(c2.vars).difference(c3.vars)
         shared13 = set(c1.vars).intersection(c3.vars).difference(c2.vars)
@@ -2303,8 +2310,8 @@ class MergeHogs(Merge):
         logging.getLogger("clustersolver").debug("MergeHogs.multi_execute \
 called")
 
-        conf1 = inmap[self._inputs[0]]
-        conf2 = inmap[self._inputs[1]]
+        conf1 = inmap[self.inputs[0]]
+        conf2 = inmap[self.inputs[1]]
 
         shared = set(self.hog1.xvars).intersection(self.hog2.xvars)
 
@@ -2336,8 +2343,8 @@ class Rigid2Hog(Derive):
         logging.getLogger("clustersolver").debug("Rigid2Hog.multi_execute \
 called")
 
-        conf1 = inmap[self._inputs[0]]
-        vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
+        conf1 = inmap[self.inputs[0]]
+        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
         conf = conf1.select(vars)
 
         return [conf]
@@ -2360,8 +2367,8 @@ class Balloon2Hog(Derive):
         logging.getLogger("clustersolver").debug("Balloon2Hog.multi_execute \
 called")
 
-        conf1 = inmap[self._inputs[0]]
-        vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
+        conf1 = inmap[self.inputs[0]]
+        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
         conf = conf1.select(vars)
 
         return [conf]
@@ -2380,8 +2387,8 @@ class SubHog(Derive):
     def multi_execute(self, inmap):
         logging.getLogger("clustersolver").debug("SubHog.multi_execute called")
 
-        conf1 = inmap[self._inputs[0]]
-        vars = list(self._outputs[0].xvars) + [self._outputs[0].cvar]
+        conf1 = inmap[self.inputs[0]]
+        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
         conf = conf1.select(vars)
 
         return [conf]
