@@ -25,6 +25,7 @@ class Configuration(object):
        dimension - the dimension of the space in which the configuration is embedded
        underconstrained - flag indicating an underconstrained merge (not a unique solution)
     """
+    
     def __init__(self, map):
         """instantiate a Configuration
 
