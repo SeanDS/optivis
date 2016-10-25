@@ -41,10 +41,15 @@ class Method(object):
         raise NotImplementedError()
 
     def __unicode__(self):
+        # comma separated list of inputs
         input_str = ", ".join([unicode(_input) for _input in self.inputs])
+
+        # comma separated list of outputs
         output_str = ", ".join([unicode(output) for output in self.outputs])
 
-        return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, output_str)
+        # combined string
+        return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, \
+        output_str)
 
     def __str__(self):
         return unicode(self).encode("utf-8")
@@ -60,21 +65,27 @@ class AddMethod(Method):
         :param c: output
         """
 
+        # call parent to set appropriate inputs and outputs
         super(AddMethod, self).__init__("AddMethod", inputs=[a, b], outputs=[c])
 
-    def execute(self, inmap):
+    def execute(self, in_map):
         """Execute method"""
 
-        outmap = {}
+        # map of outputs to input values
+        out_map = {}
 
+        # get variables from lists of inputs and outputs
         a = self.inputs[0]
         b = self.inputs[1]
         c = self.outputs[0]
 
-        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
-            outmap[c] = inmap[a] + inmap[b]
+        # calculate c = a + b if the variables exist in the input map
+        if a in in_map and b in in_map \
+        and in_map[a] != None and in_map[b] != None:
+            # set the value in the output map
+            out_map[c] = in_map[a] + in_map[b]
 
-        return outmap
+        return out_map
 
 class SubMethod(Method):
     """Method representing subtraction of two variables"""
@@ -87,43 +98,58 @@ class SubMethod(Method):
         :param c: output
         """
 
+        # call parent to set appropriate inputs and outputs
         super(SubMethod, self).__init__("SubMethod", inputs=[a, b], outputs=[c])
 
-    def execute(self, inmap):
+    def execute(self, in_map):
         """Execute method"""
 
-        outmap = {}
+        # map of outputs to input values
+        out_map = {}
 
+        # get variables from lists of inputs and outputs
         a = self.inputs[0]
         b = self.inputs[1]
         c = self.outputs[0]
 
-        if a in inmap and b in inmap and inmap[a] != None and inmap[b] != None:
-            outmap[c] = inmap[a] - inmap[b]
+        # calculate c = a - b if the variables exist in the input map
+        if a in in_map and b in in_map \
+        and in_map[a] != None and in_map[b] != None:
+            # set the value in the output map
+            out_map[c] = in_map[a] - in_map[b]
 
-        return outmap
+        return out_map
 
 class SetMethod(Method):
     """Method representing the setting of a variable's value"""
 
-    def __init__(self, var, value):
+    def __init__(self, variable, value):
         """Instantiates a new SetMethod
 
-        :param var: variable name
+        :param variable: variable name
         :param value: any object to be associated with var
         """
 
-        super(SetMethod, self).__init__("SetMethod", inputs=[], outputs=[var])
+        # call parent to set appropriate inputs and outputs
+        super(SetMethod, self).__init__("SetMethod", inputs=[], \
+        outputs=[variable])
 
-        # set value
+        # make a record of the value to be set
         self._value = value
 
-    def execute(self, inmap):
+    def execute(self, in_map):
         """Execute method"""
 
+        # return a dict with the output set to the value
         return {self._outputs[0]: self._value}
 
     def __unicode__(self):
+        """Unicode representation of the method
+
+        Overrides :class:`~.Method`
+        """
+
+        # show the output's set value in the string representation
         return "{0}({1}={2})".format(self.name, self._outputs[0], self._value)
 
 class AssignMethod(Method):
@@ -136,16 +162,22 @@ class AssignMethod(Method):
         :param b: second input
         """
 
-        self.inputs = [b]
-        self.outputs = [a]
+        # call parent to set appropriate inputs and outputs
+        super(AssignMethod, self).__init__("AssignMethod", inputs=[b], \
+        outputs=[a])
 
-    def execute(self, inmap):
-        if self._inputs[0] in inmap:
-            return {self._outputs[0]: inmap(self._inputs[0])}
+    def execute(self, in_map):
+        """Execute method"""
 
-        return {}
+        # return empty dict of the only input is not in the map
+        if self._inputs[0] not in in_map:
+            return {}
+
+        # set the relevant output to the mapping and return
+        return {self._outputs[0]: in_map(self._inputs[0])}
 
     def __unicode__(self):
+        # show the input's assigned value in the string representation
         return "{0}({1}={2})".format(self.name, self._inputs[0], self._value)
 
 class MethodGraph(object):
@@ -191,32 +223,32 @@ class MethodGraph(object):
     def add_variable(self, varname, value=None):
         """Adds a variable, optionally with a value"""
 
-        if not varname in self._map:
+        if varname not in self._map:
             self._map[varname] = value
             self._graph.add_vertex(varname)
 
     def rem_variable(self, varname):
         """Remove a variable and all methods on that variable"""
 
-        if varname in self._map:
-            del(self._map[varname])
-
-            if varname in self._changed:
-                del(self._changed[varname])
-
-            # delete all methods on it
-            map(self.rem_method, self._graph.ingoing_vertices(varname))
-            map(self.rem_method, self._graph.outgoing_vertices(varname))
-
-            # remove it from graph
-            self._graph.rem_vertex(varname)
-        else:
+        if varname not in self._map:
             raise Exception("Variable not in graph")
 
-    def get(self, key):
+        del(self._map[varname])
+
+        if varname in self._changed:
+            del(self._changed[varname])
+
+        # delete all methods on it
+        map(self.rem_method, self._graph.ingoing_vertices(varname))
+        map(self.rem_method, self._graph.outgoing_vertices(varname))
+
+        # remove it from graph
+        self._graph.rem_vertex(varname)
+
+    def get(self, variable):
         """Gets the value of a variable"""
 
-        return self._map[key]
+        return self._map[variable]
 
     def set(self, varname, value, prop=True):
         """Sets the value of a variable.
@@ -264,17 +296,17 @@ by multiple methods".format(var))
 (variable {0})".format(var))
 
         if prop:
-            self._execute(met)
-            self.propagate()
+            # execute includes propagation
+            self.execute(met)
 
     def rem_method(self, met):
         """Removes a method"""
 
-        if met in self._methods:
-            del(self._methods[met])
-            self._graph.rem_vertex(met)
-        else:
+        if met not in self._methods:
             raise Exception("Method not in graph")
+
+        del(self._methods[met])
+        self._graph.rem_vertex(met)
 
     def propagate(self):
         """Propagates any pending changes
@@ -282,7 +314,7 @@ by multiple methods".format(var))
         Changes are propagated until no changes are left or until no more
         changes can be propagated. This method is called from set() and
         add_method() by default. However, if the user so chooses, the methods
-        will not call propagate, and the user should call this fucntion at a
+        will not call propagate, and the user should call this function at a
         convenient time.
         """
 
@@ -290,8 +322,7 @@ by multiple methods".format(var))
             pick = self._changed.keys()[0]
             methods = self._graph.outgoing_vertices(pick)
 
-            for met in methods:
-                self._execute(met)
+            map(lambda method: self._do_execute(method), methods)
 
             if pick in self._changed:
                 del(self._changed[pick])
@@ -302,19 +333,19 @@ by multiple methods".format(var))
         while (len(self._map) > 0):
             self.rem_variable(self._map.keys()[0])
 
-    def execute(self, met):
+    def execute(self, method):
         """Executes a method and propagates changes
 
         Method must be in MethodGraph
         """
 
-        if met in self._methods:
-            self._execute(met)
-            self.propagate()
-        else:
+        if method not in self._methods:
             raise Exception("Method not in graph")
 
-    def _execute(self, met):
+        self._do_execute(method)
+        self.propagate()
+
+    def _do_execute(self, method):
         """Executes a method
 
         Method is executed only if all input variable values are not None.
@@ -325,25 +356,26 @@ by multiple methods".format(var))
         inmap = {}
         has_nones = False
 
-        for var in met.inputs:
+        for var in method.inputs:
             value = self._map[var]
 
             if value == None:
                 has_nones = True
 
             inmap[var] = value
-        for var in met.outputs:
+
+        for var in method.outputs:
             inmap[var] = self._map[var]
 
         # call method.execute
         if has_nones:
             outmap = {}
         else:
-            outmap = met.execute(inmap)
+            outmap = method.execute(inmap)
 
         # update values in self._map
         # set output variables changed
-        for var in met.outputs:
+        for var in method.outputs:
             if var in outmap:
                 self._map[var] = outmap[var]
                 self._changed[var] = 1
@@ -353,13 +385,15 @@ by multiple methods".format(var))
                     self._map[var] = None
 
         # clear change flag on input variables
-        for var in met.inputs:
+        for var in method.inputs:
             if var in self._changed:
                 del(self._changed[var])
 
     def __unicode__(self):
-        variables = ", ".join([str(el) for el in self._map.keys()])
-        methods = ", ".join([str(el) for el in self._methods.keys()])
+        variables = ", ".join([unicode(element) \
+        for element in self._map.keys()])
+        methods = ", ".join([unicode(element) \
+        for element in self._methods.keys()])
 
         return "MethodGraph(variables=[{0}], methods=[{1}])".format(variables, \
         methods)
