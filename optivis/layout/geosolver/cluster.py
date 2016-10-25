@@ -108,9 +108,6 @@ class Cluster(MultiVariable):
         return "{0}{1}#{2}({3})".format(ovr_const, self.name, id(self), \
         var_list)
 
-    def __str__(self):
-        return unicode(self).encode("utf-8")
-
     def _variable_list(self):
         """Variable list for the :class:`~.Cluster`
 
