@@ -235,13 +235,19 @@ class GeometricProblem(Notifier, Listener):
             if message == "set_parameter":
                 self.send_notify(("set_parameter", (obj, data)))
 
+    def __unicode__(self):
+        # variable list on separate lines
+        variables = "\n".join(["{0} = {1}".format(variable, \
+        self.prototype[variable]) for variable in self.prototype])
+
+        # constraints on separate lines
+        constraints = "\n".join([unicode(constraint) for constraint \
+        in self.cg.constraints()])
+
+        return "{0}\n{1}".format(variables, constraints)
+
     def __str__(self):
-        s = ""
-        for v in self.prototype:
-            s += v + " = " + str(self.prototype[v]) + "\n"
-        for con in self.cg.constraints():
-            s += str(con) + "\n"
-        return s
+        return unicode(self).encode("utf-8")
 
 class GeometricSolver(Listener):
     """The GeometricSolver monitors changes in a GeometricProblem and
