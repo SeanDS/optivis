@@ -209,31 +209,59 @@ constraint that isn't in graph")
         # return the variable's outgoing vertices
         return self._graph.outgoing_vertices(variable)
 
-    def get_constraints_on_all(self, varlist):
-        """get a list of all constraints on all vars in list"""
-        if len(varlist) == 0: return []
-        l0 = self.get_constraints_on(varlist[0])
-        l = []
-        for con in l0:
-            ok = True;
-            for var in varlist[1:]:
-                ok &= (var in con.variables())
-            #for
-            if ok: l.append(con)
-        #for
-        return l;
+    def get_constraints_on_all(self, variables):
+        """Gets a list of the constraints shared by all of the variables \
+        specified in the sequence
 
-    def get_constraints_on_any(self, varlist):
-        """get a list of all constraints on any of the vars in list"""
-        if len(varlist) == 0: return []
-        l = []
-        for var in varlist:
-            l0 = self.get_constraints_on(var)
-            for con in l0:
-                if con not in l: l.append(con)
-            #for
-        #for
-        return l;
+        :param variables: variables to find constraints for"""
+
+        # if no variables were specified, there are no shared constraints
+        if len(variables) == 0:
+            # return  an empty list
+            return []
+
+        # empty list of shared constraints
+        shared_constraints = []
+
+        # loop over the constraints of the first variable in the list
+        for constraint in self.get_constraints_on(variables[0]):
+            # default flag
+            shared_constraint = True
+
+            # loop over the variables in the rest of the list
+            for var in variables[1:]:
+                # is this variable constrained by this constraint?
+                if var not in constraint.variables():
+                    # this variable doesn't share the constraint
+                    shared_constraint = False
+
+                    # no point checking the others
+                    break
+
+            if shared_constraint:
+                # add constraint to list of shared constraints
+                shared_constraints.append(constraint)
+
+        return shared_constraints
+
+    def get_constraints_on_any(self, variables):
+        """Gets a list of the constraints on any of the specified variables
+
+        :param variables: variables to get constraints for"""
+
+        # if no variables were specified, there are no constraints
+        if len(variables) == 0:
+            # return  an empty list
+            return []
+
+        # empty set of constraints
+        constraints = set([])
+
+        map(lambda x: constraints.update(x), \
+        [set(self.get_constraints_on(variable)) for variable in variables])
+
+        # return constraints set as a list
+        return list(constraints)
 
     def __unicode__(self):
         return "ConstraintGraph(variables=[{0}], constraints=[{1}])".format( \
@@ -243,30 +271,12 @@ constraint that isn't in graph")
     def __str__(self):
         return unicode(self).encode("utf-8")
 
-def test():
-    class PlusConstraint(Constraint):
-        def __init__(self, a, b, c):
-            self._variables = [a,b,c]
+class PlusConstraint(Constraint):
+    """Constraint for testing purposes"""
 
-        def satisfied(self, mapping):
-            return mapping[self._variables[0]] + mapping[self._variables[1]]\
-             == mapping[self._variables[2]]
+    def __init__(self, a, b, c):
+        self._variables = [a, b, c]
 
-        def __str__(self):
-            s = "PlusConstraint("
-            s += self._variables[0]+","
-            s += self._variables[1]+","
-            s += self._variables[2]+")"
-            return s
-
-    problem = ConstraintGraph()
-    problem.add_variable('a')
-    problem.add_variable('b')
-    plus = PlusConstraint('a','b','c')
-    problem.add_constraint(plus)
-    print str(problem)
-    print "get_constraints_on(a) = ",
-    print map(str, problem.get_constraints_on('a'))
-
-if __name__ == "__main__":
-    test()
+    def satisfied(self, mapping):
+        return mapping[self._variables[0]] + mapping[self._variables[1]] \
+         == mapping[self._variables[2]]
