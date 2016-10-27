@@ -516,7 +516,7 @@ class ClusterSolver(Notifier):
             return
         if self._search_balloon_from_balloon(balloon):
             return
-        if self._search_cluster_from_balloon(balloon):
+        if self._search_rigid_from_balloon(balloon):
             return
         self._search_hogs_from_balloon(balloon)
 
@@ -529,14 +529,14 @@ class ClusterSolver(Notifier):
             return
         self._search_hogs_from_hog(hog)
 
-    def _search_from_rigid(self, cluster):
-        if self._search_absorb_from_cluster(cluster):
+    def _search_from_rigid(self, rigid):
+        if self._search_absorb_from_rigid(rigid):
             return
-        if self._search_balloonclustermerge_from_cluster(cluster):
+        if self._search_balloonrigidmerge_from_rigid(rigid):
             return
-        if self._search_merge_from_cluster(cluster):
+        if self._search_merge_from_rigid(rigid):
             return
-        self._search_hogs_from_cluster(cluster)
+        self._search_hogs_from_rigid(rigid)
 
     def _search_absorb_from_balloon(self, balloon):
         for cvar in balloon.vars:
@@ -550,7 +550,7 @@ class ClusterSolver(Notifier):
                 if len(shared) == len(hog.xvars):
                     return self._merge_balloon_hog(balloon, hog)
 
-    def _search_absorb_from_cluster(self, cluster):
+    def _search_absorb_from_rigid(self, cluster):
         for cvar in cluster.vars:
             # find all incident hedgehogs
             hogs = self._find_hogs(cvar)
@@ -560,7 +560,7 @@ class ClusterSolver(Notifier):
                 shared = set(hog.xvars).intersection(cluster.vars)
 
                 if len(shared) == len(hog.xvars):
-                    return self._merge_cluster_hog(cluster, hog)
+                    return self._merge_rigid_hog(cluster, hog)
 
     def _search_absorb_from_hog(self, hog):
         dep = self.find_dependent(hog.cvar)
@@ -587,7 +587,7 @@ class ClusterSolver(Notifier):
             sharedcx = set(cluster.vars).intersection(hog.xvars)
 
             if len(sharedcx) == len(hog.xvars):
-                return self._merge_cluster_hog(cluster, hog)
+                return self._merge_rigid_hog(cluster, hog)
 
     def _find_balloons(self, variables):
         balloons = set()
@@ -667,8 +667,8 @@ class ClusterSolver(Notifier):
 
         return None
 
-    def _search_cluster_from_balloon(self, balloon):
-        logging.getLogger("clustersolver").debug("_search_cluster_from_balloon")
+    def _search_rigid_from_balloon(self, balloon):
+        logging.getLogger("clustersolver").debug("_search_rigid_from_balloon")
 
         # map from adjacent clusters to variables shared with input balloon
         mapping = {}
@@ -688,13 +688,13 @@ class ClusterSolver(Notifier):
 
         for cluster in mapping:
             if len(mapping[cluster]) >= 2:
-                return self._merge_balloon_cluster(balloon, cluster)
+                return self._merge_balloon_rigid(balloon, cluster)
 
         return None
 
-    def _search_balloonclustermerge_from_cluster(self, rigid):
+    def _search_balloonrigidmerge_from_rigid(self, rigid):
         logging.getLogger("clustersolver").debug( \
-        "_search_balloonclustermerge_from_cluster")
+        "_search_balloonrigidmerge_from_rigid")
 
         # map from adjacent clusters to variables shared with input balloon
         mapping = {}
@@ -713,7 +713,7 @@ class ClusterSolver(Notifier):
 
         for balloon in mapping:
             if len(mapping[balloon]) >= 2:
-                return self._merge_balloon_cluster(balloon, rigid)
+                return self._merge_balloon_rigid(balloon, rigid)
 
         return None
 
@@ -731,17 +731,17 @@ class ClusterSolver(Notifier):
 
         return new_balloon
 
-    def _merge_balloon_cluster(self, balloon, cluster):
-        # create new cluster and method
+    def _merge_balloon_rigid(self, balloon, rigid):
+        # create new rigid and method
 
-        # get variables in both the balloon and the cluster
-        variables = set(balloon.vars).union(cluster.vars)
+        # get variables in both the balloon and the rigid
+        variables = set(balloon.vars).union(rigid.vars)
 
         # create new rigid cluster
         new_cluster = Rigid(list(variables))
 
         # add new balloon-rigid merge
-        self._add_merge(BalloonRigidMerge(balloon, cluster, new_cluster))
+        self._add_merge(BalloonRigidMerge(balloon, rigid, new_cluster))
 
         return new_cluster
 
@@ -754,9 +754,9 @@ class ClusterSolver(Notifier):
 
         return hogs
 
-    def _make_hog_from_cluster(self, cvar, cluster):
+    def _make_hog_from_rigid(self, cvar, rigid):
         # outer variables of hedgehog are the rigid's variables
-        xvars = set(cluster.vars)
+        xvars = set(rigid.vars)
 
         # remove the central value of the hedgehog from the list
         xvars.remove(cvar)
@@ -768,7 +768,7 @@ class ClusterSolver(Notifier):
         self._add_hog(hog)
 
         # add new rigid-to-hedgehog method
-        self._add_method(Rigid2Hog(cluster, hog))
+        self._add_method(Rigid2Hog(rigid, hog))
 
         return hog
 
@@ -811,7 +811,7 @@ class ClusterSolver(Notifier):
                         newhog = self._make_hog_from_balloon(cvar, newballoon)
                         self._merge_hogs(hog, newhog)
 
-    def _search_hogs_from_cluster(self, newcluster):
+    def _search_hogs_from_rigid(self, newcluster):
         if len(newcluster.vars) <= 2:
             return None
 
@@ -832,7 +832,7 @@ class ClusterSolver(Notifier):
                 < len(hog.xvars) and len(shared) < len(xvars):
                     tmphog = Hedgehog(cvar, xvars)
                     if not self._graph.has_vertex(tmphog):
-                        newhog = self._make_hog_from_cluster(cvar, newcluster)
+                        newhog = self._make_hog_from_rigid(cvar, newcluster)
                         self._merge_hogs(hog, newhog)
 
     def _search_hogs_from_hog(self, newhog):
@@ -861,7 +861,7 @@ class ClusterSolver(Notifier):
                 tmphog = Hedgehog(newhog.cvar, xvars)
 
                 if not self._graph.has_vertex(tmphog):
-                    newnewhog = self._make_hog_from_cluster(newhog.cvar, \
+                    newnewhog = self._make_hog_from_rigid(newhog.cvar, \
                     cluster)
 
                     tomerge.append(newnewhog)
@@ -930,7 +930,7 @@ class ClusterSolver(Notifier):
             sharedcx = set(cluster.vars).intersection(hog.xvars)
 
             if len(sharedcx) == len(hog.xvars):
-                return self._merge_cluster_hog(cluster, hog)
+                return self._merge_rigid_hog(cluster, hog)
 
         # case CHC
         for i in range(len(sharecx)):
@@ -939,7 +939,7 @@ class ClusterSolver(Notifier):
             for j in range(i + 1, len(sharecx)):
                 c2 = sharecx[j]
 
-                return self._merge_cluster_hog_cluster(c1, hog, c2)
+                return self._merge_rigid_hog_rigid(c1, hog, c2)
 
         # case CCH
         sharex = set()
@@ -960,12 +960,12 @@ class ClusterSolver(Notifier):
 
                 if len(shared12) >= 1 and len(sharedh2) >= 1 \
                 and len(shared2) == 2:
-                    return self._merge_cluster_cluster_hog(c1, c2, hog)
+                    return self._merge_rigid_rigid_hog(c1, c2, hog)
 
         return None
 
-    def _search_merge_from_cluster(self, newcluster):
-        logging.getLogger("clustersolver").debug("_search_merge %s", newcluster)
+    def _search_merge_from_rigid(self, newcluster):
+        logging.getLogger("clustersolver").debug("_search_merge_from_rigid %s", newcluster)
 
         # find clusters overlapping with new cluster
         overlap = {}
@@ -993,14 +993,14 @@ class ClusterSolver(Notifier):
         for cluster in overlap:
             if len(overlap[cluster]) == 1:
                 if len(cluster.vars) == 1:
-                    return self._merge_point_cluster(cluster, newcluster)
+                    return self._merge_point_rigid(cluster, newcluster)
                 elif len(newcluster.vars) == 1:
-                    return self._merge_point_cluster(newcluster, cluster)
+                    return self._merge_point_rigid(newcluster, cluster)
 
         # two cluster merge (overconstrained)
         for cluster in overlap:
             if len(overlap[cluster]) >= 2:
-                return self._merge_cluster_pair(cluster, newcluster)
+                return self._merge_rigid_pair(cluster, newcluster)
 
         # three cluster merge
         clusterlist = overlap.keys()
@@ -1019,7 +1019,7 @@ class ClusterSolver(Notifier):
 
                 if len(shared1) == 2 and len(shared1) == 2 and \
                    len(shared2) == 2:
-                    return self._merge_cluster_triple(c1, c2, newcluster)
+                    return self._merge_rigid_triple(c1, c2, newcluster)
 
         # merge with an angle, case 1
         for cluster in overlap:
@@ -1039,7 +1039,7 @@ class ClusterSolver(Notifier):
 
                 if len(sharedch) >= 1 and len(sharednh) >= 1 \
                 and len(sharedh) >= 2:
-                    return self._merge_cluster_hog_cluster(cluster, hog, \
+                    return self._merge_rigid_hog_rigid(cluster, hog, \
                     newcluster)
 
         # merge with an angle, case 2
@@ -1065,7 +1065,7 @@ class ClusterSolver(Notifier):
                     sharedc = sharedch.union(sharednc)
 
                     if len(sharedch) >= 1 and len(sharedc) >= 2:
-                        return self._merge_cluster_cluster_hog(newcluster, \
+                        return self._merge_rigid_rigid_hog(newcluster, \
                         cluster, hog)
 
         # merge with an angle, case 3
@@ -1089,31 +1089,31 @@ class ClusterSolver(Notifier):
 
                     if len(sharedhc) >= 1 and len(sharedhn) >= 1 \
                     and len(sharedh) >= 2 and len(sharedc) == 2:
-                        return self._merge_cluster_cluster_hog(cluster, \
+                        return self._merge_rigid_rigid_hog(cluster, \
                         newcluster, hog)
 
-    def _merge_point_cluster(self, point, cluster):
-        logging.getLogger("clustersolver").debug("_merge_point_cluster %s, \
-%s", point, cluster)
+    def _merge_point_rigid(self, point, rigid):
+        logging.getLogger("clustersolver").debug("_merge_point_rigid %s, \
+%s", point, rigid)
 
         # get variables from point and rigid
-        variables = set(point.vars).union(cluster.vars)
+        variables = set(point.vars).union(rigid.vars)
 
         # create new rigid from variables
         new_cluster = Rigid(variables)
 
         # add new point-to-rigid merge
-        self._add_merge(Merge1C(point, cluster, new_cluster))
+        self._add_merge(Merge1C(point, rigid, new_cluster))
 
         return new_cluster
 
-    def _merge_cluster_pair(self, c1, c2):
+    def _merge_rigid_pair(self, c1, c2):
         """Merge a pair of clusters, structurally overconstrained.
            Rigid which contains root is used as origin.
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("_merge_cluster_pair %s, %s", \
+        logging.getLogger("clustersolver").debug("_merge_rigid_pair %s, %s", \
         c1, c2)
 
         # always use root cluster as first cluster, swap if needed
@@ -1124,7 +1124,7 @@ class ClusterSolver(Notifier):
         elif self._contains_root(c2):
             logging.getLogger("clustersolver").debug("swap cluster order")
 
-            return self._merge_cluster_pair(c2, c1)
+            return self._merge_rigid_pair(c2, c1)
 
         # create new cluster and merge
         variables = set(c1.vars).union(c2.vars)
@@ -1137,17 +1137,17 @@ class ClusterSolver(Notifier):
 
         return new_cluster
 
-    def _merge_cluster_hog(self, cluster, hog):
+    def _merge_rigid_hog(self, rigid, hog):
         """merge rigid and hog (absorb hog, overconstrained)"""
 
-        logging.getLogger("clustersolver").debug("_merge_cluster_hog %s, %s", \
-        cluster, hog)
+        logging.getLogger("clustersolver").debug("_merge_rigid_hog %s, %s", \
+        rigid, hog)
 
         # create new rigid from variables
-        new_cluster = Rigid(cluster.vars)
+        new_cluster = Rigid(rigid.vars)
 
         # add new rigid-hedgehog merge
-        self._add_merge(MergeCH(cluster, hog, new_cluster))
+        self._add_merge(MergeCH(rigid, hog, new_cluster))
 
         return new_cluster
 
@@ -1166,49 +1166,49 @@ class ClusterSolver(Notifier):
 
         return newballoon
 
-    def _merge_cluster_triple(self, c1, c2, c3):
+    def _merge_rigid_triple(self, r1, r2, r3):
         """Merge a triple of clusters.
            Rigid which contains root is used as origin.
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("_merge_cluster_triple %s, \
-%s, %s", c1, c2, c3)
+        logging.getLogger("clustersolver").debug("_merge_rigid_triple %s, \
+%s, %s", r1, r2, r3)
 
-        # always use root cluster as first cluster, swap if needed
-        if self._contains_root(c2):
+        # always use root rigid as first cluster, swap if needed
+        if self._contains_root(r2):
             logging.getLogger("clustersolver").debug("swap cluster order")
 
-            return self._merge_cluster_triple(c2, c1, c3)
-        elif self._contains_root(c3):
+            return self._merge_rigid_triple(r2, r1, r3)
+        elif self._contains_root(r3):
             logging.getLogger("clustersolver").debug("swap cluster order")
 
-            return self._merge_cluster_triple(c3, c1, c2)
+            return self._merge_rigid_triple(r3, r1, r2)
 
         # create new cluster and method
-        allvars = set(c1.vars).union(c2.vars).union(c3.vars)
+        allvars = set(r1.vars).union(r2.vars).union(r3.vars)
 
         newcluster = Rigid(allvars)
 
-        merge = Merge3C(c1,c2,c3,newcluster)
+        merge = Merge3C(r1,r2,r3,newcluster)
 
         self._add_merge(merge)
 
         return newcluster
 
-    def _merge_cluster_hog_cluster(self, c1, hog, c2):
-        """merge c1 and c2 with a hog, with hog center in c1 and c2"""
-        logging.getLogger("clustersolver").debug("_merge_cluster_hog_cluster \
-%s, %s, %s", c1, hog, c2)
+    def _merge_rigid_hog_rigid(self, r1, hog, r2):
+        """merge r1 and r2 with a hog, with hog center in r1 and r2"""
+        logging.getLogger("clustersolver").debug("_merge_rigid_hog_rigid \
+%s, %s, %s", r1, hog, r2)
 
         # always use root cluster as first cluster, swap if needed
-        if self._contains_root(c2):
+        if self._contains_root(r2):
             logging.getLogger("clustersolver").debug("swap cluster order")
 
-            return self._merge_cluster_hog_cluster(c2, hog, c1)
+            return self._merge_rigid_hog_rigid(r2, hog, r1)
 
         # derive sub-hog if nessecairy
-        allvars = set(c1.vars).union(c2.vars)
+        allvars = set(r1.vars).union(r2.vars)
         xvars = set(hog.xvars).intersection(allvars)
 
         if len(xvars) < len(hog.xvars):
@@ -1217,11 +1217,11 @@ class ClusterSolver(Notifier):
             hog = self._derive_subhog(hog, xvars)
 
         #create new cluster and merge
-        allvars = set(c1.vars).union(c2.vars)
+        allvars = set(r1.vars).union(r2.vars)
 
         newcluster = Rigid(allvars)
 
-        merge = MergeCHC(c1,hog,c2,newcluster)
+        merge = MergeCHC(r1,hog,r2,newcluster)
 
         self._add_merge(merge)
 
@@ -1240,22 +1240,22 @@ class ClusterSolver(Notifier):
 
         return subhog
 
-    def _merge_cluster_cluster_hog(self, c1, c2, hog):
+    def _merge_rigid_rigid_hog(self, r1, r2, hog):
         """merge c1 and c2 with a hog, with hog center only in c1"""
 
-        logging.getLogger("clustersolver").debug("_merge_cluster_cluster_hog \
-%s, %s, %s", c1, c2, hog)
+        logging.getLogger("clustersolver").debug("_merge_rigid_rigid_hog \
+%s, %s, %s", r1, r2, hog)
 
-        # always use root cluster as first cluster, swap if needed
-        if self._contains_root(c1) and self._contains_root(c2):
+        # always use root rigid as first cluster, swap if needed
+        if self._contains_root(r1) and self._contains_root(r2):
             raise Exception("two root clusters!")
         elif not self._contains_root(c1) and not self._contains_root(c2):
             pass
-        elif self._contains_root(c2):
-            return self._merge_cluster_cluster_hog(c2, c1, hog)
+        elif self._contains_root(r2):
+            return self._merge_rigid_rigid_hog(r2, r1, hog)
 
         # derive subhog if necessary
-        allvars = set(c1.vars).union(c2.vars)
+        allvars = set(r1.vars).union(r2.vars)
         xvars = set(hog.xvars).intersection(allvars)
 
         if len(xvars) < len(hog.xvars):
@@ -1266,7 +1266,7 @@ class ClusterSolver(Notifier):
         # create new cluster and method
         newcluster = Rigid(allvars)
 
-        merge = MergeCCH(c1,c2,hog,newcluster)
+        merge = MergeCCH(r1,r2,hog,newcluster)
 
         self._add_merge(merge)
 
