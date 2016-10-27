@@ -42,13 +42,13 @@ class Method(object):
 
     def __unicode__(self):
         # comma separated list of inputs
-        input_str = ", ".join([unicode(_input) for _input in self.inputs])
+        input_str = " + ".join([unicode(_input) for _input in self.inputs])
 
         # comma separated list of outputs
-        output_str = ", ".join([unicode(output) for output in self.outputs])
+        output_str = " + ".join([unicode(output) for output in self.outputs])
 
         # combined string
-        return "{0}(in=[{1}], out=[{2}])".format(self.name, input_str, \
+        return "{0}({1} -> {2})".format(self.name, input_str, \
         output_str)
 
     def __str__(self):
