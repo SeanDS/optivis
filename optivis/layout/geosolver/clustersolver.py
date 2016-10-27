@@ -100,7 +100,7 @@ class ClusterSolver(Notifier):
               cluster: A Rigid
            """
 
-        logging.getLogger("clustersolver").debug("add_cluster %s", cluster)
+        logging.getLogger("clustersolver").debug("Adding cluster %s", cluster)
 
         self._add_cluster(cluster)
         self._process_new()
@@ -189,7 +189,7 @@ class ClusterSolver(Notifier):
                     to_restore.add(cluster)
 
             # delete it from graph
-            logging.getLogger("clustersolver").debug("deleting %s", item)
+            logging.getLogger("clustersolver").debug("Deleting %s", item)
             self._graph.rem_vertex(item)
 
             # remove from _new list
@@ -242,7 +242,7 @@ class ClusterSolver(Notifier):
         """
 
         if not self._graph.has_vertex(var):
-            logging.getLogger("clustersolver").debug("_add_variable %s", var)
+            logging.getLogger("clustersolver").debug("Adding variable %s", var)
 
             self._add_to_group("_variables", var)
 
@@ -259,7 +259,7 @@ class ClusterSolver(Notifier):
     def _add_rigid(self, newcluster):
         """add a rigid cluster if not already in system"""
 
-        logging.getLogger("clustersolver").debug("_add_rigid %s", newcluster)
+        logging.getLogger("clustersolver").debug("Adding rigid %s", newcluster)
 
         # check if not already exists
         if self._graph.has_vertex(newcluster):
@@ -286,7 +286,7 @@ class ClusterSolver(Notifier):
         self.send_notify(("add", newcluster))
 
     def _add_hog(self, hog):
-        logging.getLogger("clustersolver").debug("_add_hog: %s", hog)
+        logging.getLogger("clustersolver").debug("Adding hedgehog: %s", hog)
 
         # check if not already exists
         if self._graph.has_vertex(hog):
@@ -310,7 +310,7 @@ class ClusterSolver(Notifier):
 
     def _add_balloon(self, newballoon):
         """add a cluster if not already in system"""
-        logging.getLogger("clustersolver").debug("_add_balloon %s", newballoon)
+        logging.getLogger("clustersolver").debug("Adding balloon %s", newballoon)
 
         # check if not already exists
         if self._graph.has_vertex(newballoon):
@@ -406,7 +406,7 @@ class ClusterSolver(Notifier):
         self._rem_top_level(incluster)
 
     def _add_method(self, method):
-        logging.getLogger("clustersolver").debug("new %s", method)
+        logging.getLogger("clustersolver").debug("Adding method %s", method)
 
         self._add_to_group("_methods", method)
 
@@ -423,7 +423,7 @@ class ClusterSolver(Notifier):
     def _process_new(self):
         while len(self._new) > 0:
             new_obj = self._new.pop()
-            logging.getLogger("clustersolver").debug("search from %s", \
+            logging.getLogger("clustersolver").debug("Searching from %s", \
             new_obj)
 
             # do search
@@ -532,7 +532,7 @@ class ClusterSolver(Notifier):
         return balloons
 
     def _make_balloon(self, var1, var2, var3, hog1, hog2):
-        logging.getLogger("clustersolver").debug("_make_balloon %s, %s, %s", \
+        logging.getLogger("clustersolver").debug("Making balloon %s, %s, %s", \
         var1, var2, var3)
 
         # derive sub-hogs if necessary
@@ -600,7 +600,7 @@ class ClusterSolver(Notifier):
         return None
 
     def _search_rigid_from_balloon(self, balloon):
-        logging.getLogger("clustersolver").debug("_search_rigid_from_balloon")
+        logging.getLogger("clustersolver").debug("Searching for rigid from balloon")
 
         # map from adjacent clusters to variables shared with input balloon
         mapping = {}
@@ -625,8 +625,8 @@ class ClusterSolver(Notifier):
         return None
 
     def _search_balloonrigidmerge_from_rigid(self, rigid):
-        logging.getLogger("clustersolver").debug( \
-        "_search_balloonrigidmerge_from_rigid")
+        logging.getLogger("clustersolver").debug("Searching for balloon-rigid \
+merge from rigid")
 
         # map from adjacent clusters to variables shared with input balloon
         mapping = {}
@@ -838,7 +838,8 @@ class ClusterSolver(Notifier):
             return lasthog
 
     def _merge_hogs(self, hog1, hog2):
-        logging.getLogger("clustersolver").debug("merging %s + %s", hog1, hog2)
+        logging.getLogger("clustersolver").debug("Merging hedgehogs %s and \
+%s", hog1, hog2)
 
         # create new hog and method
         xvars = set(hog1.xvars).union(hog2.xvars)
@@ -897,7 +898,8 @@ class ClusterSolver(Notifier):
         return None
 
     def _search_merge_from_rigid(self, newcluster):
-        logging.getLogger("clustersolver").debug("_search_merge_from_rigid %s", newcluster)
+        logging.getLogger("clustersolver").debug("Searching for merge from \
+rigid %s", newcluster)
 
         # find clusters overlapping with new cluster
         overlap = {}
@@ -1025,7 +1027,7 @@ class ClusterSolver(Notifier):
                         newcluster, hog)
 
     def _merge_point_rigid(self, point, rigid):
-        logging.getLogger("clustersolver").debug("_merge_point_rigid %s, \
+        logging.getLogger("clustersolver").debug("Merging point %s with rigid \
 %s", point, rigid)
 
         # get variables from point and rigid
@@ -1045,8 +1047,8 @@ class ClusterSolver(Notifier):
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("_merge_rigid_pair %s, %s", \
-        c1, c2)
+        logging.getLogger("clustersolver").debug("Merging rigid pair %s and \
+%s", c1, c2)
 
         # always use root cluster as first cluster, swap if needed
         if not self._contains_root(c1) and not self._contains_root(c2):
@@ -1054,7 +1056,8 @@ class ClusterSolver(Notifier):
         elif self._contains_root(c1) and self._contains_root(c2):
             raise Exception("two root clusters")
         elif self._contains_root(c2):
-            logging.getLogger("clustersolver").debug("swap cluster order")
+            logging.getLogger("clustersolver").debug("Swapping rigid pair \
+order")
 
             return self._merge_rigid_pair(c2, c1)
 
@@ -1072,8 +1075,8 @@ class ClusterSolver(Notifier):
     def _merge_rigid_hog(self, rigid, hog):
         """merge rigid and hog (absorb hog, overconstrained)"""
 
-        logging.getLogger("clustersolver").debug("_merge_rigid_hog %s, %s", \
-        rigid, hog)
+        logging.getLogger("clustersolver").debug("Merging rigid %s with \
+hedgehog %s", rigid, hog)
 
         # create new rigid from variables
         new_cluster = Rigid(rigid.vars)
@@ -1086,8 +1089,8 @@ class ClusterSolver(Notifier):
     def _merge_balloon_hog(self, balloon, hog):
         """merge balloon and hog (absorb hog, overconstrained)"""
 
-        logging.getLogger("clustersolver").debug("_merge_balloon_hog %s, %s", \
-        balloon, hog)
+        logging.getLogger("clustersolver").debug("Merging balloon %s with \
+hedgehog %s", balloon, hog)
 
         # create new balloon and merge
         newballoon = Balloon(balloon.vars)
@@ -1104,16 +1107,16 @@ class ClusterSolver(Notifier):
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("_merge_rigid_triple %s, \
-%s, %s", r1, r2, r3)
+        logging.getLogger("clustersolver").debug("Merging rigids %s, %s and \
+%s", r1, r2, r3)
 
         # always use root rigid as first cluster, swap if needed
         if self._contains_root(r2):
-            logging.getLogger("clustersolver").debug("swap cluster order")
+            logging.getLogger("clustersolver").debug("Swapping rigid order")
 
             return self._merge_rigid_triple(r2, r1, r3)
         elif self._contains_root(r3):
-            logging.getLogger("clustersolver").debug("swap cluster order")
+            logging.getLogger("clustersolver").debug("Swapping rigid order")
 
             return self._merge_rigid_triple(r3, r1, r2)
 
@@ -1130,12 +1133,12 @@ class ClusterSolver(Notifier):
 
     def _merge_rigid_hog_rigid(self, r1, hog, r2):
         """merge r1 and r2 with a hog, with hog center in r1 and r2"""
-        logging.getLogger("clustersolver").debug("_merge_rigid_hog_rigid \
-%s, %s, %s", r1, hog, r2)
+        logging.getLogger("clustersolver").debug("Merging rigid %s, hedgehog \
+%s and rigid %s", r1, hog, r2)
 
-        # always use root cluster as first cluster, swap if needed
+        # always use root rigid as first cluster, swap if needed
         if self._contains_root(r2):
-            logging.getLogger("clustersolver").debug("swap cluster order")
+            logging.getLogger("clustersolver").debug("Swapping cluster order")
 
             return self._merge_rigid_hog_rigid(r2, hog, r1)
 
@@ -1144,7 +1147,7 @@ class ClusterSolver(Notifier):
         xvars = set(hog.xvars).intersection(allvars)
 
         if len(xvars) < len(hog.xvars):
-            logging.getLogger("clustersolver").debug("deriving sub-hog")
+            logging.getLogger("clustersolver").debug("Deriving sub-hedgehog")
 
             hog = self._derive_subhog(hog, xvars)
 
@@ -1175,8 +1178,8 @@ class ClusterSolver(Notifier):
     def _merge_rigid_rigid_hog(self, r1, r2, hog):
         """merge c1 and c2 with a hog, with hog center only in c1"""
 
-        logging.getLogger("clustersolver").debug("_merge_rigid_rigid_hog \
-%s, %s, %s", r1, r2, hog)
+        logging.getLogger("clustersolver").debug("Merging rigid %s, rigid %s \
+and hedgehog %s", r1, r2, hog)
 
         # always use root rigid as first cluster, swap if needed
         if self._contains_root(r1) and self._contains_root(r2):
@@ -1191,7 +1194,7 @@ class ClusterSolver(Notifier):
         xvars = set(hog.xvars).intersection(allvars)
 
         if len(xvars) < len(hog.xvars):
-            logging.getLogger("clustersolver").debug("deriving sub-hog")
+            logging.getLogger("clustersolver").debug("Deriving sub-hedgehog")
 
             hog = self._derive_subhog(hog, xvars)
 
@@ -1240,28 +1243,28 @@ class ClusterSolver(Notifier):
         return False
 
     def _is_consistent_pair(self, object1, object2):
-        logging.getLogger("clustersolver").debug("in is_consistent_pair %s, \
-%s", object1, object2)
+        logging.getLogger("clustersolver").debug("Checking if %s and %s are a \
+consistent pair", object1, object2)
 
         oc = over_constraints(object1, object2)
 
-        logging.getLogger("clustersolver").debug("over_constraints: %s", \
-        map(unicode, oc))
+        logging.getLogger("clustersolver").debug("Overconstraints of \
+consistent pair: %s", map(unicode, oc))
 
         # calculate consistency (True if no overconstraints)
         consistent = reduce(lambda x, y: x and y, \
         [self._consistent_overconstraint_in_pair(con, object1, object2) \
         for con in oc], True)
 
-        logging.getLogger("clustersolver").debug("global consistent? %s", \
+        logging.getLogger("clustersolver").debug("Global consistent? %s", \
         consistent)
 
         return consistent
 
     def _consistent_overconstraint_in_pair(self, overconstraint, object1, \
     object2):
-        logging.getLogger("clustersolver").debug("consistent %s in %s and \
-%s?", overconstraint, object1, object2)
+        logging.getLogger("clustersolver").debug("Checking if %s and %s have \
+a consistent overconstraint %s", object1, object2, overconstraint)
 
         # get sources for constraint in given clusters
         s1 = self._source_constraint_in_cluster(overconstraint, object1)
@@ -1281,7 +1284,7 @@ class ClusterSolver(Notifier):
             else:
                 consistent = True
 
-        logging.getLogger("clustersolver").debug("consistent? %s", consistent)
+        logging.getLogger("clustersolver").debug("Consistent? %s", consistent)
 
         return consistent
 
@@ -1433,8 +1436,9 @@ class PrototypeMethod(MultiMethod):
         for i in range(1, len(self.inputs)):
             selclusters.append(self.inputs[i])
 
-        logging.getLogger("clustersolver").debug("input clusters %s", incluster)
-        logging.getLogger("clustersolver").debug("selection clusters %s", \
+        logging.getLogger("clustersolver").debug("Input clusters: %s", \
+        incluster)
+        logging.getLogger("clustersolver").debug("Selection clusters: %s", \
         selclusters)
 
         # get confs
@@ -1452,20 +1456,20 @@ class PrototypeMethod(MultiMethod):
         selconf = Configuration(selmap)
         sat = True
 
-        logging.getLogger("clustersolver").debug("input configuration = \
-%s", inconf)
-        logging.getLogger("clustersolver").debug("selection configuration = \
+        logging.getLogger("clustersolver").debug("Input configuration: %s", \
+        inconf)
+        logging.getLogger("clustersolver").debug("Selection configuration: \
 %s", selconf)
 
         for con in self.constraints:
             satcon = con.satisfied(inconf.map) != con.satisfied(selconf.map)
 
-            logging.getLogger("clustersolver").debug("constraint = %s", con)
-            logging.getLogger("clustersolver").debug("constraint satisfied? \
+            logging.getLogger("clustersolver").debug("Constraint: %s", con)
+            logging.getLogger("clustersolver").debug("Constraint satisfied? \
 %s", satcon)
             sat = sat and satcon
 
-        logging.getLogger("clustersolver").debug("prototype satisfied? %s", \
+        logging.getLogger("clustersolver").debug("Prototype satisfied? %s", \
 sat)
 
         if sat:
@@ -1526,7 +1530,7 @@ class MergePR(Merge):
         outputs=[out], overconstrained=False, consistent=True)
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("MergeRC.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergePR.multi_execute called")
 
         c1 = self.inputs[0]
         c2 = self.inputs[1]
@@ -1617,40 +1621,40 @@ class MergeRRR(Merge):
         if len(shared12) < 1:
             raise Exception("underconstrained r1 and r2")
         elif len(shared12) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r1 \
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r1 \
 and r2")
 
             self.overconstrained = True
         if len(shared13) < 1:
             raise Exception("underconstrained r1 and r3")
         elif len(shared13) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r1 \
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r1 \
 and r3")
 
             self.overconstrained = True
         if len(shared23) < 1:
             raise Exception("underconstrained r2 and r3")
         elif len(shared23) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r2 \
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r2 \
 and r3", "clmethods")
 
             self.overconstrained = True
         if len(shared1) < 2:
             raise Exception("underconstrained r1")
         elif len(shared1) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r1")
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r1")
 
             self.overconstrained = True
         if len(shared2) < 2:
             raise Exception("underconstrained r2")
         elif len(shared2) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r2")
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r2")
 
             self.overconstrained = True
         if len(shared3) < 2:
             raise Exception("underconstrained r3")
         elif len(shared3) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained RRR - r3")
+            logging.getLogger("clustersolver").debug("Overconstrained RRR: r3")
 
             self.overconstrained = True
 
@@ -1720,8 +1724,8 @@ and r3", "clmethods")
 
     @staticmethod
     def solve_ddd(v1, v2, v3, d12, d23, d31):
-        logging.getLogger("clustersolver").debug("solve_ddd: %s %s %s %f %f %f", \
-        v1, v2, v3, d12, d23, d31)
+        logging.getLogger("clustersolver").debug("Solving ddd: %s %s %s %f %f \
+%f", v1, v2, v3, d12, d23, d31)
 
         p1 = vector.vector([0.0, 0.0])
         p2 = vector.vector([d12, 0.0])
@@ -1766,40 +1770,40 @@ class MergeRHR(Merge):
         if len(shared12) < 1:
             raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - c1 \
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: c1 \
 and c2")
 
             self.overconstrained = True
         if len(shared1h) < 1:
             raise Exception("underconstrained c1 and hog")
         elif len(shared1h) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - c1 \
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: c1 \
 and hog")
 
             self.overconstrained = True
         if len(shared2h) < 1:
             raise Exception("underconstrained c2 and hog")
         elif len(shared2h) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - c2 \
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: c2 \
 and hog")
 
             self.overconstrained = True
         if len(shared1) < 2:
             raise Exception("underconstrained c1")
         elif len(shared1) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - c1")
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: c1")
 
             self.overconstrained = True
         if len(shared2) < 2:
             raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - c2")
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: c2")
 
             self.overconstrained = True
         if len(sharedh) < 2:
             raise Exception("underconstrained hog")
         elif len(shared1) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CHC - \
+            logging.getLogger("clustersolver").debug("Overconstrained CHC: \
 hog")
 
             self.overconstrained = True
@@ -1848,8 +1852,8 @@ hog")
 
     @staticmethod
     def solve_dad(v1, v2, v3, d12, a123, d23):
-        logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
-        v1, v2, v3, d12, a123, d23)
+        logging.getLogger("clustersolver").debug("Solving dad: %s %s %s %f %f \
+%f", v1, v2, v3, d12, a123, d23)
 
         p2 = vector.vector([0.0, 0.0])
         p1 = vector.vector([d12, 0.0])
@@ -1894,41 +1898,41 @@ class MergeRRH(Merge):
         if len(shared12) < 1:
             raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - c1 \
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: c1 \
 and c2")
 
             self.overconstrained = True
         if len(shared1h) < 1:
             raise Exception("underconstrained c1 and hog")
         elif len(shared1h) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - c1 \
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: c1 \
 and hog")
 
             self.overconstrained = True
         if len(shared2h) < 1:
             raise Exception("underconstrained c2 and hog")
         elif len(shared2h) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - c2 \
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: c2 \
 and hog")
 
             self.overconstrained = True
         if len(shared1) < 1:
             raise Exception("underconstrained c1")
         elif len(shared1) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - c1")
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: c1")
 
             self.overconstrained = True
         if len(shared2) < 2:
             raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - c2")
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: c2")
 
             self.overconstrained = True
         if len(sharedh) < 2:
             raise Exception("underconstrained hog")
         elif len(sharedh) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCH - \
-hog")
+            logging.getLogger("clustersolver").debug("Overconstrained CCH: \
+hedgehog")
 
             self.overconstrained = True
 
@@ -2001,8 +2005,8 @@ hog")
 
     @staticmethod
     def solve_add(a,b,c, a_cab, d_ab, d_bc):
-        logging.getLogger("clustersolver").debug("solve_add: %s %s %s %f %f %f", \
-        a, b, c, a_cab, d_ab, d_bc)
+        logging.getLogger("clustersolver").debug("Solving add: %s %s %s %f %f \
+%f", a, b, c, a_cab, d_ab, d_bc)
 
         p_a = vector.vector([0.0, 0.0])
         p_b = vector.vector([d_ab, 0.0])
@@ -2115,8 +2119,8 @@ class BalloonFromHogs(Merge):
 
     @staticmethod
     def solve_ada(a, b, c, a_cab, d_ab, a_abc):
-        logging.getLogger("clustersolver").debug("solve_ada: %s %s %s %f %f %f", \
-        a, b, c, a_cab, d_ab, a_abc)
+        logging.getLogger("clustersolver").debug("Solve ada: %s %s %s %f %f \
+%f", a, b, c, a_cab, d_ab, a_abc)
 
         p_a = vector.vector([0.0, 0.0])
         p_b = vector.vector([d_ab, 0.0])
@@ -2166,7 +2170,7 @@ class BalloonMerge(Merge):
         if len(shared) < 2:
             raise Exception("underconstrained")
         elif len(shared) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained balloon \
+            logging.getLogger("clustersolver").debug("Overconstrained balloon \
 merge")
 
             self.overconstrained = True
@@ -2203,8 +2207,8 @@ class BalloonRigidMerge(Merge):
         if len(shared) < 2:
             raise Exception("underconstrained balloon-cluster merge")
         elif len(shared) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained merge %s \
-+ %s", balloon, cluster)
+            logging.getLogger("clustersolver").debug("Overconstrained merge of \
+%s and %s", balloon, cluster)
 
             self.overconstrained = True
 
@@ -2236,8 +2240,8 @@ class MergeHogs(Merge):
         if len(shared) < 1:
             raise Exception("underconstrained balloon-cluster merge")
         elif len(shared) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained merge \
-%s + %s", hog1, hog2)
+            logging.getLogger("clustersolver").debug("Overconstrained merge of \
+%s and %s", hog1, hog2)
 
             self.overconstrained = True
 

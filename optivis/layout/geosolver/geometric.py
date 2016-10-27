@@ -7,6 +7,7 @@ from __future__ import unicode_literals, division
 
 import math
 import logging
+import abc
 
 from optivis.layout.geosolver.vector import vector
 from optivis.layout.geosolver.clustersolver import PrototypeMethod, \
@@ -590,19 +591,21 @@ class GeometricSolver(Listener):
         self.dr.set(cluster, [conf])
 
     def _update_fix(self):
-        if self.fixcluster:
-            variables = fixcluster.vars
-
-            map = {}
-
-            for var in variables:
-                map[var] = self.problem.get_fix(var).get_parameter()
-
-            conf = Configuration(map)
-
-            self.dr.set(fixcluster, [conf])
-        else:
+        if not self.fixcluster:
             logging.getLogger("geometric").warning("No fix cluster to update")
+
+            return
+
+        variables = fixcluster.vars
+
+        mapping = {}
+
+        for var in variables:
+            mapping[var] = self.problem.get_fix(var).get_parameter()
+
+        conf = Configuration(mapping)
+
+        self.dr.set(fixcluster, [conf])
 
 class GeometricCluster(object):
     """Represents the result of solving a GeometricProblem. A cluster is a list of
@@ -677,9 +680,12 @@ class GeometricCluster(object):
 class ParametricConstraint(Constraint, Notifier):
     """A constraint with a parameter and notification when parameter changes"""
 
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self):
         """initialize ParametricConstraint"""
 
+        Constraint.__init__(self)
         Notifier.__init__(self)
 
         self._value = None
@@ -689,7 +695,7 @@ class ParametricConstraint(Constraint, Notifier):
 
         return self._value
 
-    def set_parameter(self,value):
+    def set_parameter(self, value):
         """set parameter value and notify any listeners"""
 
         self._value = value
@@ -720,10 +726,8 @@ class FixConstraint(ParametricConstraint):
 
         return result
 
-    def __str__(self):
-        return "FixConstraint("\
-            +str(self._variables[0])+","\
-            +str(self._value)+")"
+    def __unicode__(self):
+        return "FixConstraint({0}, {1})".format(self._variables[0], self._value)
 
 class DistanceConstraint(ParametricConstraint):
     """A constraint on the Euclidean distance between two points"""
@@ -751,11 +755,9 @@ class DistanceConstraint(ParametricConstraint):
 
         return result
 
-    def __str__(self):
-        return "DistanceConstraint("\
-            +str(self._variables[0])+","\
-            +str(self._variables[1])+","\
-            +str(self._value)+")"
+    def __unicode__(self):
+        return "DistanceConstraint({0}, {1}, {2})".format(self._variables[0], \
+        self._variables[1], self._value)
 
 class AngleConstraint(ParametricConstraint):
     """A constraint on the angle in point B of a triangle ABC"""
@@ -800,9 +802,10 @@ class AngleConstraint(ParametricConstraint):
 
         return result
 
-    def __str__(self):
-        return "AngleConstraint("\
-            +str(self._variables[0])+","\
-            +str(self._variables[1])+","\
-            +str(self._variables[2])+","\
-            +str(self._value)+")"
+    def angle_degrees(self):
+        return math.degrees(self._value)
+
+    def __unicode__(self):
+        return "AngleConstraint({0}, {1}, {2}, {3})".format(\
+        self._variables[0], self._variables[1], self._variables[2], \
+        self.angle_degrees())

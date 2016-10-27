@@ -93,7 +93,9 @@ def ll_int(p1, v1, p2, v2):
 	"""Intersect line though p1 direction v1 with line through p2 direction v2.
 	   Returns a list of zero or one solutions
 	"""
-	logging.getLogger("intersections").debug("ll_int "+str(p1)+str(v1)+str(p2)+str(v2),"intersections")
+	logging.getLogger("intersections").debug("ll_int %s %s %s %s", p1, v1, p2, \
+	v2)
+	
 	if tol_eq((v1[0]*v2[1])-(v1[1]*v2[0]),0):
 		return []
 	elif not tol_eq(v2[1],0.0):
@@ -110,7 +112,9 @@ def lr_int(p1, v1, p2, v2):
 	"""Intersect line though p1 direction v1 with ray through p2 direction v2.
 	   Returns a list of zero or one solutions
 	"""
-	logging.getLogger("intersections").debug("lr_int "+str(p1)+str(v1)+str(p2)+str(v2),"intersections")
+	logging.getLogger("intersections").debug("lr_int %s %s %s %s", p1, v1, p2, \
+	v2)
+
 	s = ll_int(p1,v1,p2,v2)
 	if len(s) > 0 and tol_gte(vector.dot(s[0]-p2,v2), 0):
 		return s
@@ -121,7 +125,9 @@ def rr_int(p1, v1, p2, v2):
 	"""Intersect ray though p1 direction v1 with ray through p2 direction v2.
 	   Returns a list of zero or one solutions
 	"""
-	logging.getLogger("intersections").debug("rr_int "+str(p1)+str(v1)+str(p2)+str(v2),"intersections")
+	logging.getLogger("intersections").debug("rr_int %s %s %s %s", p1, v1, p2, \
+	v2)
+
 	s = ll_int(p1,v1,p2,v2)
 	if len(s) > 0 and tol_gte(vector.dot(s[0]-p2,v2), 0) and tol_gte(vector.dot(s[0]-p1,v1),0):
 		return s

@@ -67,6 +67,13 @@ class Constraint(object):
 
         pass
 
+    @abc.abstractmethod
+    def __unicode__(self):
+        raise NotImplementedError
+
+    def __str__(self):
+        return unicode(self).encode("utf-8")
+
 class ConstraintGraph(Notifier):
     """A constraint graph"""
 
@@ -107,9 +114,6 @@ class ConstraintGraph(Notifier):
 
         # only add if it doesn't already exist
         if var_name in self._variables:
-            logging.getLogger("constraint").warning("Trying to add variable \
-that is already in graph")
-
             return
 
         # create entry in variables dict
@@ -154,9 +158,6 @@ that isn't in graph")
 
         # only add constraint if it isn't already in the graph
         if constraint in self._constraints:
-            logging.getLogger("constraint").warning("Trying to add constraint \
-that is already in graph")
-
             return
 
         # create entry in constraints dict
