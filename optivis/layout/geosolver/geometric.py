@@ -66,19 +66,19 @@ class GeometricProblem(Notifier, Listener):
     def set_point(self, variable, position):
         """set prototype position of point variable"""
 
-        if variable in self.prototype:
-            self.prototype[variable] = position
-            self.send_notify(("set_point", (variable, position)))
-        else:
+        if variable not in self.prototype:
             raise Exception("unknown point variable")
+
+        self.prototype[variable] = position
+        self.send_notify(("set_point", (variable, position)))
 
     def get_point(self, variable):
         """get prototype position of point variable"""
 
-        if variable in self.prototype:
-            return self.prototype[variable]
-        else:
+        if variable not in self.prototype:
             raise Exception("unknown point variable")
+
+        return self.prototype[variable]
 
     def has_point(self, variable):
         return variable in self.prototype
@@ -494,7 +494,7 @@ class GeometricSolver(Listener):
             if self.fixcluster != None:
                 self.dr.remove(self.fixcluster)
 
-            self.fixvars.append(self.get(con.variables()[0]))
+            self.fixvars.append(con.variables()[0])
 
             if len(self.fixvars) >= self.problem.dimension:
                 self.fixcluster = Cluster(self.fixvars)
@@ -716,7 +716,7 @@ class FixConstraint(ParametricConstraint):
 
         a = mapping[self._variables[0]]
 
-        result = tol_eq(a[0], self._value[0]) and tol_eq(a[1], self.value[1])
+        result = tol_eq(a[0], self._value[0]) and tol_eq(a[1], self._value[1])
 
         return result
 
