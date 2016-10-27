@@ -369,9 +369,6 @@ class ClusterSolver(Notifier):
         # add prototype selection method
         self._add_prototype_selector(merge)
 
-        # add solution selection method
-        self._add_solution_selector(merge)
-
     def _add_prototype_selector(self, merge):
         incluster = merge.outputs[0]
         constraints = merge.prototype_constraints()
@@ -407,9 +404,6 @@ class ClusterSolver(Notifier):
         self._add_cluster(outcluster)
         self._add_method(selector)
         self._rem_top_level(incluster)
-
-    def _add_solution_selector(self, merge):
-        return
 
     def _add_method(self, method):
         logging.getLogger("clustersolver").debug("new %s", method)
