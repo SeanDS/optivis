@@ -275,7 +275,7 @@ class GeometricSolver(Listener):
         self.dr = ClusterSolver()
 
         # map
-        self._map = {}
+        self.mapping = {}
 
         # register listeners
         self.cg.add_listener(self)
@@ -327,7 +327,7 @@ class GeometricSolver(Listener):
         """Computes the solution(s) to the geometric problem"""
 
         # empty dict
-        map = {}
+        mapping = {}
 
         # get cluster solver object's rigid clusters
         # at this point, the solver may already have a solution, if the solver
@@ -337,8 +337,8 @@ class GeometricSolver(Listener):
             geocluster = GeometricCluster()
 
             # create map from geometric cluster to drcluster (and vice versa)
-            map[drcluster] = geocluster
-            map[geocluster] = drcluster
+            mapping[drcluster] = geocluster
+            mapping[geocluster] = drcluster
 
             # determine variables
             for var in drcluster.vars:
@@ -370,19 +370,19 @@ class GeometricSolver(Listener):
         for method in self.dr.methods():
             for out in method.outputs:
                 if isinstance(out, Rigid):
-                    parent = map[out]
+                    parent = mapping[out]
 
                     for inp in method.inputs:
                         if isinstance(inp, Rigid):
-                            parent.subs.append(map[inp])
+                            parent.subs.append(mapping[inp])
 
         # combine clusters due to selection
         for method in self.dr.methods():
             if isinstance(method, PrototypeMethod):
                 incluster = method.inputs[0]
                 outcluster = method.outputs[0]
-                geoin = map[incluster]
-                geoout = map[outcluster]
+                geoin = mapping[incluster]
+                geoout = mapping[outcluster]
                 geoout.subs = list(geoin.subs)
 
         # determine top-level result
@@ -398,14 +398,14 @@ class GeometricSolver(Listener):
             result.flags = GeometricCluster.UNSOLVED
         elif len(rigids) == 1:
             # structurally well constrained
-            result = map[rigids[0]]
+            result = mapping[rigids[0]]
         else:
             # structurally underconstrained cluster
             result = GeometricCluster()
             result.flag = GeometricCluster.S_UNDER
 
             for rigid in rigids:
-                result.subs.append(map[rigid])
+                result.subs.append(mapping[rigid])
 
         return result
 
@@ -443,11 +443,11 @@ class GeometricSolver(Listener):
             raise Exception("message from unknown source {0} {1}".format(obj, message))
 
     def _add_variable(self, var):
-        if var not in self._map:
+        if var not in self.mapping:
             rigid = Rigid([var])
 
-            self._map[var] = rigid
-            self._map[rigid] = var
+            self.mapping[var] = rigid
+            self.mapping[rigid] = var
 
             self.dr.add(rigid)
 
@@ -456,10 +456,10 @@ class GeometricSolver(Listener):
     def _rem_variable(self, var):
         logging.getLogger("geometric").debug("GeometricSolver._rem_variable")
 
-        if var in self._map:
-            self.dr.remove(self._map[var])
+        if var in self.mapping:
+            self.dr.remove(self.mapping[var])
 
-            del(self._map[var])
+            del(self.mapping[var])
 
     def _add_constraint(self, con):
         if isinstance(con, AngleConstraint):
@@ -470,8 +470,8 @@ class GeometricSolver(Listener):
             # other points specified w.r.t. it
             hog = Hedgehog(vars[1], [vars[0], vars[2]])
 
-            self._map[con] = hog
-            self._map[hog] = con
+            self.mapping[con] = hog
+            self.mapping[hog] = con
 
             self.dr.add(hog)
 
@@ -483,8 +483,8 @@ class GeometricSolver(Listener):
 
             rig = Rigid([vars[0], vars[1]])
 
-            self._map[con] = rig
-            self._map[rig] = con
+            self.mapping[con] = rig
+            self.mapping[rig] = con
 
             self.dr.add(rig)
 
@@ -523,9 +523,9 @@ class GeometricSolver(Listener):
                 self.fixcluster = Cluster(self.fixvars)
                 self.dr.add(self.fixcluster)
                 self.dr.set_root(self.fixcluster)
-        elif con in self._map:
-            self.dr.remove(self._map[con])
-            del(self._map[con])
+        elif con in self.mapping:
+            self.dr.remove(self.mapping[con])
+            del(self.mapping[con])
 
     def _update_constraint(self, con):
         if isinstance(con, AngleConstraint):
@@ -533,7 +533,7 @@ class GeometricSolver(Listener):
 
             # the hog was added to the map for this constraint by _add_constraint,
             # which calls this method
-            hog = self._map[con]
+            hog = self.mapping[con]
 
             # get variables associated with constraint
             variables = list(con.variables())
@@ -559,7 +559,7 @@ class GeometricSolver(Listener):
             assert con.satisfied(conf.mapping)
         elif isinstance(con, DistanceConstraint):
             # set configuration
-            rig = self._map[con]
+            rig = self.mapping[con]
 
             variables = list(con.variables())
 
@@ -582,7 +582,7 @@ class GeometricSolver(Listener):
             raise Exception("unknown constraint type")
 
     def _update_variable(self, variable):
-        cluster = self._map[variable]
+        cluster = self.mapping[variable]
         proto = self.problem.get_point(variable)
 
         conf = Configuration({variable: proto})
