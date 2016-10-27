@@ -22,68 +22,6 @@ from optivis.layout.geosolver.selconstr import NotCounterClockwiseConstraint, \
 NotClockwiseConstraint, NotAcuteConstraint, NotObtuseConstraint
 from optivis.layout.geosolver.intersections import *
 
-class PrototypeMethod(MultiMethod):
-    """A PrototypeMethod selects those solutions of a cluster for which the \
-    protoype and the solution satisfy the same constraints."""
-
-    def __init__(self, incluster, selclusters, outcluster, constraints):
-        # call parent constructor
-        super(PrototypeMethod, self).__init__(name="PrototypeMethod", \
-        inputs=[incluster]+selclusters, outputs=[outcluster])
-
-        # set constraints
-        self.constraints = list(constraints)
-
-    def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug( \
-"PrototypeMethod.multi_execute called")
-
-        incluster = self.inputs[0]
-        selclusters = []
-
-        for i in range(1, len(self.inputs)):
-            selclusters.append(self.inputs[i])
-
-        logging.getLogger("clustersolver").debug("input clusters %s", incluster)
-        logging.getLogger("clustersolver").debug("selection clusters %s", \
-        selclusters)
-
-        # get confs
-        inconf = inmap[incluster]
-        selmap = {}
-
-        for cluster in selclusters:
-            conf = inmap[cluster]
-
-            assert len(conf.vars()) == 1
-
-            var = conf.vars()[0]
-            selmap[var] = conf.map[var]
-
-        selconf = Configuration(selmap)
-        sat = True
-
-        logging.getLogger("clustersolver").debug("input configuration = \
-%s", inconf)
-        logging.getLogger("clustersolver").debug("selection configuration = \
-%s", selconf)
-
-        for con in self.constraints:
-            satcon = con.satisfied(inconf.map) != con.satisfied(selconf.map)
-
-            logging.getLogger("clustersolver").debug("constraint = %s", con)
-            logging.getLogger("clustersolver").debug("constraint satisfied? \
-%s", satcon)
-            sat = sat and satcon
-
-        logging.getLogger("clustersolver").debug("prototype satisfied? %s", \
-sat)
-
-        if sat:
-            return [inconf]
-
-        return []
-
 class ClusterSolver(Notifier):
     """A generic 2D geometric constraint solver
 
@@ -768,7 +706,7 @@ class ClusterSolver(Notifier):
         self._add_hog(hog)
 
         # add new rigid-to-hedgehog method
-        self._add_method(Rigid2Hog(rigid, hog))
+        self._add_method(RigidToHog(rigid, hog))
 
         return hog
 
@@ -781,7 +719,7 @@ class ClusterSolver(Notifier):
 
         self._add_hog(hog)
 
-        method = Balloon2Hog(balloon, hog)
+        method = BalloonToHog(balloon, hog)
 
         self._add_method(method)
 
@@ -1103,7 +1041,7 @@ class ClusterSolver(Notifier):
         new_cluster = Rigid(variables)
 
         # add new point-to-rigid merge
-        self._add_merge(Merge1C(point, rigid, new_cluster))
+        self._add_merge(MergePR(point, rigid, new_cluster))
 
         return new_cluster
 
@@ -1133,7 +1071,7 @@ class ClusterSolver(Notifier):
         new_cluster = Rigid(variables)
 
         # add new two-rigid merge
-        self._add_merge(Merge2C(c1, c2, new_cluster))
+        self._add_merge(MergeRR(c1, c2, new_cluster))
 
         return new_cluster
 
@@ -1147,7 +1085,7 @@ class ClusterSolver(Notifier):
         new_cluster = Rigid(rigid.vars)
 
         # add new rigid-hedgehog merge
-        self._add_merge(MergeCH(rigid, hog, new_cluster))
+        self._add_merge(MergeRH(rigid, hog, new_cluster))
 
         return new_cluster
 
@@ -1190,7 +1128,7 @@ class ClusterSolver(Notifier):
 
         newcluster = Rigid(allvars)
 
-        merge = Merge3C(r1,r2,r3,newcluster)
+        merge = MergeRRR(r1,r2,r3,newcluster)
 
         self._add_merge(merge)
 
@@ -1221,7 +1159,7 @@ class ClusterSolver(Notifier):
 
         newcluster = Rigid(allvars)
 
-        merge = MergeCHC(r1,hog,r2,newcluster)
+        merge = MergeRHR(r1,hog,r2,newcluster)
 
         self._add_merge(merge)
 
@@ -1266,7 +1204,7 @@ class ClusterSolver(Notifier):
         # create new cluster and method
         newcluster = Rigid(allvars)
 
-        merge = MergeCCH(r1,r2,hog,newcluster)
+        merge = MergeRRH(r1,r2,hog,newcluster)
 
         self._add_merge(merge)
 
@@ -1478,6 +1416,68 @@ inconsistent")
 
         return None
 
+class PrototypeMethod(MultiMethod):
+    """A PrototypeMethod selects those solutions of a cluster for which the \
+    protoype and the solution satisfy the same constraints."""
+
+    def __init__(self, incluster, selclusters, outcluster, constraints):
+        # call parent constructor
+        super(PrototypeMethod, self).__init__(name="PrototypeMethod", \
+        inputs=[incluster]+selclusters, outputs=[outcluster])
+
+        # set constraints
+        self.constraints = list(constraints)
+
+    def multi_execute(self, inmap):
+        logging.getLogger("clustersolver").debug( \
+"PrototypeMethod.multi_execute called")
+
+        incluster = self.inputs[0]
+        selclusters = []
+
+        for i in range(1, len(self.inputs)):
+            selclusters.append(self.inputs[i])
+
+        logging.getLogger("clustersolver").debug("input clusters %s", incluster)
+        logging.getLogger("clustersolver").debug("selection clusters %s", \
+        selclusters)
+
+        # get confs
+        inconf = inmap[incluster]
+        selmap = {}
+
+        for cluster in selclusters:
+            conf = inmap[cluster]
+
+            assert len(conf.vars()) == 1
+
+            var = conf.vars()[0]
+            selmap[var] = conf.map[var]
+
+        selconf = Configuration(selmap)
+        sat = True
+
+        logging.getLogger("clustersolver").debug("input configuration = \
+%s", inconf)
+        logging.getLogger("clustersolver").debug("selection configuration = \
+%s", selconf)
+
+        for con in self.constraints:
+            satcon = con.satisfied(inconf.map) != con.satisfied(selconf.map)
+
+            logging.getLogger("clustersolver").debug("constraint = %s", con)
+            logging.getLogger("clustersolver").debug("constraint satisfied? \
+%s", satcon)
+            sat = sat and satcon
+
+        logging.getLogger("clustersolver").debug("prototype satisfied? %s", \
+sat)
+
+        if sat:
+            return [inconf]
+
+        return []
+
 class ClusterMethod(MultiMethod):
     __metaclass__ = abc.ABCMeta
 
@@ -1520,24 +1520,24 @@ class Merge(ClusterMethod):
 
         return "{0}, {1}".format(consistent_status, constrained_status)
 
-class Merge1C(Merge):
-    """Represents a merging of a one-point cluster with any other cluster
-       The first cluster determines the orientation of the resulting
-       cluster
+class MergePR(Merge):
+    """Represents a merging of one point with a rigid
+
+    The first cluster determines the orientation of the resulting cluster.
     """
 
     def __init__(self, in1, in2, out):
-        super(Merge1C, self).__init__(name="Merge1C", inputs=[in1, in2], \
+        super(MergePR, self).__init__(name="MergePR", inputs=[in1, in2], \
         outputs=[out], overconstrained=False, consistent=True)
 
     def __unicode__(self):
-        s =  "merge1C("+str(self.inputs[0])+"+"+str(self.inputs[1])+"->"+str(self.outputs[0])+")"
+        s =  "mergePR("+str(self.inputs[0])+"+"+str(self.inputs[1])+"->"+str(self.outputs[0])+")"
         s += "[" + self.status_str()+"]"
 
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("Merge1C.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRC.multi_execute called")
 
         c1 = self.inputs[0]
         c2 = self.inputs[1]
@@ -1550,13 +1550,13 @@ class Merge1C(Merge):
         else:
             return [conf1.copy()]
 
-class Merge2C(Merge):
-    """Represents a merging of two clusters (overconstrained)
-       The first cluster determines the orientation of the resulting
-       cluster"""
+class MergeRR(Merge):
+    """Represents a merging of two rigids (overconstrained)
+
+    The first rigid determines the orientation of the resulting cluster"""
 
     def __init__(self, in1, in2, out):
-        super(Merge2C, self).__init__(name="Merge2C", inputs=[in1, in2], \
+        super(MergeRR, self).__init__(name="MergeRR", inputs=[in1, in2], \
         outputs=[out], overconstrained=True, consistent=True)
 
         self.input1 = in1
@@ -1564,13 +1564,13 @@ class Merge2C(Merge):
         self.output = out
 
     def __str__(self):
-        s =  "merge2C("+str(self.input1)+"+"+str(self.input2)+"->"+str(self.output)+")"
+        s =  "mergeRR("+str(self.input1)+"+"+str(self.input2)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
 
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("Merge2C.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRR.multi_execute called")
 
         c1 = self.inputs[0]
         c2 = self.inputs[1]
@@ -1580,12 +1580,12 @@ class Merge2C(Merge):
 
         return [conf1.merge(conf2)]
 
-class MergeCH(Merge):
-    """Represents a merging of a cluster and a hog (where
-       the hog is absorbed by the cluster). Overconstrained."""
+class MergeRH(Merge):
+    """Represents a merging of a rigid and a hog (where the hog is absorbed by \
+    the rigid). Overconstrained."""
 
     def __init__(self, cluster, hog, out):
-        super(MergeCH, self).__init__(name="MergeCH", inputs=[cluster, hog], \
+        super(MergeRH, self).__init__(name="MergeRH", inputs=[cluster, hog], \
         outputs=[out], overconstrained=True, consistent=True)
 
         self.cluster = cluster
@@ -1593,12 +1593,12 @@ class MergeCH(Merge):
         self.output = out
 
     def __str__(self):
-        s =  "mergeCH("+str(self.cluster)+"+"+str(self.hog)+"->"+str(self.output)+")"
+        s =  "mergeRH("+str(self.cluster)+"+"+str(self.hog)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("MergeCH.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRH.multi_execute called")
 
         conf1 = inmap[self.cluster]
 
@@ -1629,14 +1629,14 @@ class MergeBH(Merge):
 
         return [conf1.copy()]
 
-class Merge3C(Merge):
-    """Represents a merging of three clusters
-       The first cluster determines the orientation of the resulting
-       cluster
+class MergeRRR(Merge):
+    """Represents a merging of three rigids
+
+    The first rigid determines the orientation of the resulting cluster.
     """
 
     def __init__(self, c1, c2, c3, out):
-        super(Merge3C, self).__init__(name="Merge3C", inputs=[c1, c2, c3], \
+        super(MergeRRR, self).__init__(name="MergeRRR", inputs=[c1, c2, c3], \
         outputs=[out], overconstrained=False, consistent=True)
 
         self.input1 = c1
@@ -1655,50 +1655,50 @@ class Merge3C(Merge):
         if len(shared12) < 1:
             raise Exception("underconstrained c1 and c2")
         elif len(shared12) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c1 \
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c1 \
 and c2")
 
             self.overconstrained = True
         if len(shared13) < 1:
             raise Exception("underconstrained c1 and c3")
         elif len(shared13) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c1 \
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c1 \
 and c3")
 
             self.overconstrained = True
         if len(shared23) < 1:
             raise Exception("underconstrained c2 and c3")
         elif len(shared23) > 1:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c2 \
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c2 \
 and c3", "clmethods")
 
             self.overconstrained = True
         if len(shared1) < 2:
             raise Exception("underconstrained c1")
         elif len(shared1) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c1")
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c1")
 
             self.overconstrained = True
         if len(shared2) < 2:
             raise Exception("underconstrained c2")
         elif len(shared2) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c2")
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c2")
 
             self.overconstrained = True
         if len(shared3) < 2:
             raise Exception("underconstrained c3")
         elif len(shared3) > 2:
-            logging.getLogger("clustersolver").debug("overconstrained CCC - c3")
+            logging.getLogger("clustersolver").debug("overconstrained RRR - c3")
 
             self.overconstrained = True
 
     def __str__(self):
-        s = "merge3C("+str(self.input1)+"+"+str(self.input2)+"+"+str(self.input3)+"->"+str(self.output)+")"
+        s = "mergeRRR("+str(self.input1)+"+"+str(self.input2)+"+"+str(self.input3)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("Merge3C.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRRR.multi_execute called")
 
         c1 = inmap[self.inputs[0]]
         c2 = inmap[self.inputs[1]]
@@ -1726,7 +1726,7 @@ and c3", "clmethods")
         p12 = c2.get(v1)
         d31 = vector.norm(p32 - p12)
 
-        ddds = solve_ddd(v1, v2, v3, d12, d23, d31)
+        ddds = MergeRRR.solve_ddd(v1, v2, v3, d12, d23, d31)
 
         solutions = []
 
@@ -1761,31 +1761,32 @@ and c3", "clmethods")
 
         return constraints
 
-def solve_ddd(v1, v2, v3, d12, d23, d31):
-    logging.getLogger("clustersolver").debug("solve_ddd: %s %s %s %f %f %f", \
-    v1, v2, v3, d12, d23, d31)
+    @staticmethod
+    def solve_ddd(v1, v2, v3, d12, d23, d31):
+        logging.getLogger("clustersolver").debug("solve_ddd: %s %s %s %f %f %f", \
+        v1, v2, v3, d12, d23, d31)
 
-    p1 = vector.vector([0.0, 0.0])
-    p2 = vector.vector([d12, 0.0])
-    p3s = cc_int(p1, d31, p2, d23)
+        p1 = vector.vector([0.0, 0.0])
+        p2 = vector.vector([d12, 0.0])
+        p3s = cc_int(p1, d31, p2, d23)
 
-    solutions = []
+        solutions = []
 
-    for p3 in p3s:
-        solution = Configuration({v1:p1, v2:p2, v3:p3})
+        for p3 in p3s:
+            solution = Configuration({v1:p1, v2:p2, v3:p3})
 
-        solutions.append(solution)
+            solutions.append(solution)
 
-    return solutions
+        return solutions
 
-class MergeCHC(Merge):
-    """Represents a merging of two clusters and a hedgehog
-       The first cluster determines the orientation of the resulting
-       cluster
+class MergeRHR(Merge):
+    """Represents a merging of two rigids and a hedgehog
+
+    The first rigid determines the orientation of the resulting cluster
     """
 
     def __init__(self, c1, hog, c2, out):
-        super(MergeCHC, self).__init__(name="MergeCHC", inputs=[c1, hog, c2], \
+        super(MergeRHR, self).__init__(name="MergeRHR", inputs=[c1, hog, c2], \
         outputs=[out], overconstrained=False, consistent=True)
 
         self.c1 = c1
@@ -1847,12 +1848,12 @@ hog")
             self.overconstrained = True
 
     def __str__(self):
-        s = "mergeCHC("+str(self.c1)+"+"+str(self.hog)+"+"+str(self.c2)+"->"+str(self.output)+")"
+        s = "mergeRHR("+str(self.c1)+"+"+str(self.hog)+"+"+str(self.c2)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("MergeCHC.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRHR.multi_execute called")
 
         # determine vars
         shared1 = set(self.hog.xvars).intersection(self.c1.vars)
@@ -1884,7 +1885,7 @@ hog")
         d23 = distance_2p(p32,p22)
 
         # solve
-        dads = MergeCHC.solve_dad(v1, v2, v3, d12, a123, d23)
+        dads = MergeRHR.solve_dad(v1, v2, v3, d12, a123, d23)
         solutions = []
 
         for s in dads:
@@ -1910,13 +1911,13 @@ hog")
 
         return solutions
 
-class MergeCCH(Merge):
-    """Represents a merging of two clusters and a hedgehog
-       The first cluster determines the orientation of the resulting
+class MergeRRH(Merge):
+    """Represents a merging of two rigids and a hedgehog
+       The first rigid determines the orientation of the resulting
        cluster
     """
     def __init__(self, c1, c2, hog, out):
-        super(MergeCCH, self).__init__(name="MergeCCH", inputs=[c1, c2, hog], \
+        super(MergeRRH, self).__init__(name="MergeRRH", inputs=[c1, c2, hog], \
         outputs=[out], overconstrained=False, consistent=True)
 
         self.c1 = c1
@@ -1985,7 +1986,7 @@ hog")
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("MergeCCH.multi_execute called")
+        logging.getLogger("clustersolver").debug("MergeRRH.multi_execute called")
 
         # assert hog.cvar in c1
         if self.hog.cvar in self.c1.vars:
@@ -2037,7 +2038,7 @@ hog")
         p22 = conf2.get(v2)
         p32 = conf2.get(v3)
         d23 = distance_2p(p22, p32)
-        adds = MergeCCH.solve_add(v1, v2, v3, a312, d12, d23)
+        adds = MergeRRH.solve_add(v1, v2, v3, a312, d12, d23)
 
         solutions = []
 
@@ -2246,7 +2247,7 @@ called")
         return [conf1.merge_scale(conf2)]
 
 class BalloonRigidMerge(Merge):
-    """Represents a merging of a balloon and a cluster"""
+    """Represents a merging of a balloon and a rigid"""
 
     def __init__(self, balloon, cluster, output):
         super(BalloonRigidMerge, self).__init__(name="BalloonRigidMerge", \
@@ -2308,7 +2309,7 @@ class MergeHogs(Merge):
             self.overconstrained = True
 
     def __str__(self):
-        s = "mergeHH("+str(self.hog1)+"+"+str(self.hog2)+"->"+str(self.output)+")"
+        s = "mergeHogs("+str(self.hog1)+"+"+str(self.hog2)+"->"+str(self.output)+")"
         s += "[" + self.status_str()+"]"
         return s
 
@@ -2331,51 +2332,51 @@ class Derive(ClusterMethod):
 
     __metaclass__ = abc.ABCMeta
 
-class Rigid2Hog(Derive):
+class RigidToHog(Derive):
     """Represents a derivation of a hog from a cluster"""
 
     def __init__(self, cluster, hog):
-        super(Rigid2Hog, self).__init__(name="Rigid2Hog", inputs=[cluster], \
+        super(RigidToHog, self).__init__(name="RigidToHog", inputs=[cluster], \
         outputs=[hog])
 
         self.cluster = cluster
         self.hog = hog
 
     def __str__(self):
-        s = "rigid2hog("+str(self.cluster)+"->"+str(self.hog)+")"
+        s = "rigidtohog("+str(self.cluster)+"->"+str(self.hog)+")"
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("Rigid2Hog.multi_execute \
+        logging.getLogger("clustersolver").debug("RigidToHog.multi_execute \
 called")
 
         conf1 = inmap[self.inputs[0]]
-        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
-        conf = conf1.select(vars)
+        variables = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
+        conf = conf1.select(variables)
 
         return [conf]
 
-class Balloon2Hog(Derive):
+class BalloonToHog(Derive):
     """Represents a derivation of a hog from a balloon
     """
     def __init__(self, balloon, hog):
-        super(Balloon2Hog, self).__init__(name="Balloon2Hog", \
+        super(BalloonToHog, self).__init__(name="BalloonToHog", \
         inputs=[balloon], outputs=[hog])
 
         self.balloon = balloon
         self.hog = hog
 
     def __str__(self):
-        s = "balloon2hog("+str(self.balloon)+"->"+str(self.hog)+")"
+        s = "balloontohog("+str(self.balloon)+"->"+str(self.hog)+")"
         return s
 
     def multi_execute(self, inmap):
-        logging.getLogger("clustersolver").debug("Balloon2Hog.multi_execute \
+        logging.getLogger("clustersolver").debug("BalloonToHog.multi_execute \
 called")
 
         conf1 = inmap[self.inputs[0]]
-        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
-        conf = conf1.select(vars)
+        variables = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
+        conf = conf1.select(variables)
 
         return [conf]
 
@@ -2394,8 +2395,8 @@ class SubHog(Derive):
         logging.getLogger("clustersolver").debug("SubHog.multi_execute called")
 
         conf1 = inmap[self.inputs[0]]
-        vars = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
-        conf = conf1.select(vars)
+        variables = list(self.outputs[0].xvars) + [self.outputs[0].cvar]
+        conf = conf1.select(variables)
 
         return [conf]
 
