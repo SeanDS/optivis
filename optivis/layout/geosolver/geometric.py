@@ -351,7 +351,7 @@ class GeometricSolver(Listener):
 
             if solutions != None:
                 for solution in solutions:
-                    geocluster.solutions.append(solution.map)
+                    geocluster.solutions.append(solution.mapping)
 
                     if solution.underconstrained:
                         underconstrained = True
@@ -556,7 +556,7 @@ class GeometricSolver(Listener):
             # set the hedgehog's configuration in the solver
             self.dr.set(hog, [conf])
 
-            assert con.satisfied(conf.map)
+            assert con.satisfied(conf.mapping)
         elif isinstance(con, DistanceConstraint):
             # set configuration
             rig = self._map[con]
@@ -575,7 +575,7 @@ class GeometricSolver(Listener):
 
             self.dr.set(rig, [conf])
 
-            assert con.satisfied(conf.map)
+            assert con.satisfied(conf.mapping)
         elif isinstance(con, FixConstraint):
             self._update_fix()
         else:
