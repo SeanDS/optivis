@@ -3,7 +3,7 @@
 """A generic 2D geometric constraint solver.
 
 The solver finds a generic solution for problems formulated by Clusters. The
-generic solution is a directed acyclic graph of Clusters and Methods. Particilar
+generic solution is a directed acyclic graph of Clusters and Methods. Particular
 problems and solutions are represented by a Configuration for each cluster.
 """
 
@@ -21,12 +21,6 @@ from optivis.layout.geosolver.configuration import Configuration
 from optivis.layout.geosolver.selconstr import NotCounterClockwiseConstraint, \
 NotClockwiseConstraint, NotAcuteConstraint, NotObtuseConstraint
 from optivis.layout.geosolver.intersections import *
-
-class ClusterMethod(MultiMethod):
-    __metaclass__ = abc.ABCMeta
-
-    def prototype_constraints(self):
-        return []
 
 class PrototypeMethod(MultiMethod):
     """A PrototypeMethod selects those solutions of a cluster for which the \
@@ -1484,6 +1478,15 @@ inconsistent")
 
         return None
 
+class ClusterMethod(MultiMethod):
+    __metaclass__ = abc.ABCMeta
+
+    def prototype_constraints(self):
+        """Default prototype constraints"""
+
+        # empty list of constraints
+        return []
+
 class Merge(ClusterMethod):
     """A merge is a method such that a single output cluster satisfies
     all constraints in several input clusters. The output cluster
@@ -1881,7 +1884,7 @@ hog")
         d23 = distance_2p(p32,p22)
 
         # solve
-        dads = solve_dad(v1, v2, v3, d12, a123, d23)
+        dads = MergeCHC.solve_dad(v1, v2, v3, d12, a123, d23)
         solutions = []
 
         for s in dads:
@@ -1890,21 +1893,22 @@ hog")
 
         return solutions
 
-def solve_dad(v1, v2, v3, d12, a123, d23):
-    logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
-    v1, v2, v3, d12, a123, d23)
+    @staticmethod
+    def solve_dad(v1, v2, v3, d12, a123, d23):
+        logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
+        v1, v2, v3, d12, a123, d23)
 
-    p2 = vector.vector([0.0, 0.0])
-    p1 = vector.vector([d12, 0.0])
-    p3s = [vector.vector([d23 * math.cos(a123), d23 * math.sin(a123)])]
+        p2 = vector.vector([0.0, 0.0])
+        p1 = vector.vector([d12, 0.0])
+        p3s = [vector.vector([d23 * math.cos(a123), d23 * math.sin(a123)])]
 
-    solutions = []
+        solutions = []
 
-    for p3 in p3s:
-        solution = Configuration({v1: p1, v2: p2, v3: p3})
-        solutions.append(solution)
+        for p3 in p3s:
+            solution = Configuration({v1: p1, v2: p2, v3: p3})
+            solutions.append(solution)
 
-    return solutions
+        return solutions
 
 class MergeCCH(Merge):
     """Represents a merging of two clusters and a hedgehog
@@ -2033,7 +2037,7 @@ hog")
         p22 = conf2.get(v2)
         p32 = conf2.get(v3)
         d23 = distance_2p(p22, p32)
-        adds = solve_add(v1, v2, v3, a312, d12, d23)
+        adds = MergeCCH.solve_add(v1, v2, v3, a312, d12, d23)
 
         solutions = []
 
@@ -2046,6 +2050,28 @@ hog")
             solutions.append(solution)
 
         return solutions
+
+    @staticmethod
+    def solve_add(a,b,c, a_cab, d_ab, d_bc):
+        logging.getLogger("clustersolver").debug("solve_add: %s %s %s %f %f %f", \
+        a, b, c, a_cab, d_ab, d_bc)
+
+        p_a = vector.vector([0.0, 0.0])
+        p_b = vector.vector([d_ab, 0.0])
+
+        dir = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
+
+        solutions = cr_int(p_b, d_bc, p_a, dir)
+
+        rval = []
+
+        for s in solutions:
+            p_c = s
+            map = {a: p_a, b: p_b, c: p_c}
+
+            rval.append(Configuration(map))
+
+        return rval
 
     def prototype_constraints(self):
         # assert hog.cvar in c1
@@ -2074,27 +2100,6 @@ hog")
         constraints.append(NotObtuseConstraint(v2, v3, v1))
 
         return constraints
-
-def solve_add(a,b,c, a_cab, d_ab, d_bc):
-    logging.getLogger("clustersolver").debug("solve_dad: %s %s %s %f %f %f", \
-    a, b, c, a_cab, d_ab, d_bc)
-
-    p_a = vector.vector([0.0, 0.0])
-    p_b = vector.vector([d_ab, 0.0])
-
-    dir = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
-
-    solutions = cr_int(p_b, d_bc, p_a, dir)
-
-    rval = []
-
-    for s in solutions:
-        p_c = s
-        map = {a: p_a, b: p_b, c: p_c}
-
-        rval.append(Configuration(map))
-
-    return rval
 
 class BalloonFromHogs(Merge):
     """Represent a balloon merged from two hogs"""
@@ -2163,41 +2168,42 @@ class BalloonFromHogs(Merge):
         a123 = angle_3p(p12,p22,p32)
 
         # solve
-        return solve_ada(v1, v2, v3, a312, d12, a123)
+        return BalloonFromHogs.solve_ada(v1, v2, v3, a312, d12, a123)
 
-def solve_ada(a, b, c, a_cab, d_ab, a_abc):
-    logging.getLogger("clustersolver").debug("solve_ada: %s %s %s %f %f %f", \
-    a, b, c, a_cab, d_ab, a_abc)
+    @staticmethod
+    def solve_ada(a, b, c, a_cab, d_ab, a_abc):
+        logging.getLogger("clustersolver").debug("solve_ada: %s %s %s %f %f %f", \
+        a, b, c, a_cab, d_ab, a_abc)
 
-    p_a = vector.vector([0.0, 0.0])
-    p_b = vector.vector([d_ab, 0.0])
+        p_a = vector.vector([0.0, 0.0])
+        p_b = vector.vector([d_ab, 0.0])
 
-    dir_ac = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
-    dir_bc = vector.vector([-math.cos(-a_abc), math.sin(-a_abc)])
+        dir_ac = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
+        dir_bc = vector.vector([-math.cos(-a_abc), math.sin(-a_abc)])
 
-    if tol_eq(math.sin(a_cab), 0.0) and tol_eq(math.sin(a_abc),0.0):
-        m = d_ab / 2 + math.cos(-a_cab) * d_ab - math.cos(-a_abc) * d_ab
+        if tol_eq(math.sin(a_cab), 0.0) and tol_eq(math.sin(a_abc),0.0):
+            m = d_ab / 2 + math.cos(-a_cab) * d_ab - math.cos(-a_abc) * d_ab
 
-        p_c = vector.vector([m, 0.0])
+            p_c = vector.vector([m, 0.0])
 
-        map = {a: p_a, b: p_b, c: p_c}
-
-        cluster = Configuration(map)
-        cluster.underconstrained = True
-
-        rval = [cluster]
-    else:
-        solutions = rr_int(p_a, dir_ac, p_b, dir_bc)
-
-        rval = []
-
-        for s in solutions:
-            p_c = s
             map = {a: p_a, b: p_b, c: p_c}
 
-            rval.append(Configuration(map))
+            cluster = Configuration(map)
+            cluster.underconstrained = True
 
-    return rval
+            rval = [cluster]
+        else:
+            solutions = rr_int(p_a, dir_ac, p_b, dir_bc)
+
+            rval = []
+
+            for s in solutions:
+                p_c = s
+                map = {a: p_a, b: p_b, c: p_c}
+
+                rval.append(Configuration(map))
+
+        return rval
 
 class BalloonMerge(Merge):
     """Represents a merging of two balloons"""
@@ -2237,7 +2243,7 @@ called")
         conf1 = inmap[c1]
         conf2 = inmap[c2]
 
-        return [conf1.merge_scale_2D(conf2)]
+        return [conf1.merge_scale(conf2)]
 
 class BalloonRigidMerge(Merge):
     """Represents a merging of a balloon and a cluster"""
@@ -2275,7 +2281,7 @@ class BalloonRigidMerge(Merge):
         rigid = inmap[self.cluster]
         balloon = inmap[self.balloon]
 
-        return [rigid.merge_scale_2D(balloon)]
+        return [rigid.merge_scale(balloon)]
 
 class MergeHogs(Merge):
     """Represents a merging of two hogs to form a new hog"""
@@ -2315,7 +2321,7 @@ called")
 
         shared = set(self.hog1.xvars).intersection(self.hog2.xvars)
 
-        conf12 = conf1.merge_scale_2D(conf2, [self.hog1.cvar, list(shared)[0]])
+        conf12 = conf1.merge_scale(conf2, [self.hog1.cvar, list(shared)[0]])
 
         return [conf12]
 

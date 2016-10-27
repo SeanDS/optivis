@@ -9,12 +9,6 @@ from optivis.layout.geosolver.matfunc import Vec, Mat
 from optivis.layout.geosolver.intersections import *
 from optivis.layout.geosolver.tolerance import *
 
-def perp2D(v):
-    w = Vec(v)
-    w[0] = -v[1]
-    w[1] = v[0]
-    return w
-
 class Configuration(object):
     """A set of named points with coordinates of a specified dimension.
 
@@ -25,7 +19,7 @@ class Configuration(object):
        dimension - the dimension of the space in which the configuration is embedded
        underconstrained - flag indicating an underconstrained merge (not a unique solution)
     """
-    
+
     def __init__(self, map):
         """instantiate a Configuration
 
@@ -93,32 +87,12 @@ class Configuration(object):
         result.underconstrained = t.underconstrained
         return result
 
-    def merge_scale(self, other):
-        """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
-        t = self.merge_scale_transform(other)
-        othertransformed = other.transform(t)
-        result = self.add(othertransformed)
-        result.underconstrained = t.underconstrained
-        return result
-
     def merge_transform(self,other):
-        if other.dimension != self.dimension:
-            raise Exception("cannot merge configurations of different dimensions")
-        elif self.dimension == 2:
-            return self._merge_transform_2D(other)
-        else:
-            return self._merge_transform_3D(other)
-
-    def merge_scale_transform(self,other):
-        if other.dimension != self.dimension:
-            raise Exception("cannot merge configurations of different dimensions")
-        elif self.dimension == 2:
-            return self._merge_scale_transform_2D(other)
-        else:
-            return self._merge_scale_transform_3D(other)
-
-    def _merge_transform_2D(self, other):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
+
+        if other.dimension != self.dimension:
+            raise Exception("cannot merge configurations of different dimensions")
+
         shared = set(self.vars()).intersection(other.vars())
         underconstrained = self.underconstrained or other.underconstrained
         if len(shared) == 0:
@@ -155,7 +129,7 @@ class Configuration(object):
         t.underconstrained = underconstrained
         return t
 
-    def merge_scale_2D(self, other, vars=[]):
+    def merge_scale(self, other, vars=[]):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
         if len(vars) == 0:
             shared = set(self.vars()).intersection(other.vars())
@@ -187,99 +161,6 @@ class Configuration(object):
         result = self.add(othert)
         result.underconstrained = underconstrained
         return result
-
-    def _merge_transform_3D(self, other):
-        """returns a matrix for a rigid transformation
-           such that points in other are mapped onto points in self
-        """
-        shared = set(self.vars()).intersection(other.vars())
-        underconstrained = self.underconstrained or other.underconstrained
-        if len(shared) == 0:
-            underconstrained = True
-            cs1 = make_hcs_3d(vector.vector([0.0,0.0,0.0]),
-                              vector.vector([0.0,1.0,0.0]),
-                              vector.vector([0.0,0.0,1.0]))
-            cs2 = make_hcs_3d(vector.vector([0.0,0.0,0.0]),
-                              vector.vector([0.0,1.0,0.0]),
-                              vector.vector([0.0,0.0,1.0]))
-        elif len(shared) == 1:
-            if len(self.vars()) > 1 and len(other.vars()) > 1:
-                underconstrained = True
-            v1 = list(shared)[0]
-            p1s = self.map[v1]
-            p1o = other.map[v1]
-            cs1 = make_hcs_3d(p1s,
-                              p1s+vector.vector([1.0,0.0,0.0]),
-                              p1s+vector.vector([0.0,1.0,0.0]))
-            cs2 = make_hcs_3d(p1o,
-                              p1o+vector.vector([1.0,0.0,0.0]),
-                              p1o+vector.vector([0.0,1.0,0.0]))
-        elif len(shared) == 2:
-            if len(self.vars()) > 2 and len(other.vars()) > 2:
-                underconstrained = True
-            v1 = list(shared)[0]
-            p1s = self.map[v1]
-            p1o = other.map[v1]
-            v2 = list(shared)[1]
-            p2s = self.map[v2]
-            p2o = other.map[v2]
-            p3s = p1s + vector.cross(p2s-p1s, perp2D(p2s-p1s))
-            p3o = p1o + vector.cross(p2o-p1o, perp2D(p2s-p1s))
-            if tol_eq(vector.norm(p2s-p1s),0.0):
-                underconstrained = True
-            cs1 = make_hcs_3d(p1s, p2s, p3s)
-            cs2 = make_hcs_3d(p1o, p2o, p3o)
-        else:   # len(shared) >= 3:
-            v1 = list(shared)[0]
-            v2 = list(shared)[1]
-            v3 = list(shared)[2]
-            p1s = self.map[v1]
-            p2s = self.map[v2]
-            p3s = self.map[v3]
-            cs1 = make_hcs_3d(p1s, p2s, p3s)
-            if tol_eq(vector.norm(p2s-p1s),0.0):
-                underconstrained = True
-            if tol_eq(vector.norm(p3s-p1s),0.0):
-                underconstrained = True
-            if tol_eq(vector.norm(p3s-p2s),0.0):
-                underconstrained = True
-            p1o = other.map[v1]
-            p2o = other.map[v2]
-            p3o = other.map[v3]
-            cs2 = make_hcs_3d(p1o, p2o, p3o)
-            if tol_eq(vector.norm(p2o-p1o),0.0):
-                underconstrained = True
-            if tol_eq(vector.norm(p3o-p1o),0.0):
-                underconstrained = True
-            if tol_eq(vector.norm(p3o-p2o),0.0):
-                underconstrained = True
-        # in any case:
-        t = cs_transform_matrix(cs2, cs1)
-        t.underconstrained = underconstrained
-        return t
-
-    def _merge_scale_transform_3D(self, other):
-        shared = set(self.vars()).intersection(other.vars())
-        if len(shared) == 0:
-            return self._merge_transform_3D(other)
-        elif len(shared) == 1:
-            return self._merge_transform_3D(other)
-        elif len(shared) >= 2:
-            v1 = list(shared)[0]
-            p1s = self.map[v1]
-            p1o = other.map[v1]
-            v2 = list(shared)[1]
-            p2s = self.map[v2]
-            p2o = other.map[v2]
-            scale = vector.norm(p2s-p1s) / vector.norm(p2o-p1o)
-            scale_trans = pivot_scale_3D(p1o,scale)
-            diag_print("scale_trans = "+str(scale_trans),"Configuration.merge_scale_transform_3D")
-            merge_trans = self._merge_transform_3D(other)
-            diag_print("merge_trans = "+str(merge_trans),"Configuration.merge_scale_transform_3D")
-            #merge_scale_trans = scale_trans.mmul(merge_trans)
-            merge_scale_trans = merge_trans.mmul(scale_trans)
-            merge_scale_trans.underconstrained = merge_trans.underconstrained
-            return merge_scale_trans
 
     def __eq__(self, other):
         """two configurations are equal if they map onto eachother modulo rotation and translation"""
