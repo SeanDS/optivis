@@ -10,6 +10,7 @@ variable is changed, one or more methods are executed to update the value of
 from __future__ import unicode_literals, division
 
 import abc
+import logging
 
 from optivis.layout.geosolver.graph import Graph
 
@@ -318,6 +319,8 @@ by multiple methods".format(var))
         convenient time.
         """
 
+        logging.getLogger("method").debug("Propagating changes")
+
         while len(self._changed) != 0:
             pick = self._changed.keys()[0]
             methods = self._graph.outgoing_vertices(pick)
@@ -352,6 +355,8 @@ by multiple methods".format(var))
         Updates mapping and change flags.
         """
 
+        logging.getLogger("method").debug("Executing method %s", method)
+
         # create input map and check for None values
         inmap = {}
         has_nones = False
@@ -371,6 +376,7 @@ by multiple methods".format(var))
         if has_nones:
             outmap = {}
         else:
+            logging.getLogger("method").debug("No None values in map")
             outmap = method.execute(inmap)
 
         # update values in self._map

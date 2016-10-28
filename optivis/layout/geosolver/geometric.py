@@ -443,16 +443,18 @@ class GeometricSolver(Listener):
         else:
             raise Exception("message from unknown source {0} {1}".format(obj, message))
 
-    def _add_variable(self, var):
-        if var not in self.mapping:
-            rigid = Rigid([var])
+    def _add_variable(self, variable):
+        if variable not in self.mapping:
+            logging.getLogger("geometric").debug("Adding variable %s", variable)
 
-            self.mapping[var] = rigid
-            self.mapping[rigid] = var
+            rigid = Rigid([variable])
+
+            self.mapping[variable] = rigid
+            self.mapping[rigid] = variable
 
             self.dr.add(rigid)
 
-            self._update_variable(var)
+            self._update_variable(variable)
 
     def _rem_variable(self, var):
         logging.getLogger("geometric").debug("GeometricSolver._rem_variable")
@@ -463,6 +465,8 @@ class GeometricSolver(Listener):
             del(self.mapping[var])
 
     def _add_constraint(self, con):
+        logging.getLogger("geometric").debug("Adding constraint %s", con)
+
         if isinstance(con, AngleConstraint):
             # map to hedgehog
             vars = list(con.variables())
@@ -583,6 +587,8 @@ class GeometricSolver(Listener):
             raise Exception("unknown constraint type")
 
     def _update_variable(self, variable):
+        logging.getLogger("geometric").debug("Updating variable %s", variable)
+
         cluster = self.mapping[variable]
         proto = self.problem.get_point(variable)
 

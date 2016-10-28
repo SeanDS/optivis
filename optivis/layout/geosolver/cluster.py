@@ -116,22 +116,6 @@ class Cluster(MultiVariable):
 
         return list(self.vars)
 
-    def __eq__(self, other):
-        """Equality operator for clusters
-
-        Clusters are considered equal if their types are the same and their
-        variables are the same
-
-        :param other: other cluster to compare
-        """
-
-        # can't compare to None
-        if other is None:
-            return False
-
-        return self.cluster_type == other.cluster_type \
-        and self._variable_list() == other._variable_list()
-
     def intersection(self, other):
         """Get the intersection between this cluster and the specified cluster
 

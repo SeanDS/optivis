@@ -1184,7 +1184,7 @@ and hedgehog %s", r1, r2, hog)
         # always use root rigid as first cluster, swap if needed
         if self._contains_root(r1) and self._contains_root(r2):
             raise Exception("two root clusters!")
-        elif not self._contains_root(c1) and not self._contains_root(c2):
+        elif not self._contains_root(r1) and not self._contains_root(r2):
             pass
         elif self._contains_root(r2):
             return self._merge_rigid_rigid_hog(r2, r1, hog)
