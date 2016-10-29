@@ -90,8 +90,8 @@ class ClusterSolver(Notifier):
         """get top-level objects"""
         return self._graph.outgoing_vertices("_toplevel")
 
-    def is_top_level(self, object):
-        return self._graph.has_edge("_toplevel",object)
+    def is_top_level(self, obj):
+        return self._graph.has_edge("_toplevel", obj)
 
     def add(self, cluster):
         """Add a cluster.
@@ -127,6 +127,7 @@ class ClusterSolver(Notifier):
            arguments:
               cluster: A Rigid
            """
+        logging.getLogger("clustersolver").debug("Setting root to %s", rigid)
         self._graph.rem_vertex("_root")
         self._graph.add_edge("_root", rigid)
 
@@ -378,7 +379,7 @@ class ClusterSolver(Notifier):
 
         variables = set()
 
-        map(lambda x: variables.update(x.variables()), constraints)
+        map(lambda x: variables.update(x.variables), constraints)
 
         selclusters = []
 
@@ -1041,34 +1042,35 @@ rigid %s", newcluster)
 
         return new_cluster
 
-    def _merge_rigid_pair(self, c1, c2):
+    def _merge_rigid_pair(self, r1, r2):
         """Merge a pair of clusters, structurally overconstrained.
            Rigid which contains root is used as origin.
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("Merging rigid pair %s and \
-%s", c1, c2)
+        r1_contains_root = self._contains_root(r1)
+        r2_contains_root = self._contains_root(r2)
+
+        logging.getLogger("clustersolver").debug("Merging rigid pair %s (root \
+derived = %s) and %s (root derived = %s)", r1, r1_contains_root, r2, \
+        r2_contains_root)
 
         # always use root cluster as first cluster, swap if needed
-        if not self._contains_root(c1) and not self._contains_root(c2):
-            pass
-        elif self._contains_root(c1) and self._contains_root(c2):
+        if r1_contains_root and r2_contains_root:
             raise Exception("two root clusters")
-        elif self._contains_root(c2):
-            logging.getLogger("clustersolver").debug("Swapping rigid pair \
-order")
+        elif r2_contains_root:
+            logging.getLogger("clustersolver").debug("Swapping rigid order")
 
-            return self._merge_rigid_pair(c2, c1)
+            return self._merge_rigid_pair(r2, r1)
 
         # create new cluster and merge
-        variables = set(c1.vars).union(c2.vars)
+        variables = set(r1.vars).union(r2.vars)
 
         # create new rigid cluster from variables
         new_cluster = Rigid(variables)
 
         # add new two-rigid merge
-        self._add_merge(MergeRR(c1, c2, new_cluster))
+        self._add_merge(MergeRR(r1, r2, new_cluster))
 
         return new_cluster
 
@@ -1107,15 +1109,20 @@ hedgehog %s", balloon, hog)
            Returns resulting cluster.
         """
 
-        logging.getLogger("clustersolver").debug("Merging rigids %s, %s and \
-%s", r1, r2, r3)
+        r1_contains_root = self._contains_root(r1)
+        r2_contains_root = self._contains_root(r2)
+        r3_contains_root = self._contains_root(r3)
+
+        logging.getLogger("clustersolver").debug("Merging rigids %s (root \
+derived = %s), %s (root derived = %s) and %s (root derived = %s)", r1, \
+r1_contains_root, r2, r2_contains_root, r3, r3_contains_root)
 
         # always use root rigid as first cluster, swap if needed
-        if self._contains_root(r2):
+        if r2_contains_root:
             logging.getLogger("clustersolver").debug("Swapping rigid order")
 
             return self._merge_rigid_triple(r2, r1, r3)
-        elif self._contains_root(r3):
+        elif r3_contains_root:
             logging.getLogger("clustersolver").debug("Swapping rigid order")
 
             return self._merge_rigid_triple(r3, r1, r2)
@@ -1133,12 +1140,17 @@ hedgehog %s", balloon, hog)
 
     def _merge_rigid_hog_rigid(self, r1, hog, r2):
         """merge r1 and r2 with a hog, with hog center in r1 and r2"""
-        logging.getLogger("clustersolver").debug("Merging rigid %s, hedgehog \
-%s and rigid %s", r1, hog, r2)
+
+        r1_contains_root = self._contains_root(r1)
+        r2_contains_root = self._contains_root(r2)
+
+        logging.getLogger("clustersolver").debug("Merging rigid %s (root \
+derived = %s), hedgehog %s and rigid %s (root derived = %s)", r1, \
+        r1_contains_root, hog, r2, r2_contains_root)
 
         # always use root rigid as first cluster, swap if needed
-        if self._contains_root(r2):
-            logging.getLogger("clustersolver").debug("Swapping cluster order")
+        if r2_contains_root:
+            logging.getLogger("clustersolver").debug("Swapping rigid order")
 
             return self._merge_rigid_hog_rigid(r2, hog, r1)
 
@@ -1156,7 +1168,7 @@ hedgehog %s", balloon, hog)
 
         newcluster = Rigid(allvars)
 
-        merge = MergeRHR(r1,hog,r2,newcluster)
+        merge = MergeRHR(r1, hog, r2, newcluster)
 
         self._add_merge(merge)
 
@@ -1178,15 +1190,19 @@ hedgehog %s", balloon, hog)
     def _merge_rigid_rigid_hog(self, r1, r2, hog):
         """merge c1 and c2 with a hog, with hog center only in c1"""
 
-        logging.getLogger("clustersolver").debug("Merging rigid %s, rigid %s \
-and hedgehog %s", r1, r2, hog)
+        r1_contains_root = self._contains_root(r1)
+        r2_contains_root = self._contains_root(r2)
+
+        logging.getLogger("clustersolver").debug("Merging rigid %s (root \
+derived = %s), rigid %s (root derived = %s) and hedgehog %s", r1, \
+        r1_contains_root, r2, r2_contains_root, hog)
 
         # always use root rigid as first cluster, swap if needed
-        if self._contains_root(r1) and self._contains_root(r2):
+        if r1_contains_root and r2_contains_root:
             raise Exception("two root clusters!")
-        elif not self._contains_root(r1) and not self._contains_root(r2):
-            pass
-        elif self._contains_root(r2):
+        elif r2_contains_root:
+            logging.getLogger("clustersolver").debug("Swapping rigid order")
+
             return self._merge_rigid_rigid_hog(r2, r1, hog)
 
         # derive subhog if necessary
@@ -1201,7 +1217,7 @@ and hedgehog %s", r1, r2, hog)
         # create new cluster and method
         newcluster = Rigid(allvars)
 
-        merge = MergeRRH(r1,r2,hog,newcluster)
+        merge = MergeRRH(r1, r2, hog, newcluster)
 
         self._add_merge(merge)
 
@@ -1215,10 +1231,16 @@ and hedgehog %s", r1, r2, hog)
         #  - input cluster found -> True
         #  - no more merges -> False
 
-        if len(self._graph.outgoing_vertices("_root")) > 1:
+        # get the vertices attached to root
+        outgoing_vertices = self._graph.outgoing_vertices("_root")
+
+        # number of root clusters
+        num_roots = len(outgoing_vertices)
+
+        if num_roots > 1:
             raise Exception("more than one root cluster")
-        if len(self._graph.outgoing_vertices("_root")) == 1:
-            cluster = self._graph.outgoing_vertices("_root")[0]
+        if num_roots == 1:
+            cluster = outgoing_vertices[0]
         else:
             cluster = None
 
@@ -1226,14 +1248,17 @@ and hedgehog %s", r1, r2, hog)
             if cluster is input_cluster:
                 return True
 
+            # list of vertices this cluster is linked to
             fr = self._graph.outgoing_vertices(cluster)
 
-            me = filter(lambda x: isinstance(x, Merge), fr)
-            me = filter(lambda x: cluster in x.outputs, me)
+            # get vertices that are merges with this cluster as an input
+            me = [x for x in fr if isinstance(x, Merge) and cluster in x.inputs]
 
-            if len(me) > 1:
-                raise Exception("root cluster merged more than once")
-            elif len(me) == 0:
+            num_merges = len(me)
+
+            if num_merges > 1:
+                raise Exception("cluster merged more than once")
+            elif num_merges == 0:
                 cluster = None
             elif len(me[0].outputs) != 1:
                 raise Exception("a merge with number of outputs != 1")
@@ -1451,7 +1476,7 @@ class PrototypeMethod(MultiMethod):
             assert len(conf.vars()) == 1
 
             var = conf.vars()[0]
-            selmap[var] = conf.map[var]
+            selmap[var] = conf.mapping[var]
 
         selconf = Configuration(selmap)
         sat = True
@@ -1462,7 +1487,8 @@ class PrototypeMethod(MultiMethod):
 %s", selconf)
 
         for con in self.constraints:
-            satcon = con.satisfied(inconf.map) != con.satisfied(selconf.map)
+            satcon = con.satisfied(inconf.mapping) \
+            != con.satisfied(selconf.mapping)
 
             logging.getLogger("clustersolver").debug("Constraint: %s", con)
             logging.getLogger("clustersolver").debug("Constraint satisfied? \

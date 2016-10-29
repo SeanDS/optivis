@@ -498,13 +498,15 @@ class GeometricSolver(Listener):
         elif isinstance(con, FixConstraint):
             if self.fixcluster != None:
                 self.dr.remove(self.fixcluster)
+                self.fixcluster = None
 
             self.fixvars.append(con.variables()[0])
 
             if len(self.fixvars) >= self.problem.dimension:
-                self.fixcluster = Cluster(self.fixvars)
+                # TODO: check that a Rigid() is always correct to use here
+                self.fixcluster = Rigid(self.fixvars)
                 self.dr.add(self.fixcluster)
-                self.dr.set_root(fixcluster)
+                self.dr.set_root(self.fixcluster)
 
             self._update_fix()
         else:
@@ -525,7 +527,7 @@ class GeometricSolver(Listener):
             if len(self.fixvars) < self.problem.dimension:
                 self.fixcluster = None
             else:
-                self.fixcluster = Cluster(self.fixvars)
+                self.fixcluster = Rigid(self.fixvars)
                 self.dr.add(self.fixcluster)
                 self.dr.set_root(self.fixcluster)
         elif con in self.mapping:
@@ -602,7 +604,7 @@ class GeometricSolver(Listener):
 
             return
 
-        variables = fixcluster.vars
+        variables = self.fixcluster.vars
 
         mapping = {}
 
@@ -611,7 +613,7 @@ class GeometricSolver(Listener):
 
         conf = Configuration(mapping)
 
-        self.dr.set(fixcluster, [conf])
+        self.dr.set(self.fixcluster, [conf])
 
 class GeometricCluster(object):
     """Represents the result of solving a GeometricProblem. A cluster is a list of
