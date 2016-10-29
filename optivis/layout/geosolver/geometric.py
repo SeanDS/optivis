@@ -290,15 +290,22 @@ class GeometricSolver(Listener):
         for var in self.cg.variables():
             self._add_variable(var)
 
-        # add distances first? Nicer decomposition in Rigids
-        for con in self.cg.constraints():
-            if isinstance(con, DistanceConstraint):
-                self._add_constraint(con)
+        # list of constraints from graph
+        constraints = self.cg.constraints()
 
-        # add angles and other constraints first? Better performance
-        for con in self.cg.constraints():
-            if not isinstance(con, DistanceConstraint):
-                self._add_constraint(con)
+        # add fixed constraints first (avoids problems with invalid solutions)
+        map(self._add_constraint, [x for x in constraints \
+        if isinstance(x, FixConstraint)])
+
+        # add distances next (doing this before angles results in nicer
+        # decompositions)
+        map(self._add_constraint, [x for x in constraints \
+        if isinstance(x, DistanceConstraint)])
+
+        # add everything else
+        map(self._add_constraint, [x for x in constraints \
+        if not isinstance(x, FixConstraint) \
+        and not isinstance(x, DistanceConstraint)])
 
     def get_constrainedness(self):
         # get cluster solver's top level solution(s)
