@@ -117,14 +117,14 @@ class Configuration(object):
             p12 = self.mapping[v2]
             if tol_eq(vector.norm(p12-p11),0.0):
                 underconstrained = True
-                cs1 = make_hcs_2d(p11, p11+vector.vector[1.0,0.0])
+                cs1 = make_hcs_2d(p11, p11+vector.vector([1.0,0.0]))
             else:
                 cs1 = make_hcs_2d(p11, p12)
             p21 = other.mapping[v1]
             p22 = other.mapping[v2]
             if tol_eq(vector.norm(p22-p21),0.0):
                 underconstrained = True
-                cs2 = make_hcs_2d(p21, p21+vector.vector[1.0,0.0])
+                cs2 = make_hcs_2d(p21, p21+vector.vector([1.0,0.0]))
             else:
                 cs2 = make_hcs_2d(p21, p22)
         # in any case
@@ -148,14 +148,14 @@ class Configuration(object):
         p12 = self.mapping[v2]
         if tol_eq(vector.norm(p12-p11),0.0):
             underconstrained = True
-            cs1 = make_hcs_2d_scaled(p11, p11+vector.vector[1.0,0.0])
+            cs1 = make_hcs_2d_scaled(p11, p11+vector.vector([1.0,0.0]))
         else:
             cs1 = make_hcs_2d_scaled(p11, p12)
         p21 = other.mapping[v1]
         p22 = other.mapping[v2]
         if tol_eq(vector.norm(p22-p21),0.0):
             underconstrained = True
-            cs2 = make_hcs_2d_scaled(p21, p21+vector.vector[1.0,0.0])
+            cs2 = make_hcs_2d_scaled(p21, p21+vector.vector([1.0,0.0]))
         else:
             cs2 = make_hcs_2d_scaled(p21, p22)
         print cs1, cs2
