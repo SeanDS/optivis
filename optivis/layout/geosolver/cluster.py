@@ -57,8 +57,8 @@ class Distance(PointRelation):
     def __eq__(self, other):
         # check other object is a Distance
         if isinstance(other, Distance):
-            # check variables are the same
-            return frozenset(self.vars) == frozenset(other.vars)
+            # check points are the same
+            return frozenset(self.points) == frozenset(other.points)
 
         return False
 
@@ -84,12 +84,12 @@ class Angle(PointRelation):
     def __eq__(self, other):
         # check other object is an Angle
         if isinstance(other, Angle):
-            # check the middle point is identical, and that the variables are
-            # the same
-            return self.vars[2] == other.vars[2] \
-            and frozenset(self.vars) == frozenset(other.vars)
-        else:
-            return False
+            # check the middle point is identical, and that the other points are
+            # the included
+            return self.points[2] == other.points[2] \
+            and frozenset(self.points) == frozenset(other.points)
+
+        return False
 
 class Cluster(MultiVariable):
     """A set of points, satisfying some constaint"""
