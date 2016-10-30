@@ -1,33 +1,58 @@
 # -*- coding: utf-8 -*-
 
-"""Clusters are generalised constraints on sets of points in R^n. Cluster
-types are Rigids, Hedgehogs and Balloons."""
+"""Clusters are generalised constraints on sets of points in
+:math:`\mathbb{R}^2`. Cluster types are :class:`~.Rigid`, :class:`~.Hedgehog`
+and :class:`~.Balloon`."""
 
 from __future__ import unicode_literals, division
 
+import abc
+
 from multimethod import MultiVariable
 
-class Distance(object):
-    """Represents a known distance between two points"""
+class PointRelation(object):
+    """Represents a relation between a set of points"""
 
-    def __init__(self, a, b):
-        """Create a new Distance
+    __metaclass__ = abc.ABCMeta
 
-        :param a: first :class:`~Vector`
-        :param b: second :class:`~Vector`
+    def __init__(self, name, points):
+        """Creates a new point relation
+
+        :param name: name of relation
+        :param points: list of points
+        :type name: unicode
+        :type points: sequence of :class:~.vector:
         """
 
-        # set variables to the provided points
-        self.vars = (a, b)
+        self.name = unicode(name)
+        self.points = list(points)
 
     def __unicode__(self):
-        return "dist({0}, {1})".format(*self.vars)
+        # comma separated points
+        points = ", ".join(self.points)
+
+        return "{0}({1})".format(self.name, points)
 
     def __str__(self):
         return unicode(self).encode("utf-8")
 
     def __hash__(self):
-        return hash(frozenset(self.vars))
+        return hash(frozenset(self.points))
+
+class Distance(PointRelation):
+    """Represents a known distance between two points"""
+
+    def __init__(self, a, b):
+        """Creates a new known distance
+
+        :param a: first point
+        :param b: second point
+        :type a: :class:`~.vector`
+        :type b: :class:`~.vector`
+        """
+
+        # call parent constructor
+        super(Distance, self).__init__("dist", [a, b])
 
     def __eq__(self, other):
         # check other object is a Distance
@@ -37,21 +62,24 @@ class Distance(object):
 
         return False
 
-class Angle(object):
+class Angle(PointRelation):
     """Represents a known angle between three points"""
 
     def __init__(self, a, b, c):
-        """Create a new Angle
+        """Creates a new known angle
 
-        The angle is defined at the b edge between a and c.
+        The angle is defined at the *b* edge between *a* and *c*.
 
-        :param a: first :class:`~Vector`
-        :param b: second :class:`~Vector`
-        :param c: third :class:`~Vector`
+        :param a: first point
+        :param b: second point
+        :param c: third point
+        :type a: :class:`~.vector`
+        :type b: :class:`~.vector`
+        :type c: :class:`~.vector`
         """
 
-        # set variables to the provided points
-        self.vars = (a, b, c)
+        # call parent constructor
+        super(Angle, self).__init__("ang", [a, b, c])
 
     def __eq__(self, other):
         # check other object is an Angle
@@ -62,15 +90,6 @@ class Angle(object):
             and frozenset(self.vars) == frozenset(other.vars)
         else:
             return False
-
-    def __hash__(self):
-        return hash(frozenset(self.vars))
-
-    def __unicode__(self):
-        return "ang({0}, {1}, {2})".format(*self.vars)
-
-    def __str__(self):
-        return unicode(self).encode("utf-8")
 
 class Cluster(MultiVariable):
     """A set of points, satisfying some constaint"""

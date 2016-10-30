@@ -1361,27 +1361,27 @@ inconsistent")
 
     def _contains_distance(self,object, distance):
         if isinstance(object, Rigid):
-            return (distance.vars[0] in object.vars and distance.vars[1] \
+            return (distance.points[0] in object.vars and distance.points[1] \
             in object.vars)
         elif isinstance(object, Distance):
-            return (distance.vars[0] in object.vars and distance.vars[1] \
+            return (distance.points[0] in object.vars and distance.points[1] \
             in object.vars)
         else:
             return False
 
     def _contains_angle(self, object, angle):
         if isinstance(object, Rigid) or isinstance(object, Balloon):
-            return (angle.vars[0] in object.vars
-            and angle.vars[1] in object.vars
-            and angle.vars[2] in object.vars)
+            return (angle.points[0] in object.vars
+            and angle.points[1] in object.vars
+            and angle.points[2] in object.vars)
         elif isinstance(object, Hedgehog):
-            return (angle.vars[1] == object.cvar and
-            angle.vars[0] in object.xvars and
-            angle.vars[2] in object.xvars)
+            return (angle.points[1] == object.cvar and
+            angle.points[0] in object.xvars and
+            angle.points[2] in object.xvars)
         elif isinstance(object, Angle):
-            return (angle.vars[1] == object.vars[1] and
-            angle.vars[0] in object.vars and
-            angle.vars[2] in object.vars)
+            return (angle.points[1] == object.vars[1] and
+            angle.points[0] in object.vars and
+            angle.points[2] in object.vars)
         else:
             return False
 
