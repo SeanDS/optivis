@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """Clusters are generalised constraints on sets of points in
-:math:`\mathbb{R}^2`. Cluster types are :class:`~.Rigid`, :class:`~.Hedgehog`
-and :class:`~.Balloon`."""
+:math:`\mathbb{R}^2`. Cluster types are :class:`Rigid`, :class:`Hedgehog` and
+:class:`Balloon`."""
 
 from __future__ import unicode_literals, division
 
@@ -21,7 +21,7 @@ class PointRelation(object):
         :param name: name of relation
         :param points: list of points
         :type name: unicode
-        :type points: sequence of :class:~.vector:
+        :type points: list
         """
 
         self.name = unicode(name)
@@ -44,6 +44,8 @@ class Distance(PointRelation):
 
     def __init__(self, a, b):
         """Creates a new known distance
+
+        The distance is defined between points *a* and *b*
 
         :param a: first point
         :param b: second point
@@ -94,16 +96,19 @@ class Angle(PointRelation):
 class Cluster(MultiVariable):
     """A set of points, satisfying some constaint"""
 
-    cluster_type = "cluster"
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, variables, *args, **kwargs):
         """Create a new cluster
 
-        :param vars: sequence of cluster variables
+        Specified variables should be hashable.
+
+        :param variables: cluster variables
+        :type variables: list
         """
 
         # call parent constructor
-        super(Cluster, self).__init__(name=self.cluster_type, *args, **kwargs)
+        super(Cluster, self).__init__(*args, **kwargs)
 
         # set variables
         self.vars = set(variables)
@@ -112,8 +117,6 @@ class Cluster(MultiVariable):
         self.overconstrained = False
 
     def __unicode__(self):
-        """Returns a status string for the cluster"""
-
         # create character string to represent whether the cluster is
         # overconstrained
         ovr_const = ""
@@ -128,9 +131,10 @@ class Cluster(MultiVariable):
         var_list)
 
     def _variable_list(self):
-        """Variable list for the :class:`~.Cluster`
+        """Variable list for the cluster
 
-        This is overridden by :class:`~.Hedgehog`.
+        :returns: variables
+        :rtype: list
         """
 
         return list(self.vars)
@@ -138,7 +142,11 @@ class Cluster(MultiVariable):
     def intersection(self, other):
         """Get the intersection between this cluster and the specified cluster
 
-        :param other: other :class:`~.Cluster`
+        :param other: other cluster
+        :type other: :class:`Cluster`
+        :returns: new cluster with intersection of input clusters' variables
+        :rtype: :class:`Cluster`
+        :raises TypeError: if cluster types are unknown
         """
 
         # get shared points between this cluster and the other cluster
@@ -193,27 +201,33 @@ class Cluster(MultiVariable):
                     return None
 
         # if all fails
-        raise Exception("intersection of unknown Cluster types")
+        raise TypeError("Intersection of unknown cluster types")
 
 class Rigid(Cluster):
-    """Represents a cluster of points variables that form a rigid body"""
+    """Represents a set of points that form a rigid body"""
 
-    cluster_type = "rigid"
+    def __init__(self, *args, **kwargs):
+        """Creates a new rigid cluster"""
+
+        # call parent
+        super(Rigid, self).__init__(name="rigid", *args, **kwargs)
 
     def copy(self):
         return Rigid(self.vars)
 
 class Hedgehog(Cluster):
-    """Represents a set of points (M,X1...XN) where all angles a(Xi,M,Xj) are
+    """Represents a set of points (C, X1...XN) where all angles a(Xi, C, Xj) are
     known"""
 
-    cluster_type = "hedgehog"
-
     def __init__(self, cvar, xvars):
-        """Create a new hedgehog
+        """Creates a new hedgehog cluster
 
         :param cvar: center variable
-        :param xvars: sequence of other variables
+        :param xvars: other variables
+        :type cvar: object
+        :type xvars: list
+        :raises ValueError: if less than three variables are specified between \
+        *cvar* and *xvars*
         """
 
         # set central variable
@@ -221,18 +235,22 @@ class Hedgehog(Cluster):
 
         # check there are enough other variables
         if len(xvars) < 2:
-            raise Exception("hedgehog must have at least three variables")
+            raise ValueError("Hedgehog must have at least three variables")
 
         # set other variables
         self.xvars = set(xvars)
 
         # call parent constructor with all variables
-        super(Hedgehog, self).__init__(self.xvars.union([self.cvar]))
+        super(Hedgehog, self).__init__(self.xvars.union([self.cvar]), \
+        name="hedgehog")
 
     def _variable_list(self):
-        """Variable list for the :class:`~.Hedgehog`
+        """Gets list of variables associated with this hedgehog
 
-        Overrides :class:`~.Cluster`.
+        Overrides :class:`Cluster`.
+
+        :returns: variables
+        :rtype: list
         """
 
         # central value followed by other variables
@@ -242,20 +260,21 @@ class Hedgehog(Cluster):
         return Hedgehog(self.cvar, self.xvars)
 
 class Balloon(Cluster):
-    """A Balloon (or ScalableCluster) is set of points that is
-       invariant to rotation, translation and scaling.
-    """
-    cluster_type = "balloon"
+    """Represents a set of points that is invariant to rotation, translation and
+    scaling"""
 
     def __init__(self, *args, **kwargs):
-        """Create a new balloon"""
+        """Create a new balloon
+
+        :raises ValueError: if less than three variables are specified
+        """
 
         # call parent
-        super(Balloon, self).__init__(*args, **kwargs)
+        super(Balloon, self).__init__(name="balloon", *args, **kwargs)
 
         # check there are enough variables for a balloon
         if len(self.vars) < 3:
-            raise Exception("Balloon must have at least three variables")
+            raise ValueError("Balloon must have at least three variables")
 
     def copy(self):
         return Balloon(self.vars)
