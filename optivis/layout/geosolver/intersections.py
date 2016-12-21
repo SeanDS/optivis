@@ -95,7 +95,7 @@ def ll_int(p1, v1, p2, v2):
 	"""
 	logging.getLogger("intersections").debug("ll_int %s %s %s %s", p1, v1, p2, \
 	v2)
-	
+
 	if tol_eq((v1[0]*v2[1])-(v1[1]*v2[0]),0):
 		return []
 	elif not tol_eq(v2[1],0.0):
@@ -207,24 +207,6 @@ def is_obtuse(p1,p2,p3):
         return tol_gt(abs(angle), math.pi / 2)
     else:
         return False
-
-# ONLY FOR 3D
-def is_left_handed(p1,p2,p3,p4):
-    """return True if tetrahedron p1 p2 p3 p4 is left handed"""
-    u = p2-p1
-    v = p3-p1
-    uv = vector.cross(u,v)
-    w = p4-p1
-    return vector.dot(uv,w) < 0
-
-# ONLY FOR 3D
-def is_right_handed(p1,p2,p3,p4):
-    """return True if tetrahedron p1 p2 p3 p4 is right handed"""
-    u = p2-p1
-    v = p3-p1
-    uv = vector.cross(u,v)
-    w = p4-p1
-    return vector.dot(uv,w) > 0
 
 def make_hcs_2d (a, b):
     """build a 2D homogeneus coordiate system from two vectors"""
