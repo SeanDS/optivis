@@ -8,7 +8,7 @@ from __future__ import unicode_literals, division
 import numpy as np
 import numpy.linalg as linalg
 
-from optivis.layout.geosolver.matfunc import Vec, Mat
+# FIXME: import exact packages
 from optivis.layout.geosolver.intersections import *
 
 class Configuration(object):
@@ -59,9 +59,10 @@ class Configuration(object):
         newmap = {}
         for v in self.mapping:
             p = self.mapping[v]
-            ph = Vec(p)
-            ph.append(1.0)
-            ph = t.mmul(ph)
+            ph = np.array(p.tolist() + [1.0])
+
+            ph = np.dot(t, ph)
+
             p = np.array(ph[0:-1]) / ph[-1]
             newmap[v] = p
         return Configuration(newmap)
@@ -87,11 +88,10 @@ class Configuration(object):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
 
         logging.getLogger("configuration").debug("Merging %s with %s", self, other)
-        t = self.merge_transform(other)
+        t, underconstrained = self.merge_transform(other)
         othertransformed = other.transform(t)
         result = self.add(othertransformed)
-        result.underconstrained = t.underconstrained
-        return result
+        return result, underconstrained
 
     def merge_transform(self,other):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
@@ -132,8 +132,7 @@ class Configuration(object):
                 cs2 = make_hcs_2d(p21, p22)
         # in any case
         t = cs_transform_matrix(cs2, cs1)
-        t.underconstrained = underconstrained
-        return t
+        return t, underconstrained
 
     def merge_scale(self, other, vars=[]):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
@@ -165,8 +164,7 @@ class Configuration(object):
         t = cs_transform_matrix(cs2, cs1)
         othert = other.transform(t)
         result = self.add(othert)
-        result.underconstrained = underconstrained
-        return result
+        return result, underconstrained
 
     def __eq__(self, other):
         """two configurations are equal if they map onto eachother modulo rotation and translation"""
@@ -182,7 +180,7 @@ class Configuration(object):
                     return False
             # determine a rotation-translation transformation
             # to transform other onto self
-            t = self.merge_transform(other)
+            t, _ = self.merge_transform(other)
             othertransformed = other.transform(t)
             # test if point map onto eachother (distance metric tolerance)
             for var in self.mapping:

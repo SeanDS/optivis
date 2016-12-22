@@ -1589,7 +1589,7 @@ class MergeRR(Merge):
         conf1 = inmap[c1]
         conf2 = inmap[c2]
 
-        return [conf1.merge(conf2)]
+        return [conf1.merge(conf2)[0]]
 
 class MergeRH(Merge):
     """Represents a merging of a rigid and a hog (where the hog is absorbed by \
@@ -1720,7 +1720,7 @@ and r3", "clmethods")
         solutions = []
 
         for s in ddds:
-            solution = r1.merge(s).merge(r2).merge(r3)
+            solution = r1.merge(s)[0].merge(r2)[0].merge(r3)[0]
 
             solutions.append(solution)
 
@@ -1873,7 +1873,7 @@ hog")
         solutions = []
 
         for s in dads:
-            solution = conf1.merge(s).merge(conf2)
+            solution = conf1.merge(s)[0].merge(conf2)[0]
             solutions.append(solution)
 
         return solutions
@@ -2026,7 +2026,7 @@ hedgehog")
         conf2 = inmap[self.c2]
 
         for s in adds:
-            solution = conf1.merge(s).merge(conf2)
+            solution = conf1.merge(s)[0].merge(conf2)[0]
             solutions.append(solution)
 
         return solutions
@@ -2213,7 +2213,7 @@ called")
         conf1 = inmap[c1]
         conf2 = inmap[c2]
 
-        return [conf1.merge_scale(conf2)]
+        return [conf1.merge_scale(conf2)[0]]
 
 class BalloonRigidMerge(Merge):
     """Represents a merging of a balloon and a rigid"""
@@ -2247,7 +2247,7 @@ class BalloonRigidMerge(Merge):
         rigid = inmap[self.cluster]
         balloon = inmap[self.balloon]
 
-        return [rigid.merge_scale(balloon)]
+        return [rigid.merge_scale(balloon)[0]]
 
 class MergeHogs(Merge):
     """Represents a merging of two hogs to form a new hog"""
@@ -2282,7 +2282,7 @@ called")
 
         shared = set(self.hog1.xvars).intersection(self.hog2.xvars)
 
-        conf12 = conf1.merge_scale(conf2, [self.hog1.cvar, list(shared)[0]])
+        conf12 = conf1.merge_scale(conf2, [self.hog1.cvar, list(shared)[0]])[0]
 
         return [conf12]
 

@@ -9,8 +9,6 @@ import numpy as np
 import numpy.linalg as linalg
 import logging
 
-from optivis.layout.geosolver.matfunc import Mat, Vec
-
 def cc_int(p1, r1, p2, r2):
     """
     Intersect circle (p1,r1) circle (p2,r2)
@@ -244,7 +242,7 @@ def is_obtuse(p1,p2,p3):
     else:
         return False
 
-def make_hcs_2d (a, b):
+def make_hcs_2d(a, b):
     """build a 2D homogeneus coordiate system from two vectors"""
     u = b-a
     if np.allclose(linalg.norm(u), 0.0):     # 2006/6/30
@@ -252,10 +250,15 @@ def make_hcs_2d (a, b):
     else:
         u = u / linalg.norm(u)
     v = np.array([-u[1], u[0]])
-    hcs = Mat([ [u[0],v[0],a[0]] , [u[1],v[1],a[1]] , [0.0, 0.0, 1.0] ] )
+    hcs = np.array([
+        [u[0], v[0], a[0]],
+        [u[1], v[1], a[1]],
+        [0.0, 0.0, 1.0]
+    ])
+
     return hcs
 
-def make_hcs_2d_scaled (a, b):
+def make_hcs_2d_scaled(a, b):
     """build a 2D homogeneus coordiate system from two vectors, but scale with distance between input point"""
     u = b-a
     if np.allclose(linalg.norm(u), 0.0):     # 2006/6/30
@@ -263,35 +266,18 @@ def make_hcs_2d_scaled (a, b):
     #else:
     #    u = u / linalg.norm(u)
     v = np.array([-u[1], u[0]])
-    hcs = Mat([ [u[0],v[0],a[0]] , [u[1],v[1],a[1]] , [0.0, 0.0, 1.0] ] )
+    hcs = np.array([
+        [u[0], v[0], a[0]],
+        [u[1], v[1], a[1]],
+        [0.0, 0.0, 1.0]
+    ])
+
     return hcs
 
 def cs_transform_matrix(from_cs, to_cs):
     """returns a transform matrix from from_cs to to_cs"""
-    transform = to_cs.mmul(from_cs.inverse())
-    return transform
 
-def translate_2D(dx,dy):
-    mat = Mat([
-            [1.0, 0.0, dx] ,
-            [0.0, 1.0, dy] ,
-            [0.0, 0.0, 1.0] ] )
-    return mat
-
-def rotate_2D(angle):
-    mat = Mat([
-            [np.sin[angle],np.cos[angle],0.0],
-            [np.cos[angle],-np.sin[angle],0.0],
-            [0.0, 0.0, 1.0] ] )
-    return mat
-
-def transform_point(point, transform):
-    """transform a point from from_cs to to_cs"""
-    hpoint = Vec(point)
-    hpoint.append(1.0)
-    hres = transform.mmul(hpoint)
-    res = np.array(hres[1:-1]) / hres[-1]
-    return res
+    return np.dot(to_cs, linalg.inv(from_cs))
 
 # -------------------------test code -----------------
 
