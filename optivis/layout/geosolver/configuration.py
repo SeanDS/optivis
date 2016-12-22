@@ -5,9 +5,11 @@ coordinates"""
 
 from __future__ import unicode_literals, division
 
+import numpy as np
+import numpy.linalg as linalg
+
 from optivis.layout.geosolver.matfunc import Vec, Mat
 from optivis.layout.geosolver.intersections import *
-from optivis.layout.geosolver.tolerance import *
 
 class Configuration(object):
     """A set of named points with coordinates of a specified dimension.
@@ -19,7 +21,8 @@ class Configuration(object):
         """Instantiate a configuration
 
         :param mapping: dictionary mapping between variables and points, e.g. \
-        {v0: p0, v1: p1, v2: p2}, note that points are objects of class vector
+        {v0: p0, v1: p1, v2: p2}, note that points are objects of class \
+        :class:`.np.ndarray`
         """
 
         # dictionary mapping variable names to point values
@@ -59,7 +62,7 @@ class Configuration(object):
             ph = Vec(p)
             ph.append(1.0)
             ph = t.mmul(ph)
-            p = vector.vector(ph[0:-1]) / ph[-1]
+            p = np.array(ph[0:-1]) / ph[-1]
             newmap[v] = p
         return Configuration(newmap)
 
@@ -100,31 +103,31 @@ class Configuration(object):
         underconstrained = self.underconstrained or other.underconstrained
         if len(shared) == 0:
             underconstrained = True
-            cs1 = make_hcs_2d(vector.vector([0.0,0.0]), vector.vector([1.0,0.0]))
-            cs2 = make_hcs_2d(vector.vector([0.0,0.0]), vector.vector([1.0,0.0]))
+            cs1 = make_hcs_2d(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+            cs2 = make_hcs_2d(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
         elif len(shared) == 1:
             if len(self.vars()) > 1 and len(other.vars()) > 1:
                 underconstrained = True
             v1 = list(shared)[0]
             p11 = self.mapping[v1]
             p21 = other.mapping[v1]
-            cs1 = make_hcs_2d(p11, p11+vector.vector([1.0,0.0]))
-            cs2 = make_hcs_2d(p21, p21+vector.vector([1.0,0.0]))
+            cs1 = make_hcs_2d(p11, p11+np.array([1.0, 0.0]))
+            cs2 = make_hcs_2d(p21, p21+np.array([1.0, 0.0]))
         else:   # len(shared) >= 2:
             v1 = list(shared)[0]
             v2 = list(shared)[1]
             p11 = self.mapping[v1]
             p12 = self.mapping[v2]
-            if tol_eq(vector.norm(p12-p11),0.0):
+            if np.allclose(linalg.norm(p12-p11), 0.0):
                 underconstrained = True
-                cs1 = make_hcs_2d(p11, p11+vector.vector([1.0,0.0]))
+                cs1 = make_hcs_2d(p11, p11+np.array([1.0, 0.0]))
             else:
                 cs1 = make_hcs_2d(p11, p12)
             p21 = other.mapping[v1]
             p22 = other.mapping[v2]
-            if tol_eq(vector.norm(p22-p21),0.0):
+            if np.allclose(linalg.norm(p22-p21), 0.0):
                 underconstrained = True
-                cs2 = make_hcs_2d(p21, p21+vector.vector([1.0,0.0]))
+                cs2 = make_hcs_2d(p21, p21+np.array([1.0, 0.0]))
             else:
                 cs2 = make_hcs_2d(p21, p22)
         # in any case
@@ -146,16 +149,16 @@ class Configuration(object):
         v2 = list(shared)[1]
         p11 = self.mapping[v1]
         p12 = self.mapping[v2]
-        if tol_eq(vector.norm(p12-p11),0.0):
+        if np.allclose(linalg.norm(p12-p11), 0.0):
             underconstrained = True
-            cs1 = make_hcs_2d_scaled(p11, p11+vector.vector([1.0,0.0]))
+            cs1 = make_hcs_2d_scaled(p11, p11+np.array([1.0, 0.0]))
         else:
             cs1 = make_hcs_2d_scaled(p11, p12)
         p21 = other.mapping[v1]
         p22 = other.mapping[v2]
-        if tol_eq(vector.norm(p22-p21),0.0):
+        if np.allclose(linalg.norm(p22-p21), 0.0):
             underconstrained = True
-            cs2 = make_hcs_2d_scaled(p21, p21+vector.vector([1.0,0.0]))
+            cs2 = make_hcs_2d_scaled(p21, p21+np.array([1.0, 0.0]))
         else:
             cs2 = make_hcs_2d_scaled(p21, p22)
         print cs1, cs2
@@ -184,7 +187,8 @@ class Configuration(object):
             # test if point map onto eachother (distance metric tolerance)
             for var in self.mapping:
                 d = distance_2p(othertransformed.get(var), self.get(var))
-                if tol_gt(d, 0.0):
+                # check that d is greater than 0 within tolerance
+                if not np.allclose(d, 0.0) and np.greater(d, 0.0):
                     return False
             return True
 
@@ -216,13 +220,13 @@ class Configuration(object):
 
 
 def test():
-    p1 = vector.vector([0.0,0.0,0.0])
-    p2 = vector.vector([1.0,0.0,0.0])
-    p3 = vector.vector([0.0,1.0,0.0])
+    p1 = np.array([0.0,0.0,0.0])
+    p2 = np.array([1.0,0.0,0.0])
+    p3 = np.array([0.0,1.0,0.0])
     c1 = Configuration({1:p1,2:p2})
-    q1 = vector.vector([0.0,0.0,0.0])
-    q2 = vector.vector([1.0,0.0,0.0])
-    q3 = vector.vector([0.0,-1.0,0.0])
+    q1 = np.array([0.0,0.0,0.0])
+    q2 = np.array([1.0,0.0,0.0])
+    q3 = np.array([0.0,-1.0,0.0])
     c2 = Configuration({1:q1,2:q2})
     print c1 == c2
 

@@ -5,18 +5,16 @@ problems incrementally."""
 
 from __future__ import unicode_literals, division
 
-import math
+import numpy as np
 import logging
 import abc
 
-from optivis.layout.geosolver.vector import vector
 from optivis.layout.geosolver.clustersolver import PrototypeMethod, \
 ClusterSolver, is_information_increasing
 from optivis.layout.geosolver.cluster import Rigid, Hedgehog
 from optivis.layout.geosolver.configuration import Configuration
 from optivis.layout.geosolver.constraint import Constraint, ConstraintGraph
 from optivis.layout.geosolver.notify import Notifier, Listener
-from optivis.layout.geosolver.tolerance import tol_eq
 from optivis.layout.geosolver.intersections import angle_3p, distance_2p
 from optivis.layout.geosolver.selconstr import SelectionConstraint
 
@@ -31,7 +29,7 @@ class GeometricProblem(Notifier, Listener):
        Supported constraints are instances of DistanceConstraint,
        AngleConstraint, FixConstraint or SelectionConstraint.
 
-       Prototype points are instances of the vector class.
+       Prototype points are instances of the :class:`.np.ndarray` class.
 
        GeometricProblem listens for changes in constraint parameters and passes
        these changes, and changes in the system of constraints and the prototype,
@@ -560,9 +558,9 @@ class GeometricSolver(Listener):
             angle = con.get_parameter()
 
             # create points representing the constraint
-            p0 = vector([1.0, 0.0])
-            p1 = vector([0.0, 0.0])
-            p2 = vector([math.cos(angle), math.sin(angle)])
+            p0 = np.array([1.0, 0.0])
+            p1 = np.array([0.0, 0.0])
+            p2 = np.array([np.cos(angle), np.sin(angle)])
 
             # create configuration
             conf = Configuration({v0: p0, v1: p1, v2: p2})
@@ -582,8 +580,8 @@ class GeometricSolver(Listener):
 
             dist = con.get_parameter()
 
-            p0 = vector([0.0, 0.0])
-            p1 = vector([dist, 0.0])
+            p0 = np.array([0.0, 0.0])
+            p1 = np.array([dist, 0.0])
 
             conf = Configuration({v0: p0, v1: p1})
 
@@ -633,7 +631,8 @@ class GeometricCluster(object):
        instance attributes:
             variables       - a list of point variable names
             solutions       - a list of solutions. Each solution is a dictionary
-                              mapping variable names to vectors.
+                              mapping variable names to :class:`.np.ndarray`
+                              vectors.
             subs            - a list of sub-clusters
             flag            - value                 meaning
                               OK                    well constrained
@@ -737,7 +736,7 @@ class FixConstraint(ParametricConstraint):
 
         a = mapping[self._variables[0]]
 
-        result = tol_eq(a[0], self._value[0]) and tol_eq(a[1], self._value[1])
+        result = np.allclose(a[0], self._value[0]) and np.allclose(a[1], self._value[1])
 
         return result
 
@@ -766,7 +765,7 @@ class DistanceConstraint(ParametricConstraint):
         a = mapping[self._variables[0]]
         b = mapping[self._variables[1]]
 
-        result = tol_eq(distance_2p(a,b), self._value)
+        result = np.allclose(distance_2p(a,b), self._value)
 
         return result
 
@@ -810,7 +809,7 @@ class AngleConstraint(ParametricConstraint):
             else:
                 cmp = self._value
 
-            result = tol_eq(ang, cmp)
+            result = np.allclose(ang, cmp)
 
         if result == False:
             logging.getLogger("geometric").debug("measured angle = %s, parameter value = %s, geometric", ang, cmp)

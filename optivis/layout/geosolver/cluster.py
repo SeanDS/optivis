@@ -49,8 +49,8 @@ class Distance(PointRelation):
 
         :param a: first point
         :param b: second point
-        :type a: :class:`~.vector`
-        :type b: :class:`~.vector`
+        :type a: :class:`~.np.ndarray`
+        :type b: :class:`~.np.ndarray`
         """
 
         # call parent constructor
@@ -75,9 +75,9 @@ class Angle(PointRelation):
         :param a: first point
         :param b: second point
         :param c: third point
-        :type a: :class:`~.vector`
-        :type b: :class:`~.vector`
-        :type c: :class:`~.vector`
+        :type a: :class:`~.np.ndarray`
+        :type b: :class:`~.np.ndarray`
+        :type c: :class:`~.np.ndarray`
         """
 
         # call parent constructor

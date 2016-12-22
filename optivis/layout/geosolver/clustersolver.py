@@ -10,6 +10,8 @@ problems and solutions are represented by a Configuration for each cluster.
 from __future__ import unicode_literals, division
 
 import abc
+import numpy as np
+import numpy.linalg as linalg
 
 from optivis.layout.geosolver.graph import Graph
 from optivis.layout.geosolver.method import Method, MethodGraph
@@ -1705,13 +1707,13 @@ and r3", "clmethods")
 
         p11 = r1.get(v1)
         p21 = r1.get(v2)
-        d12 = vector.norm(p11 - p21)
+        d12 = linalg.norm(p11 - p21)
         p23 = r3.get(v2)
         p33 = r3.get(v3)
-        d23 = vector.norm(p23 - p33)
+        d23 = linalg.norm(p23 - p33)
         p32 = r2.get(v3)
         p12 = r2.get(v1)
-        d31 = vector.norm(p32 - p12)
+        d31 = linalg.norm(p32 - p12)
 
         ddds = MergeRRR.solve_ddd(v1, v2, v3, d12, d23, d31)
 
@@ -1753,8 +1755,8 @@ and r3", "clmethods")
         logging.getLogger("clustersolver").debug("Solving ddd: %s %s %s %f %f \
 %f", v1, v2, v3, d12, d23, d31)
 
-        p1 = vector.vector([0.0, 0.0])
-        p2 = vector.vector([d12, 0.0])
+        p1 = np.array([0.0, 0.0])
+        p2 = np.array([d12, 0.0])
         p3s = cc_int(p1, d31, p2, d23)
 
         solutions = []
@@ -1881,9 +1883,9 @@ hog")
         logging.getLogger("clustersolver").debug("Solving dad: %s %s %s %f %f \
 %f", v1, v2, v3, d12, a123, d23)
 
-        p2 = vector.vector([0.0, 0.0])
-        p1 = vector.vector([d12, 0.0])
-        p3s = [vector.vector([d23 * math.cos(a123), d23 * math.sin(a123)])]
+        p2 = np.array([0.0, 0.0])
+        p1 = np.array([d12, 0.0])
+        p3s = [np.array([d23 * np.cos(a123), d23 * np.sin(a123)])]
 
         solutions = []
 
@@ -2034,10 +2036,10 @@ hedgehog")
         logging.getLogger("clustersolver").debug("Solving add: %s %s %s %f %f \
 %f", a, b, c, a_cab, d_ab, d_bc)
 
-        p_a = vector.vector([0.0, 0.0])
-        p_b = vector.vector([d_ab, 0.0])
+        p_a = np.array([0.0, 0.0])
+        p_b = np.array([d_ab, 0.0])
 
-        dir = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
+        dir = np.array([np.cos(-a_cab), np.sin(-a_cab)])
 
         solutions = cr_int(p_b, d_bc, p_a, dir)
 
@@ -2148,20 +2150,20 @@ class BalloonFromHogs(Merge):
         logging.getLogger("clustersolver").debug("Solve ada: %s %s %s %f %f \
 %f", a, b, c, a_cab, d_ab, a_abc)
 
-        p_a = vector.vector([0.0, 0.0])
-        p_b = vector.vector([d_ab, 0.0])
+        p_a = np.array([0.0, 0.0])
+        p_b = np.array([d_ab, 0.0])
 
-        dir_ac = vector.vector([math.cos(-a_cab), math.sin(-a_cab)])
-        dir_bc = vector.vector([-math.cos(-a_abc), math.sin(-a_abc)])
+        dir_ac = np.array([np.cos(-a_cab), np.sin(-a_cab)])
+        dir_bc = np.array([-np.cos(-a_abc), np.sin(-a_abc)])
 
-        if tol_eq(math.sin(a_cab), 0.0) and tol_eq(math.sin(a_abc),0.0):
-            m = d_ab / 2 + math.cos(-a_cab) * d_ab - math.cos(-a_abc) * d_ab
+        if np.allclose(np.sin(a_cab), 0.0) and np.allclose(np.sin(a_abc), 0.0):
+            m = d_ab / 2 + np.cos(-a_cab) * d_ab - np.cos(-a_abc) * d_ab
 
-            p_c = vector.vector([m, 0.0])
+            p_c = np.array([m, 0.0])
 
-            map = {a: p_a, b: p_b, c: p_c}
+            mapping = {a: p_a, b: p_b, c: p_c}
 
-            cluster = Configuration(map)
+            cluster = Configuration(mapping)
             cluster.underconstrained = True
 
             rval = [cluster]
@@ -2172,9 +2174,9 @@ class BalloonFromHogs(Merge):
 
             for s in solutions:
                 p_c = s
-                map = {a: p_a, b: p_b, c: p_c}
+                mapping = {a: p_a, b: p_b, c: p_c}
 
-                rval.append(Configuration(map))
+                rval.append(Configuration(mapping))
 
         return rval
 

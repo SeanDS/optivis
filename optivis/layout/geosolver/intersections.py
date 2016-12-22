@@ -10,7 +10,6 @@ import math
 
 import optivis.layout.geosolver.vector as vector
 from optivis.layout.geosolver.matfunc import Mat, Vec
-from optivis.layout.geosolver.tolerance import *
 
 def sign(x):
 	"""Returns 1 if x>0, return -1 if x<=0"""
@@ -26,26 +25,35 @@ def cc_int(p1, r1, p2, r2):
 	Returns a list of zero, one or two solution points.
 	"""
 	d = vector.norm(p2-p1)
-	if not tol_gt(d, 0):
+
+	# check if d < 0 within tolerance
+	if np.allclose(d, 0.0) or np.less(d, 0.0)):
 		return []
+
 	u = ((r1*r1 - r2*r2)/d + d)/2
-	if tol_lt(r1*r1, u*u):
+
+	a = r1*r1
+	b = u*u
+
+	# check that a < b within tolerance
+	# FIXME: what's going on here? this used to be tol_lt, but elif block seems to repeat earlier check
+	if not np.allclose(a, b) and np.less(a, b):
 		return []
-        elif r1*r1 < u*u:
+	elif a < b:
             v = 0.0
         else:
-            v = math.sqrt(r1*r1 - u*u)
+            v = math.sqrt(a-b)
 	s = (p2-p1) * u / d
-	if tol_eq(vector.norm(s),0):
+	if np.allclose(vector.norm(s),0):
 	        p3a = p1+vector.vector([p2[1]-p1[1],p1[0]-p2[0]])*r1/d
-	        if tol_eq(r1/d,0):
+	        if np.allclose(r1/d,0):
                     return [p3a]
                 else:
                     p3b = p1+vector.vector([p1[1]-p2[1],p2[0]-p1[0]])*r1/d
                     return [p3a,p3b]
 	else:
 	        p3a = p1 + s + vector.vector([s[1], -s[0]]) * v / vector.norm(s)
-                if tol_eq(v / vector.norm(s),0):
+                if np.allclose(v / vector.norm(s),0):
                     return [p3a]
                 else:
                     p3b = p1 + s + vector.vector([-s[1], s[0]]) * v / vector.norm(s)
@@ -61,14 +69,17 @@ def cl_int(p1,r,p2,v):
 	d2 = v[0]*v[0] + v[1]*v[1]
 	D = p[0]*v[1] - v[0]*p[1]
 	E = r*r*d2 - D*D
-	if tol_gt(d2, 0) and tol_gt(E, 0):
+
+	# check that d2 and E are both > 0 within tolerance
+	if not np.allclose(d2, 0.0) and np.greater(d2, 0.0) \
+	and not np.allclose(E, 0.0) and np.greater(E, 0.0):
 		sE = math.sqrt(E)
 		x1 = p1[0] + (D * v[1] + sign(v[1])*v[0]*sE) / d2
 		x2 = p1[0] + (D * v[1] - sign(v[1])*v[0]*sE) / d2
 		y1 = p1[1] + (-D * v[0] + abs(v[1])*sE) / d2
 		y2 = p1[1] + (-D * v[0] - abs(v[1])*sE) / d2
 		return [vector.vector([x1,y1]), vector.vector([x2,y2])]
-	elif tol_eq(E, 0):
+	elif np.allclose(E, 0):
 		x1 = p1[0] + D * v[1] / d2
 		y1 = p1[1] + -D * v[0] / d2
 		# return [vector.vector([x1,y1]), vector.vector([x1,y1])]
@@ -85,7 +96,9 @@ def cr_int(p1,r,p2,v):
         sols = []
 	all = cl_int(p1,r,p2,v)
         for s in all:
-	    if tol_gte(vector.dot(s-p2,v), 0):          # gt -> gte 30/6/2006
+		a = vector.dot(s-p2, v)
+		# check if a is >= 0 within tolerance
+		if np.allclose(a, 0.0) or np.greater(a, 0.0):
                 sols.append(s)
 	return sols
 
@@ -96,9 +109,9 @@ def ll_int(p1, v1, p2, v2):
 	logging.getLogger("intersections").debug("ll_int %s %s %s %s", p1, v1, p2, \
 	v2)
 
-	if tol_eq((v1[0]*v2[1])-(v1[1]*v2[0]),0):
+	if np.allclose((v1[0]*v2[1])-(v1[1]*v2[0]),0):
 		return []
-	elif not tol_eq(v2[1],0.0):
+	elif not np.allclose(v2[1],0.0):
 		d = p2-p1
 		r2 = -v2[0]/v2[1]
 		f = v1[0] + v1[1]*r2
@@ -116,7 +129,11 @@ def lr_int(p1, v1, p2, v2):
 	v2)
 
 	s = ll_int(p1,v1,p2,v2)
-	if len(s) > 0 and tol_gte(vector.dot(s[0]-p2,v2), 0):
+
+	a = vector.dot(s[0]-p2, v2)
+
+	# check if s > 0 and a >= 0 within tolerance
+	if len(s) > 0 and np.allclose(a, 0.0) or np.greater(a, 0.0):
 		return s
 	else:
 		return []
@@ -129,7 +146,12 @@ def rr_int(p1, v1, p2, v2):
 	v2)
 
 	s = ll_int(p1,v1,p2,v2)
-	if len(s) > 0 and tol_gte(vector.dot(s[0]-p2,v2), 0) and tol_gte(vector.dot(s[0]-p1,v1),0):
+	a1 = vector.dot(s[0]-p1,v1)
+	a2 = vector.dot(s[0]-p2,v2)
+
+	# check len(s) > 0 and a1 >= 0 and a2 >= 0 within tolerance
+	if len(s) > 0 and np.allclose(a1, 0.0) or np.greater(a1, 0.0) \
+	and np.allclose(a2, 0.0) or np.greater(a2, 0.0):
 		return s
 	else:
 		return []
@@ -147,7 +169,7 @@ def angle_3p(p1, p2, p3):
     """
     d21 = vector.norm(p2-p1)
     d23 = vector.norm(p3-p2)
-    if tol_eq(d21,0) or tol_eq(d23,0):
+    if np.allclose(d21,0) or np.allclose(d23,0):
         return None         # degenerate angle
     v21 = (p1-p2) / d21
     v23 = (p3-p2) / d23
@@ -176,27 +198,39 @@ def is_clockwise(p1,p2,p3):
     u = p2 - p1
     v = p3 - p2;
     perp_u = vector.vector([-u[1], u[0]])
-    return tol_lt(vector.dot(perp_u,v),0)
+
+	a = vector.dot(perp_u,v)
+
+	# check a < 0 within tolerance
+    return not np.allclose(a, 0.0) and np.less(a, 0.0)
 
 def is_counterclockwise(p1,p2,p3):
     """ returns True iff triangle p1,p2,p3 is counterclockwise oriented"""
     u = p2 - p1
     v = p3 - p2;
     perp_u = vector.vector([-u[1], u[0]])
-    return tol_gt(vector.dot(perp_u,v), 0)
+
+	a = vector.dot(perp_u,v)
+
+	# check that a > 0 within tolerance
+    return not np.allclose(a, 0.0) and np.greater(a, 0.0)
 
 def is_flat(p1,p2,p3):
     """ returns True iff triangle p1,p2,p3 is flat (neither clockwise of counterclockwise oriented)"""
     u = p2 - p1
     v = p3 - p2;
     perp_u = vector.vector([-u[1], u[0]])
-    return tol_eq(vector.dot(perp_u,v), 0)
+    return np.allclose(vector.dot(perp_u,v), 0)
 
 def is_acute(p1,p2,p3):
     """returns True iff angle p1,p2,p3 is acute, i.e. less than pi/2"""
     angle = angle_3p(p1, p2, p3)
     if angle != None:
-        return tol_lt(abs(angle), math.pi / 2)
+		a = abs(angle)
+		b = math.pi / 2
+
+		# return whether a < b within tolerance
+        return not np.allclose(a, b) and np.less(a, b)
     else:
         return False
 
@@ -204,14 +238,18 @@ def is_obtuse(p1,p2,p3):
     """returns True iff angle p1,p2,p3 is obtuse, i.e. greater than pi/2"""
     angle = angle_3p(p1, p2, p3)
     if angle != None:
-        return tol_gt(abs(angle), math.pi / 2)
+		a = abs(angle)
+		b = math.pi / 2
+
+		# check that a > b within tolerance
+        return not np.allclose(a, b) and np.greater(a, b)
     else:
         return False
 
 def make_hcs_2d (a, b):
     """build a 2D homogeneus coordiate system from two vectors"""
     u = b-a
-    if tol_eq(vector.norm(u), 0.0):     # 2006/6/30
+    if np.allclose(vector.norm(u), 0.0):     # 2006/6/30
         return None
     else:
         u = u / vector.norm(u)
@@ -222,7 +260,7 @@ def make_hcs_2d (a, b):
 def make_hcs_2d_scaled (a, b):
     """build a 2D homogeneus coordiate system from two vectors, but scale with distance between input point"""
     u = b-a
-    if tol_eq(vector.norm(u), 0.0):     # 2006/6/30
+    if np.allclose(vector.norm(u), 0.0):     # 2006/6/30
         return None
     #else:
     #    u = u / vector.norm(u)
@@ -268,17 +306,17 @@ def test_ll_int():
 	p_b = vector.randvec(2, 0.0, 10.0, 1.0)
 	p_c = vector.randvec(2, 0.0, 10.0, 1.0)
 	# print p_a, p_b, p_c
-	if tol_eq(vector.norm(p_c - p_a),0) or tol_eq(vector.norm(p_c - p_b),0):
+	if np.allclose(vector.norm(p_c - p_a),0) or np.allclose(vector.norm(p_c - p_b),0):
 		return True # ignore this case
 	v_ac = (p_c - p_a) / vector.norm(p_c - p_a)
 	v_bc = (p_c - p_b) / vector.norm(p_c - p_b)
 	s = ll_int(p_a, v_ac, p_b, v_bc)
-	if tol_eq(math.fabs(vector.dot(v_ac, v_bc)),1.0):
+	if np.allclose(math.fabs(vector.dot(v_ac, v_bc)),1.0):
 		return len(s) == 0
 	else:
 		if len(s) > 0:
 			p_s = s[0]
-			return tol_eq(p_s[0],p_c[0]) and tol_eq(p_s[1],p_c[1])
+			return np.allclose(p_s[0],p_c[0]) and np.allclose(p_s[1],p_c[1])
 		else:
 			return False
 
@@ -291,17 +329,17 @@ def test_rr_int():
 	p_b = vector.randvec(2, 0.0, 10.0,1.0)
 	p_c = vector.randvec(2, 0.0, 10.0,1.0)
 	# print p_a, p_b, p_c
-	if tol_eq(vector.norm(p_c - p_a),0) or tol_eq(vector.norm(p_c - p_b),0):
+	if np.allclose(vector.norm(p_c - p_a),0) or np.allclose(vector.norm(p_c - p_b),0):
 		return True # ignore this case
 	v_ac = (p_c - p_a) / vector.norm(p_c - p_a)
 	v_bc = (p_c - p_b) / vector.norm(p_c - p_b)
 	s = rr_int(p_a, v_ac, p_b, v_bc)
-	if tol_eq(math.fabs(vector.dot(v_ac, v_bc)),1.0):
+	if np.allclose(math.fabs(vector.dot(v_ac, v_bc)),1.0):
 		return len(s) == 0
 	else:
 		if len(s) > 0:
 			p_s = s[0]
-			return tol_eq(p_s[0],p_c[0]) and tol_eq(p_s[1],p_c[1])
+			return np.allclose(p_s[0],p_c[0]) and np.allclose(p_s[1],p_c[1])
 		else:
 			return False
 
