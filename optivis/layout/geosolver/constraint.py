@@ -278,6 +278,9 @@ class PlusConstraint(Constraint):
     def __init__(self, a, b, c):
         self._variables = [a, b, c]
 
+    def __unicode__(self):
+        return "PlusConstraint({0})".format(", ".join(self.variables))
+
     def satisfied(self, mapping):
         return mapping[self._variables[0]] + mapping[self._variables[1]] \
          == mapping[self._variables[2]]
