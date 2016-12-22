@@ -12,18 +12,20 @@ class TestCluster(TestCase):
 
     def test_valid_intersections(self):
         # intersections with self should yield self
-        self.assertEqual(self.rigid.intersection(self.rigid), self.rigid)
-        self.assertEqual(self.balloon.intersection(self.balloon), self.balloon)
-        self.assertEqual(self.hedgehog.intersection(self.hedgehog), \
-        self.hedgehog)
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.rigid.intersection(self.rigid), self.rigid))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.balloon.intersection(self.balloon), self.balloon))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.hedgehog.intersection(self.hedgehog), self.hedgehog))
 
         # other intersections
-        self.assertEqual(self.rigid.intersection(self.balloon), \
-        Balloon([1, 3, 4]))
-        self.assertEqual(self.rigid.intersection(self.hedgehog), \
-        Hedgehog(1, [3, 5]))
-        self.assertEqual(self.balloon.intersection(self.hedgehog), \
-        Hedgehog(1, [2, 3]))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.rigid.intersection(self.balloon), Balloon([1, 3, 4])))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.rigid.intersection(self.hedgehog), Hedgehog(1, [3, 5])))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.balloon.intersection(self.hedgehog), Hedgehog(1, [2, 3])))
 
     def test_invalid_intersections(self):
         # less than 3 variables in balloons and hedgehogs
@@ -59,9 +61,18 @@ class TestCluster(TestCase):
     def test_reverse(self):
         """Reverse intersections should be the same as forward intersections"""
 
-        self.assertEqual(self.rigid.intersection(self.balloon), \
-        self.balloon.intersection(self.rigid))
-        self.assertEqual(self.rigid.intersection(self.hedgehog), \
-        self.hedgehog.intersection(self.rigid))
-        self.assertEqual(self.balloon.intersection(self.hedgehog), \
-        self.hedgehog.intersection(self.balloon))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.rigid.intersection(self.balloon), \
+        self.balloon.intersection(self.rigid)))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.rigid.intersection(self.hedgehog), \
+        self.hedgehog.intersection(self.rigid)))
+        self.assertTrue(TestCluster.clusters_equal( \
+        self.balloon.intersection(self.hedgehog), \
+        self.hedgehog.intersection(self.balloon)))
+
+    @staticmethod
+    def clusters_equal(first, second):
+        """Checks if the specified clusters are equal"""
+
+        return set(first.vars) == set(second.vars) and first.name == second.name
