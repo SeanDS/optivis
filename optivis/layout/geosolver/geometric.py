@@ -632,7 +632,7 @@ class GeometricCluster(object):
             variables       - a list of point variable names
             solutions       - a list of solutions. Each solution is a dictionary
                               mapping variable names to :class:`.np.ndarray`
-                              vectors.
+                              objects.
             subs            - a list of sub-clusters
             flag            - value                 meaning
                               OK                    well constrained
