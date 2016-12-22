@@ -103,16 +103,16 @@ class Configuration(object):
         underconstrained = self.underconstrained or other.underconstrained
         if len(shared) == 0:
             underconstrained = True
-            cs1 = make_hcs_2d(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
-            cs2 = make_hcs_2d(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+            cs1 = make_hcs(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+            cs2 = make_hcs(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
         elif len(shared) == 1:
             if len(self.vars()) > 1 and len(other.vars()) > 1:
                 underconstrained = True
             v1 = list(shared)[0]
             p11 = self.mapping[v1]
             p21 = other.mapping[v1]
-            cs1 = make_hcs_2d(p11, p11+np.array([1.0, 0.0]))
-            cs2 = make_hcs_2d(p21, p21+np.array([1.0, 0.0]))
+            cs1 = make_hcs(p11, p11+np.array([1.0, 0.0]))
+            cs2 = make_hcs(p21, p21+np.array([1.0, 0.0]))
         else:   # len(shared) >= 2:
             v1 = list(shared)[0]
             v2 = list(shared)[1]
@@ -120,16 +120,16 @@ class Configuration(object):
             p12 = self.mapping[v2]
             if np.allclose(linalg.norm(p12-p11), 0.0):
                 underconstrained = True
-                cs1 = make_hcs_2d(p11, p11+np.array([1.0, 0.0]))
+                cs1 = make_hcs(p11, p11+np.array([1.0, 0.0]))
             else:
-                cs1 = make_hcs_2d(p11, p12)
+                cs1 = make_hcs(p11, p12)
             p21 = other.mapping[v1]
             p22 = other.mapping[v2]
             if np.allclose(linalg.norm(p22-p21), 0.0):
                 underconstrained = True
-                cs2 = make_hcs_2d(p21, p21+np.array([1.0, 0.0]))
+                cs2 = make_hcs(p21, p21+np.array([1.0, 0.0]))
             else:
-                cs2 = make_hcs_2d(p21, p22)
+                cs2 = make_hcs(p21, p22)
         # in any case
         t = cs_transform_matrix(cs2, cs1)
         return t, underconstrained
@@ -150,16 +150,16 @@ class Configuration(object):
         p12 = self.mapping[v2]
         if np.allclose(linalg.norm(p12-p11), 0.0):
             underconstrained = True
-            cs1 = make_hcs_2d_scaled(p11, p11+np.array([1.0, 0.0]))
+            cs1 = make_hcs_scaled(p11, p11+np.array([1.0, 0.0]))
         else:
-            cs1 = make_hcs_2d_scaled(p11, p12)
+            cs1 = make_hcs_scaled(p11, p12)
         p21 = other.mapping[v1]
         p22 = other.mapping[v2]
         if np.allclose(linalg.norm(p22-p21), 0.0):
             underconstrained = True
-            cs2 = make_hcs_2d_scaled(p21, p21+np.array([1.0, 0.0]))
+            cs2 = make_hcs_scaled(p21, p21+np.array([1.0, 0.0]))
         else:
-            cs2 = make_hcs_2d_scaled(p21, p22)
+            cs2 = make_hcs_scaled(p21, p22)
         print cs1, cs2
         t = cs_transform_matrix(cs2, cs1)
         othert = other.transform(t)

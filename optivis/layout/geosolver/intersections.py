@@ -10,15 +10,29 @@ import numpy.linalg as linalg
 import logging
 
 def cc_int(p1, r1, p2, r2):
+    """Intersect circle (p1, r1) with circle (p2, r2)
+
+    :param p1: vector representing centre of first circle
+    :type p1: :class:`.np.ndarray`
+    :param r1: scalar representing the radius of first circle
+    :type r1: float
+    :param p2: vector representing centre of second circle
+    :type p2: :class:`.np.ndarray`
+    :param r2: scalar representing the radius of first circle
+    :type r2: float
+    :returns: list of zero, one or two solution points
+    :rtype: list
     """
-    Intersect circle (p1,r1) circle (p2,r2)
-    where p1 and p2 are 2-vectors and r1 and r2 are scalars
-    Returns a list of zero, one or two solution points.
-    """
+
+    logging.getLogger("intersections").debug("cc_int %s %s %s %s", p1, r1, p2, \
+    r2)
+
+    # distance between circle centres
     d = linalg.norm(p2-p1)
 
     # check if d < 0 within tolerance
     if np.allclose(d, 0.0) or np.less(d, 0.0):
+        # no solutions
         return []
 
     u = ((r1*r1 - r2*r2) / d + d) / 2
@@ -34,30 +48,52 @@ def cc_int(p1, r1, p2, r2):
         v = 0.0
     else:
         v = np.sqrt(a-b)
+
     s = (p2-p1) * u / d
+
     if np.allclose(linalg.norm(s),0):
-        p3a = p1+np.array([p2[1]-p1[1],p1[0]-p2[0]])*r1/d
-        if np.allclose(r1/d,0):
+        p3a = p1 + np.array([p2[1]-p1[1], p1[0]-p2[0]]) * r1/d
+
+        if np.allclose(r1/d, 0):
             return [p3a]
         else:
-            p3b = p1+np.array([p1[1]-p2[1],p2[0]-p1[0]])*r1/d
-            return [p3a,p3b]
+            p3b = p1+np.array([p1[1]-p2[1], p2[0]-p1[0]]) * r1/d
+
+            return [p3a, p3b]
     else:
         p3a = p1 + s + np.array([s[1], -s[0]]) * v / linalg.norm(s)
+
         if np.allclose(v / linalg.norm(s),0):
             return [p3a]
         else:
             p3b = p1 + s + np.array([-s[1], s[0]]) * v / linalg.norm(s)
+
             return [p3a,p3b]
 
-def cl_int(p1,r,p2,v):
+def cl_int(p1, r, p2, v):
+    """Intersect circle (p1, r) with line (p2, v)
+
+    :param p1: vector representing centre of circle
+    :type p1: :class:`.np.ndarray`
+    :param r: scalar representing the radius of circle
+    :type r1: float
+    :param p2: vector representing a point on the line
+    :type p2: :class:`.np.ndarray`
+    :param v: vector representing the direction of the line
+    :type v: :class:`.np.ndarray`
+    :returns: list of zero, one or two solution points
+    :rtype: list
     """
-    Intersect a circle (p1,r) with line (p2,v)
-    where p1, p2 and v are 2-vectors, r is a scalar
-    Returns a list of zero, one or two solution points
-    """
+
+    logging.getLogger("intersections").debug("cl_int %s %s %s %s", p1, r, p2, \
+    v)
+
+    # distance between centre of circle and start of line
     p = p2 - p1
+
+    # squared length of line
     d2 = v[0]*v[0] + v[1]*v[1]
+
     D = p[0]*v[1] - v[0]*p[1]
     E = r*r*d2 - D*D
 
@@ -67,43 +103,70 @@ def cl_int(p1,r,p2,v):
         sE = np.sqrt(E)
         x1 = p1[0] + (D * v[1] + np.sign(v[1])*v[0]*sE) / d2
         x2 = p1[0] + (D * v[1] - np.sign(v[1])*v[0]*sE) / d2
-        y1 = p1[1] + (-D * v[0] + abs(v[1])*sE) / d2
-        y2 = p1[1] + (-D * v[0] - abs(v[1])*sE) / d2
-        return [np.array([x1,y1]), np.array([x2,y2])]
+        y1 = p1[1] + (-D * v[0] + np.absolute(v[1])*sE) / d2
+        y2 = p1[1] + (-D * v[0] - np.absolute(v[1])*sE) / d2
+
+        return [np.array([x1, y1]), np.array([x2, y2])]
     elif np.allclose(E, 0):
         x1 = p1[0] + D * v[1] / d2
         y1 = p1[1] + -D * v[0] / d2
-        # return [np.array([x1,y1]), np.array([x1,y1])]
-        return [np.array([x1,y1])]
+
+        return [np.array([x1, y1])]
     else:
         return []
 
-def cr_int(p1,r,p2,v):
-    """
-    Intersect a circle (p1,r) with ray (p2,v) (a half-line)
-    where p1, p2 and v are 2-vectors, r is a scalar
-    Returns a list of zero, one or two solutions.
-    """
-    sols = []
+def cr_int(p1, r, p2, v):
+    """Intersect a circle (p1, r) with ray (p2, v) (a half-line)
 
-    for s in cl_int(p1,r,p2,v):
+    :param p1: vector representing centre of circle
+    :type p1: :class:`.np.ndarray`
+    :param r: scalar representing the radius of circle
+    :type r1: float
+    :param p2: vector representing a point on the ray
+    :type p2: :class:`.np.ndarray`
+    :param v: vector representing the direction of the ray
+    :type v: :class:`.np.ndarray`
+    :returns: list of zero, one or two solution points
+    :rtype: list
+    """
+
+    logging.getLogger("intersections").debug("cr_int %s %s %s %s", p1, r, p2, \
+    v)
+
+    solutions = []
+
+    # loop over solutions of the circle and line intercept
+    for s in cl_int(p1, r, p2, v):
         a = np.dot(s-p2, v)
+
         # check if a is >= 0 within tolerance
         if np.allclose(a, 0.0) or np.greater(a, 0.0):
-            sols.append(s)
+            solutions.append(s)
 
-    return sols
+    return solutions
 
 def ll_int(p1, v1, p2, v2):
-    """Intersect line though p1 direction v1 with line through p2 direction v2.
-       Returns a list of zero or one solutions
+    """Intersect two lines
+
+    :param p1: vector representing a point on the first line
+    :type p1: :class:`.np.ndarray`
+    :param v1: vector represting the direction of the first line
+    :type v1: :class:`.np.ndarray`
+    :param p2: vector representing a point on the second line
+    :type p2: :class:`.np.ndarray`
+    :param v2: vector represting the direction of the second line
+    :type v2: :class:`.np.ndarray`
+    :returns: list of zero or one solution points
+    :rtype: list
     """
+
     logging.getLogger("intersections").debug("ll_int %s %s %s %s", p1, v1, p2, \
     v2)
 
-    if np.allclose((v1[0]*v2[1])-(v1[1]*v2[0]),0):
+    if np.allclose(v1[0]*v2[1] - v1[1]*v2[0], 0.0):
+        # lines don't intersect
         return []
-    elif not np.allclose(v2[1],0.0):
+    elif not np.allclose(v2[1], 0.0):
         d = p2-p1
         r2 = -v2[0]/v2[1]
         f = v1[0] + v1[1]*r2
@@ -111,16 +174,29 @@ def ll_int(p1, v1, p2, v2):
     else:
         d = p2-p1
         t1 = d[1]/v1[1]
+
     return [p1 + v1*t1]
 
 def lr_int(p1, v1, p2, v2):
-    """Intersect line though p1 direction v1 with ray through p2 direction v2.
-       Returns a list of zero or one solutions
+    """Intersect line with ray
+
+    :param p1: vector representing a point on the line
+    :type p1: :class:`.np.ndarray`
+    :param v1: vector represting the direction of the line
+    :type v1: :class:`.np.ndarray`
+    :param p2: vector representing a point on the ray
+    :type p2: :class:`.np.ndarray`
+    :param v2: vector represting the direction of the ray
+    :type v2: :class:`.np.ndarray`
+    :returns: list of zero or one solution points
+    :rtype: list
     """
+
     logging.getLogger("intersections").debug("lr_int %s %s %s %s", p1, v1, p2, \
     v2)
 
-    s = ll_int(p1,v1,p2,v2)
+    # assume ray is a line and get intersection with line
+    s = ll_int(p1, v1, p2, v2)
 
     a = np.dot(s[0]-p2, v2)
 
@@ -128,16 +204,30 @@ def lr_int(p1, v1, p2, v2):
     if len(s) > 0 and np.allclose(a, 0.0) or np.greater(a, 0.0):
         return s
     else:
+        # lines intersect behind ray
         return []
 
 def rr_int(p1, v1, p2, v2):
-    """Intersect ray though p1 direction v1 with ray through p2 direction v2.
-       Returns a list of zero or one solutions
+    """Intersect ray with ray
+
+    :param p1: vector representing a point on the first ray
+    :type p1: :class:`.np.ndarray`
+    :param v1: vector represting the direction of the first ray
+    :type v1: :class:`.np.ndarray`
+    :param p2: vector representing a point on the second ray
+    :type p2: :class:`.np.ndarray`
+    :param v2: vector represting the direction of the second ray
+    :type v2: :class:`.np.ndarray`
+    :returns: list of zero or one solution points
+    :rtype: list
     """
+
     logging.getLogger("intersections").debug("rr_int %s %s %s %s", p1, v1, p2, \
     v2)
 
+    # assume rays are lines and get intersection
     s = ll_int(p1,v1,p2,v2)
+
     a1 = np.dot(s[0]-p1,v1)
     a2 = np.dot(s[0]-p2,v2)
 
@@ -146,58 +236,108 @@ def rr_int(p1, v1, p2, v2):
     and np.allclose(a2, 0.0) or np.greater(a2, 0.0):
         return s
     else:
+        # lines intersect behind rays
         return []
 
 def angle_3p(p1, p2, p3):
-    """Returns the angle, in radians, rotating vector p2p1 to vector p2p3.
-       arg keywords:
-          p1 - a vector
-          p2 - a vector
-          p3 - a vector
-       returns: a number
-       In 2D, the angle is a signed angle, range [-pi,pi], corresponding
-       to a clockwise rotation. If p1-p2-p3 is clockwise, then angle > 0.
-       In 3D, the angle is unsigned, range [0,pi]
+    """Calculates the angle rotating vector p2p1 to vector p2p3
+
+    The angle is signed and in the range [-pi, pi] corresponding to a clockwise
+    rotation. If p1-p2-p3 is clockwise, then angle > 0.
+
+    If the angle is degenerate (i.e. the triangle has zero area), None is
+    returned.
+
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: angle in radians, or None
+    :rtype: float
     """
+
+    # distances between points
     d21 = linalg.norm(p2-p1)
     d23 = linalg.norm(p3-p2)
-    if np.allclose(d21,0) or np.allclose(d23,0):
-        return None         # degenerate angle
+
+    if np.allclose(d21, 0) or np.allclose(d23, 0):
+        # degenerate angle
+        return None
+
+    # vectors between points
     v21 = (p1-p2) / d21
     v23 = (p3-p2) / d23
-    t = np.dot(v21,v23) # / (d21 * d23)
-    if t > 1.0:             # check for floating point error
+
+    # calculate vector rotating v21 to v23
+    t = np.dot(v21, v23)
+
+    # clip to +/-1.0 to fix floating point errors
+    if t > 1.0:
         t = 1.0
     elif t < -1.0:
         t = -1.0
+
+    # calculate angle from rotation vector
     angle = np.arccos(t)
-    if len(p1) == 2:        # 2D case
-        if is_counterclockwise(p1,p2,p3):
-            angle = -angle
+
+    if is_counterclockwise(p1, p2, p3):
+        # flip angle
+        angle = -angle
+
     return angle
 
 def distance_2p(p1, p2):
-    """Returns the euclidean distance between two points
-       arg keywords:
-          p1 - a vector
-          p2 - a vector
-       returns: a number
-    """
-    return linalg.norm(p2 - p1)
+    """Calculates the Euclidean distance between two points
 
-def is_clockwise(p1,p2,p3):
-    """ returns True iff triangle p1,p2,p3 is clockwise oriented"""
-    u = p2 - p1
-    v = p3 - p2;
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :returns: distance between the points
+    :rtype: float
+    """
+
+    # calculate the norm on the vector between the two points
+    return linalg.norm(p2-p1)
+
+def is_clockwise(p1, p2, p3):
+    """Calculates whether or not triangle p1, p2, p3 is orientated clockwise
+
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: True if clockwise, otherwise False
+    :rtype: boolean
+    """
+
+    u = p2-p1
+    v = p3-p2;
     perp_u = np.array([-u[1], u[0]])
 
-    a = np.dot(perp_u,v)
+    a = np.dot(perp_u, v)
 
     # check a < 0 within tolerance
     return not np.allclose(a, 0.0) and np.less(a, 0.0)
 
-def is_counterclockwise(p1,p2,p3):
-    """ returns True iff triangle p1,p2,p3 is counterclockwise oriented"""
+def is_counterclockwise(p1, p2, p3):
+    """Calculates whether or not triangle p1, p2, p3 is orientated \
+    counter-clockwise
+
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: True if counter-clockwise, otherwise False
+    :rtype: boolean
+    """
+
     u = p2 - p1
     v = p3 - p2;
     perp_u = np.array([-u[1], u[0]])
@@ -207,76 +347,135 @@ def is_counterclockwise(p1,p2,p3):
     # check that a > 0 within tolerance
     return not np.allclose(a, 0.0) and np.greater(a, 0.0)
 
-def is_flat(p1,p2,p3):
-    """ returns True iff triangle p1,p2,p3 is flat (neither clockwise of counterclockwise oriented)"""
+def is_flat(p1, p2, p3):
+    """Calculates wheter or not triangle p1, p2, p3 is flat (neither \
+    clockwise nor counter-clockwise)
+
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: True if flat, otherwise False
+    :rtype: boolean
+    """
+
     u = p2 - p1
     v = p3 - p2;
     perp_u = np.array([-u[1], u[0]])
-    return np.allclose(np.dot(perp_u,v), 0)
 
-def is_acute(p1,p2,p3):
-    """returns True iff angle p1,p2,p3 is acute, i.e. less than pi/2"""
+    return np.allclose(np.dot(perp_u, v), 0)
 
+def is_acute(p1, p2, p3):
+    """Calculates whether or not angle p1, p2, p3 is acute, i.e. less than \
+    pi / 2
+
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: True if acute, otherwise False
+    :rtype: boolean
+    """
+
+    # calculate angle between points
     angle = angle_3p(p1, p2, p3)
 
-    if angle != None:
-        a = abs(angle)
-        b = np.pi / 2
-
-        # return whether a < b within tolerance
-        return not np.allclose(a, b) and np.less(a, b)
-    else:
+    if angle is None:
         return False
+
+    a = np.absolute(angle)
+    b = np.pi / 2
+
+    # return whether a < b within tolerance
+    return not np.allclose(a, b) and np.less(a, b)
 
 def is_obtuse(p1,p2,p3):
-    """returns True iff angle p1,p2,p3 is obtuse, i.e. greater than pi/2"""
+    """Calculates whether or not angle p1, p2, p3 is obtuse, i.e. greater than \
+    pi / 2
 
+    :param p1: first point
+    :type p1: :class:`.np.ndarray`
+    :param p2: second point
+    :type p2: :class:`.np.ndarray`
+    :param p3: third point
+    :type p3: :class:`.np.ndarray`
+    :returns: True if obtuse, otherwise False
+    :rtype: boolean
+    """
+
+    # calculate angle between points
     angle = angle_3p(p1, p2, p3)
 
-    if angle != None:
-        a = abs(angle)
-        b = np.pi / 2
-
-        # check that a > b within tolerance
-        return not np.allclose(a, b) and np.greater(a, b)
-    else:
+    if angle is None:
         return False
 
-def make_hcs_2d(a, b):
-    """build a 2D homogeneus coordiate system from two vectors"""
+    a = np.absolute(angle)
+    b = np.pi / 2
+
+    # check that a > b within tolerance
+    return not np.allclose(a, b) and np.greater(a, b)
+
+def make_hcs(a, b, scale=False):
+    """Build a homogeneous coordiate system from two vectors, normalised
+
+    :param a: first vector
+    :type a: :class:`.np.ndarray`
+    :param b: second vector
+    :type b: :class:`.np.ndarray`
+    :returns: 3x3 homogeneous coordinate matrix
+    :rtype: :class:`.np.ndarray`
+    """
+
+    # resultant vector
     u = b-a
-    if np.allclose(linalg.norm(u), 0.0):     # 2006/6/30
+
+    if np.allclose(linalg.norm(u), 0.0):
+        # vectors are on top of each other (within tolerance)
         return None
-    else:
+
+    if not scale:
+        # normalise resultant
         u = u / linalg.norm(u)
+
+    # mirror of u
     v = np.array([-u[1], u[0]])
-    hcs = np.array([
+
+    # return new coordinate system
+    return np.array([
         [u[0], v[0], a[0]],
         [u[1], v[1], a[1]],
         [0.0, 0.0, 1.0]
     ])
 
-    return hcs
+def make_hcs_scaled(*args, **kwargs):
+    """Build a homogeneous coordiate system from two vectors
 
-def make_hcs_2d_scaled(a, b):
-    """build a 2D homogeneus coordiate system from two vectors, but scale with distance between input point"""
-    u = b-a
-    if np.allclose(linalg.norm(u), 0.0):     # 2006/6/30
-        return None
-    #else:
-    #    u = u / linalg.norm(u)
-    v = np.array([-u[1], u[0]])
-    hcs = np.array([
-        [u[0], v[0], a[0]],
-        [u[1], v[1], a[1]],
-        [0.0, 0.0, 1.0]
-    ])
+    :param a: first vector
+    :type a: :class:`.np.ndarray`
+    :param b: second vector
+    :type b: :class:`.np.ndarray`
+    :returns: 3x3 homogeneous coordinate matrix
+    :rtype: :class:`.np.ndarray`
+    """
 
-    return hcs
+    return make_hcs(scale=True, *args, **kwargs)
 
 def cs_transform_matrix(from_cs, to_cs):
-    """returns a transform matrix from from_cs to to_cs"""
+    """Calculate the transformation matrix from one coordinate system to another
 
+    :param from_cs: initial coordinate system
+    :type from_cs: :class:`.np.ndarray`
+    :param to_cs: target coordinate system
+    :type to_cs: :class:`.np.ndarray`
+    :returns: transformation matrix to convert from_cs to to_cs
+    :rtype: :class:`.np.ndarray`
+    """
+
+    # multiply to_cs by the inverse of from_cs
     return np.dot(to_cs, linalg.inv(from_cs))
 
 # -------------------------test code -----------------
