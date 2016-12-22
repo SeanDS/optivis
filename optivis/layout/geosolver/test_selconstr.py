@@ -6,7 +6,7 @@ from unittest import TestCase
 from optivis.layout.geosolver.selconstr import FunctionConstraint, \
 NotClockwiseConstraint, NotCounterClockwiseConstraint, NotObtuseConstraint, \
 NotAcuteConstraint
-from optivis.layout.geosolver.intersections import is_clockwise
+from optivis.geometry import is_clockwise
 
 class TestFunctionConstraint(TestCase):
     def setUp(self):

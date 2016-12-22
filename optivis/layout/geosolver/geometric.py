@@ -15,8 +15,8 @@ from optivis.layout.geosolver.cluster import Rigid, Hedgehog
 from optivis.layout.geosolver.configuration import Configuration
 from optivis.layout.geosolver.constraint import Constraint, ConstraintGraph
 from optivis.layout.geosolver.notify import Notifier, Listener
-from optivis.layout.geosolver.intersections import angle_3p, distance_2p
 from optivis.layout.geosolver.selconstr import SelectionConstraint
+from optivis.geometry import angle_3p, distance_2p
 
 class GeometricProblem(Notifier, Listener):
     """A geometric constraint problem with a prototype.

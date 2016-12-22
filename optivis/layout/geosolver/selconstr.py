@@ -7,8 +7,8 @@ from __future__ import unicode_literals, division
 import abc
 
 from optivis.layout.geosolver.constraint import Constraint
-from optivis.layout.geosolver.intersections import is_clockwise, \
-is_counterclockwise, is_obtuse, is_acute
+from optivis.geometry import is_clockwise, is_counterclockwise, is_obtuse, \
+is_acute
 
 class SelectionConstraint(Constraint):
     """Constraints for solution selection"""

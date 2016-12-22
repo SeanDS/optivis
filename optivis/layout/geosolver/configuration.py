@@ -7,9 +7,10 @@ from __future__ import unicode_literals, division
 
 import numpy as np
 import numpy.linalg as linalg
+import logging
 
-# FIXME: import exact packages
-from optivis.layout.geosolver.intersections import *
+from optivis.geometry import distance_2p, make_hcs, make_hcs_scaled, \
+cs_transform_matrix
 
 class Configuration(object):
     """A set of named points with coordinates of a specified dimension.

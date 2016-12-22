@@ -12,6 +12,7 @@ from __future__ import unicode_literals, division
 import abc
 import numpy as np
 import numpy.linalg as linalg
+import logging
 
 from optivis.layout.geosolver.graph import Graph
 from optivis.layout.geosolver.method import Method, MethodGraph
@@ -22,7 +23,7 @@ from optivis.layout.geosolver.cluster import *
 from optivis.layout.geosolver.configuration import Configuration
 from optivis.layout.geosolver.selconstr import NotCounterClockwiseConstraint, \
 NotClockwiseConstraint, NotAcuteConstraint, NotObtuseConstraint
-from optivis.layout.geosolver.intersections import *
+from optivis.geometry import distance_2p, angle_3p, rr_int, cr_int, cc_int
 
 class ClusterSolver(Notifier):
     """A generic 2D geometric constraint solver
