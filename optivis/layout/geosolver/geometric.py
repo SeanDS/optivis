@@ -817,7 +817,7 @@ class AngleConstraint(ParametricConstraint):
         return result
 
     def angle_degrees(self):
-        return math.degrees(self._value)
+        return np.degrees(self._value)
 
     def __unicode__(self):
         return "AngleConstraint({0}, {1}, {2}, {3})".format(\
