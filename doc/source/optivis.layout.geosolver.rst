@@ -13,7 +13,6 @@ Submodules
    optivis.layout.geosolver.geometric
    optivis.layout.geosolver.graph
    optivis.layout.geosolver.intersections
-   optivis.layout.geosolver.matfunc
    optivis.layout.geosolver.method
    optivis.layout.geosolver.multimethod
    optivis.layout.geosolver.notify
@@ -24,8 +23,6 @@ Submodules
    optivis.layout.geosolver.test_method
    optivis.layout.geosolver.test_multimethod
    optivis.layout.geosolver.test_selconstr
-   optivis.layout.geosolver.tolerance
-   optivis.layout.geosolver.vector
 
 Module contents
 ---------------
