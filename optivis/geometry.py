@@ -33,6 +33,15 @@ class Vector(object):
 
         return unicode(self)
 
+    def dot(self, other):
+        """Dot product
+
+        :param other: other vector
+        :type other: :class:`Vector`
+        """
+
+        return self.x * other.x + self.y * other.y
+
     @classmethod
     def origin(cls):
         """The coordinates of the origin"""
@@ -68,7 +77,7 @@ class Vector(object):
     def length(self):
         """Length between point defined by coordinates and the origin"""
 
-        return math.sqrt(self.x * self.x, self.y * self.y)
+        return math.sqrt(self.x * self.x + self.y * self.y)
 
     def is_positive(self):
         """Checks if the coordinates are all positive
@@ -86,21 +95,21 @@ class Vector(object):
 
         return not self.is_positive()
 
-    def is_close(self, other, rel_tol=1e-05, abs_tol=1e-08):
-        return abs(self.x - other.x) <= (abs_tol + rel_tol * abs(other.x)) \
-        and abs(self.y - other.y) <= (abs_tol + rel_tol * abs(other.y))
+    def tol_eq(self, other, *args, **kwargs):
+        return Scalar.tol_eq(self.x, other.x, *args, **kwargs) \
+        and Scalar.tol_eq(self.y, other.y, *args, **kwargs)
 
     def tol_gt(self, other, *args, **kwargs):
-        return self > other and not self.is_close(other, *args, **kwargs)
+        return self > other and not self.tol_eq(other, *args, **kwargs)
 
     def tol_lt(self, other, *args, **kwargs):
-        return self < other and not self.is_close(other, *args, **kwargs)
+        return self < other and not self.tol_eq(other, *args, **kwargs)
 
     def tol_ge(self, other, *args, **kwargs):
-        return self > other or self.is_close(other, *args, **kwargs)
+        return self > other or self.tol_eq(other, *args, **kwargs)
 
     def tol_le(self, other, *args, **kwargs):
-        return self < other or self.is_close(other, *args, **kwargs)
+        return self < other or self.tol_eq(other, *args, **kwargs)
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
@@ -118,21 +127,98 @@ class Vector(object):
         return self.x >= other.x and self.y >= other.y
 
     def __add__(self, other):
-        return self.__class__(self.x + other.x, self.y + other.y)
+        try:
+            other_x = other.x
+            other_y = other.y
+        except AttributeError:
+            other_x = other
+            other_y = other
+
+        return self.__class__(self.x + other_x, self.y + other_y)
 
     def __sub__(self, other):
-        return self.__class__(self.x - other.x, self.y - other.y)
+        try:
+            other_x = other.x
+            other_y = other.y
+        except AttributeError:
+            other_x = other
+            other_y = other
+
+        return self.__class__(self.x - other_x, self.y - other_y)
 
     def __mul__(self, other):
-        return self.__class__(self.x * other.x, self.y * other.y)
+        try:
+            other_x = other.x
+            other_y = other.y
+        except AttributeError:
+            other_x = other
+            other_y = other
+
+        return self.__class__(self.x * other_x, self.y * other_y)
 
     def __truediv__(self, other):
-        return self.__class__(self.x / other.x, self.y / other.y)
+        try:
+            other_x = other.x
+            other_y = other.y
+        except AttributeError:
+            other_x = other
+            other_y = other
+
+        return self.__class__(self.x / other_x, self.y / other_y)
 
     def __neg__(self):
         """Negate operator"""
 
         return self.__class__(-self.x, -self.y)
+
+class Scalar(object):
+    """Scalar value functions"""
+
+    """Relative tolerance"""
+    rel_tol = 1e-05
+
+    """Absolute tolerance"""
+    abs_tol = 1e-08
+
+    @staticmethod
+    def sign(x):
+        if x > 0:
+            return 1
+
+        return -1
+
+    @classmethod
+    def tol_eq(cls, a, b, rel_tol=None, abs_tol=None):
+        if rel_tol is None:
+            rel_tol = cls.rel_tol
+
+        if abs_tol is None:
+            abs_tol = cls.abs_tol
+
+        a = float(a)
+        b = float(b)
+
+        return abs(a - b) <= (abs_tol + rel_tol * abs(b))
+
+    @classmethod
+    def tol_zero(cls, a, *args, **kwargs):
+        return cls.tol_eq(a, 0, *args, **kwargs)
+
+    @classmethod
+    def tol_gt(cls, a, b, *args, **kwargs):
+        return a > b and not cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_lt(cls, a, b, *args, **kwargs):
+        return a < b and not cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_ge(cls, a, b, *args, **kwargs):
+        return a > b or cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_le(cls, a, b, *args, **kwargs):
+        return a < b or cls.tol_eq(a, b, *args, **kwargs)
 
 def cc_int(p1, r1, p2, r2):
     """Intersect circle (p1, r1) with circle (p2, r2)
@@ -155,8 +241,8 @@ def cc_int(p1, r1, p2, r2):
     # distance between circle centres
     d = (p2-p1).length
 
-    # check if d < 0 within tolerance
-    if np.allclose(d, 0.0) or np.less(d, 0.0):
+    # check if d <= 0 within tolerance
+    if Scalar.tol_le(d, 0):
         # no solutions
         return []
 
@@ -166,34 +252,34 @@ def cc_int(p1, r1, p2, r2):
     b = u*u
 
     # check that a < b within tolerance
-    # FIXME: what's going on here? this used to be tol_lt, but elif block seems to repeat earlier check
-    if not np.allclose(a, b) and np.less(a, b):
+    # FIXME: what's going on here?  elif block seems to repeat earlier check
+    if Scalar.tol_lt(a, b):
         return []
     elif a < b:
         v = 0.0
     else:
-        v = np.sqrt(a-b)
+        v = math.sqrt(a-b)
 
     s = (p2-p1) * u / d
 
-    if np.allclose(linalg.norm(s),0):
-        p3a = p1 + np.array([p2[1]-p1[1], p1[0]-p2[0]]) * r1/d
+    if Scalar.tol_zero(s.length):
+        p3a = p1 + Vector(p2[1]-p1[1], p1[0]-p2[0]) * r1/d
 
-        if np.allclose(r1/d, 0):
+        if Scalar.tol_zero(r1 / d):
             return [p3a]
         else:
-            p3b = p1+np.array([p1[1]-p2[1], p2[0]-p1[0]]) * r1/d
+            p3b = p1 + Vector(p1[1]-p2[1], p2[0]-p1[0]) * r1/d
 
             return [p3a, p3b]
     else:
-        p3a = p1 + s + np.array([s[1], -s[0]]) * v / linalg.norm(s)
+        p3a = p1 + s + Vector(s[1], -s[0]) * v / s.length
 
-        if np.allclose(v / linalg.norm(s),0):
+        if Scalar.tol_zero(v / s.length):
             return [p3a]
         else:
-            p3b = p1 + s + np.array([-s[1], s[0]]) * v / linalg.norm(s)
+            p3b = p1 + s + Vector(-s[1], s[0]) * v / s.length
 
-            return [p3a,p3b]
+            return [p3a, p3b]
 
 def cl_int(p1, r, p2, v):
     """Intersect circle (p1, r) with line (p2, v)
@@ -223,20 +309,19 @@ def cl_int(p1, r, p2, v):
     E = r*r*d2 - D*D
 
     # check that d2 and E are both > 0 within tolerance
-    if not np.allclose(d2, 0.0) and np.greater(d2, 0.0) \
-    and not np.allclose(E, 0.0) and np.greater(E, 0.0):
-        sE = np.sqrt(E)
-        x1 = p1[0] + (D * v[1] + np.sign(v[1])*v[0]*sE) / d2
-        x2 = p1[0] + (D * v[1] - np.sign(v[1])*v[0]*sE) / d2
-        y1 = p1[1] + (-D * v[0] + np.absolute(v[1])*sE) / d2
-        y2 = p1[1] + (-D * v[0] - np.absolute(v[1])*sE) / d2
+    if Scalar.tol_gt(d2, 0) and Scalar.tol_gt(E, 0):
+        sE = math.sqrt(E)
+        x1 = p1[0] + (D * v[1] + Scalar.sign(v[1]) * v[0] * sE) / d2
+        x2 = p1[0] + (D * v[1] - Scalar.sign(v[1]) * v[0] * sE) / d2
+        y1 = p1[1] + (-D * v[0] + math.abs(v[1]) * sE) / d2
+        y2 = p1[1] + (-D * v[0] - math.abs(v[1]) * sE) / d2
 
-        return [np.array([x1, y1]), np.array([x2, y2])]
-    elif np.allclose(E, 0):
+        return [Vector(x1, y1), Vector(x2, y2)]
+    elif Scalar.tol_zero(E):
         x1 = p1[0] + D * v[1] / d2
         y1 = p1[1] + -D * v[0] / d2
 
-        return [np.array([x1, y1])]
+        return [Vector(x1, y1)]
     else:
         return []
 
@@ -262,10 +347,8 @@ def cr_int(p1, r, p2, v):
 
     # loop over solutions of the circle and line intercept
     for s in cl_int(p1, r, p2, v):
-        a = np.dot(s-p2, v)
-
         # check if a is >= 0 within tolerance
-        if np.allclose(a, 0.0) or np.greater(a, 0.0):
+        if Scalar.tol_ge((s - p2).dot(v), 0):
             solutions.append(s)
 
     return solutions
@@ -288,19 +371,19 @@ def ll_int(p1, v1, p2, v2):
     logging.getLogger("geometry").debug("ll_int %s %s %s %s", p1, v1, p2, \
     v2)
 
-    if np.allclose(v1[0]*v2[1] - v1[1]*v2[0], 0.0):
+    if Scalar.tol_zero(v1[0] * v2[1] - v1[1] * v2[0]):
         # lines don't intersect
         return []
-    elif not np.allclose(v2[1], 0.0):
-        d = p2-p1
-        r2 = -v2[0]/v2[1]
-        f = v1[0] + v1[1]*r2
-        t1 = (d[0] + d[1]*r2) / f
+    elif not Scalar.tol_zero(v2[1]):
+        d = p2 - p1
+        r2 = -v2[0] / v2[1]
+        f = v1[0] + v1[1] * r2
+        t1 = (d[0] + d[1] * r2) / f
     else:
         d = p2-p1
-        t1 = d[1]/v1[1]
+        t1 = d[1] / v1[1]
 
-    return [p1 + v1*t1]
+    return [p1 + v1 * t1]
 
 def lr_int(p1, v1, p2, v2):
     """Intersect line with ray
@@ -323,10 +406,8 @@ def lr_int(p1, v1, p2, v2):
     # assume ray is a line and get intersection with line
     s = ll_int(p1, v1, p2, v2)
 
-    a = np.dot(s[0]-p2, v2)
-
     # check if s > 0 and a >= 0 within tolerance
-    if len(s) > 0 and np.allclose(a, 0.0) or np.greater(a, 0.0):
+    if len(s) > 0 and Scalar.tol_ge((s[0] - p2).dot(v2), 0):
         return s
     else:
         # lines intersect behind ray
@@ -357,8 +438,8 @@ def rr_int(p1, v1, p2, v2):
     a2 = np.dot(s[0]-p2,v2)
 
     # check len(s) > 0 and a1 >= 0 and a2 >= 0 within tolerance
-    if len(s) > 0 and np.allclose(a1, 0.0) or np.greater(a1, 0.0) \
-    and np.allclose(a2, 0.0) or np.greater(a2, 0.0):
+    if len(s) > 0 and Scalar.tol_ge((s[0] - p1).dot(v1), 0) \
+    and Scalar.tol_ge((s[0] - p1).dot(v1), 0):
         return s
     else:
         # lines intersect behind rays
@@ -384,19 +465,19 @@ def angle_3p(p1, p2, p3):
     """
 
     # distances between points
-    d21 = linalg.norm(p2-p1)
-    d23 = linalg.norm(p3-p2)
+    d21 = (p2 - p1).length
+    d23 = (p3 - p2).length
 
-    if np.allclose(d21, 0) or np.allclose(d23, 0):
+    if Scalar.tol_zero(d21) or Scalar.tol_zero(d23):
         # degenerate angle
         return None
 
     # vectors between points
-    v21 = (p1-p2) / d21
-    v23 = (p3-p2) / d23
+    v21 = (p1 - p2) / d21
+    v23 = (p3 - p2) / d23
 
     # calculate vector rotating v21 to v23
-    t = np.dot(v21, v23)
+    t = v21.dot(v23)
 
     # clip to +/-1.0 to fix floating point errors
     if t > 1.0:
@@ -405,7 +486,7 @@ def angle_3p(p1, p2, p3):
         t = -1.0
 
     # calculate angle from rotation vector
-    angle = np.arccos(t)
+    angle = math.acos(t)
 
     if is_counterclockwise(p1, p2, p3):
         # flip angle
@@ -424,8 +505,7 @@ def distance_2p(p1, p2):
     :rtype: float
     """
 
-    # calculate the norm on the vector between the two points
-    return linalg.norm(p2-p1)
+    return (p2 - p1).length
 
 def is_clockwise(p1, p2, p3):
     """Calculates whether or not triangle p1, p2, p3 is orientated clockwise
@@ -440,14 +520,12 @@ def is_clockwise(p1, p2, p3):
     :rtype: boolean
     """
 
-    u = p2-p1
-    v = p3-p2;
-    perp_u = np.array([-u[1], u[0]])
-
-    a = np.dot(perp_u, v)
+    u = p2 - p1
+    v = p3 - p2;
+    perp_u = Vector(-u.y, u.x)
 
     # check a < 0 within tolerance
-    return not np.allclose(a, 0.0) and np.less(a, 0.0)
+    return Scalar.tol_lt(perp_u.dot(v), 0)
 
 def is_counterclockwise(p1, p2, p3):
     """Calculates whether or not triangle p1, p2, p3 is orientated \
@@ -465,12 +543,10 @@ def is_counterclockwise(p1, p2, p3):
 
     u = p2 - p1
     v = p3 - p2;
-    perp_u = np.array([-u[1], u[0]])
-
-    a = np.dot(perp_u,v)
+    perp_u = Vector(-u.y, u.x)
 
     # check that a > 0 within tolerance
-    return not np.allclose(a, 0.0) and np.greater(a, 0.0)
+    return Scalar.tol_gt(perp_u.dot(v), 0)
 
 def is_flat(p1, p2, p3):
     """Calculates wheter or not triangle p1, p2, p3 is flat (neither \
@@ -488,9 +564,9 @@ def is_flat(p1, p2, p3):
 
     u = p2 - p1
     v = p3 - p2;
-    perp_u = np.array([-u[1], u[0]])
+    perp_u = Vector(-u.y, u.x)
 
-    return np.allclose(np.dot(perp_u, v), 0)
+    return Scalar.tol_zero(perp_u.dot(v), 0)
 
 def is_acute(p1, p2, p3):
     """Calculates whether or not angle p1, p2, p3 is acute, i.e. less than \
@@ -512,11 +588,7 @@ def is_acute(p1, p2, p3):
     if angle is None:
         return False
 
-    a = np.absolute(angle)
-    b = np.pi / 2
-
-    # return whether a < b within tolerance
-    return not np.allclose(a, b) and np.less(a, b)
+    return Scalar.tol_lt(math.abs(angle), math.pi / 2)
 
 def is_obtuse(p1,p2,p3):
     """Calculates whether or not angle p1, p2, p3 is obtuse, i.e. greater than \
@@ -538,11 +610,7 @@ def is_obtuse(p1,p2,p3):
     if angle is None:
         return False
 
-    a = np.absolute(angle)
-    b = np.pi / 2
-
-    # check that a > b within tolerance
-    return not np.allclose(a, b) and np.greater(a, b)
+    return Scalar.tol_gt(math.abs(angle), math.pi / 2)
 
 def make_hcs(a, b, scale=False):
     """Build a homogeneous coordiate system from two vectors, normalised
@@ -556,21 +624,21 @@ def make_hcs(a, b, scale=False):
     """
 
     # resultant vector
-    u = b-a
+    u = b - a
 
-    if np.allclose(linalg.norm(u), 0.0):
+    if Scalar.tol_zero(u.length):
         # vectors are on top of each other (within tolerance)
         return None
 
     if not scale:
         # normalise resultant
-        u = u / linalg.norm(u)
+        u /= u.length
 
     # mirror of u
-    v = np.array([-u[1], u[0]])
+    v = Vector(-u.y, u.x)
 
     # return new coordinate system
-    return np.array([
+    return Matrix([
         [u[0], v[0], a[0]],
         [u[1], v[1], a[1]],
         [0.0, 0.0, 1.0]
@@ -600,8 +668,7 @@ def cs_transform_matrix(from_cs, to_cs):
     :rtype: :class:`.np.ndarray`
     """
 
-    # multiply to_cs by the inverse of from_cs
-    return np.dot(to_cs, linalg.inv(from_cs))
+    return to_cs.dot(from_cs.inverse())
 
 # -------------------------test code -----------------
 
