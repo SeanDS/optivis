@@ -5,47 +5,20 @@ transformations on sets of vectors"""
 
 from __future__ import unicode_literals, division
 
-import numpy as np
-import numpy.linalg as linalg
+import math
 import logging
 
-class Vector(np.ndarray):
-    """Column vector in Cartesian coordinates"""
+class Vector(object):
+    """Two-dimensional column vector in Cartesian coordinates"""
 
-    def __new__(cls, x, y=None):
-        """Vector-specific object initialisation
-
-        This is required because numpy supports slicing and other template-based
-        initialisations that return NEW objects. To allow the new objects to be
-        of type Vector, and not ndarray, this __new__ method is required.
-
-        See https://docs.scipy.org/doc/numpy/user/basics.subclassing.html#new-from-template
-        """
-
+    def __init__(self, x, y=None):
         if y is None:
-            #'copy constructor
+            # copy constructor
             y = x.y
             x = x.x
 
-        obj = np.asarray([[x], [y]]).view(cls)
-
-        return obj
-
-    @property
-    def x(self):
-        return self[0][0]
-
-    @x.setter
-    def x(self, x):
-        self[0][0] = x
-
-    @property
-    def y(self):
-        return self[1][0]
-
-    @y.setter
-    def y(self, y):
-        self[1][0] = y
+        self.x = float(x)
+        self.y = float(y)
 
     def __unicode__(self):
         """String representation of the vector's coordinates"""
@@ -66,30 +39,6 @@ class Vector(np.ndarray):
 
         return cls(0, 0)
 
-    def pre_multiply(self, other):
-        """Pre-multiplies the vector by other"""
-
-        # do multiplication
-        resultant = other * self
-
-        # check the shape matches
-        if resultant.shape != self.shape:
-            raise Exception("Pre-multiplication did not yield a column vector")
-
-        return resultant.view(Vector)
-
-    def post_multiply(self, other):
-        """Post-multiplies the vector by other"""
-
-        # do multiplication
-        resultant = self * other
-
-        # check the shape matches
-        if resultant.shape != self.shape:
-            raise Exception("Post-multiplication did not yield a column vector")
-
-        return resultant
-
     def rotate(self, azimuth):
         """Rotation of coordinates about the origin using a left-handed \
         coordinate system
@@ -101,24 +50,25 @@ class Vector(np.ndarray):
         azimuth = float(azimuth)
 
         # apply rotation matrix to x and y
-        x = self.x * np.cos(np.radians(azimuth)) \
-        - self.y * np.sin(np.radians(azimuth))
-        y = self.x * np.sin(np.radians(azimuth)) \
-        + self.y * np.cos(np.radians(azimuth))
+        x = self.x * math.cos(math.radians(azimuth)) \
+        - self.y * math.sin(math.radians(azimuth))
+        y = self.x * math.sin(math.radians(azimuth)) \
+        + self.y * math.cos(math.radians(azimuth))
 
         # return new coordinates
-        return Vector(x, y)
+        return self.__class__(x, y)
 
     @property
     def azimuth(self):
         """Azimuth defined by the coordinate with respect to the origin"""
 
-        return np.degrees(np.arctan2(self.y, self.x))
+        return math.degrees(math.atan2(self.y, self.x))
 
+    @property
     def length(self):
         """Length between point defined by coordinates and the origin"""
 
-        return np.hypot(self.x, self.y)
+        return math.sqrt(self.x * self.x, self.y * self.y)
 
     def is_positive(self):
         """Checks if the coordinates are all positive
@@ -127,6 +77,62 @@ class Vector(np.ndarray):
         """
 
         return self.x >= 0 and self.y >= 0
+
+    def is_negative(self):
+        """Checks if the coordinates are all negative
+
+        Assumes 0 is positive
+        """
+
+        return not self.is_positive()
+
+    def is_close(self, other, rtol=1e-05, atol=1e-08):
+        return abs(self.x - other.x) <= (atol + rtol * abs(other.x)) \
+        and abs(self.y - other.y) <= (atol + rtol * abs(other.y))
+
+    def is_close_gt(self, other, *args, **kwargs):
+        return self > other and not self.is_close(other, *args, **kwargs)
+
+    def is_close_lt(self, other, *args, **kwargs):
+        return self < other and not self.is_close(other, *args, **kwargs)
+
+    def is_close_ge(self, other, *args, **kwargs):
+        return self > other or self.is_close(other, *args, **kwargs)
+
+    def is_close_le(self, other, *args, **kwargs):
+        return self < other or self.is_close(other, *args, **kwargs)
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __lt__(self, other):
+        return self.x < other.x and self.y < other.y
+
+    def __gt__(self, other):
+        return self.x > other.x and self.y > other.y
+
+    def __le__(self, other):
+        return self.x <= other.x and self.y <= other.y
+
+    def __ge__(self, other):
+        return self.x >= other.x and self.y >= other.y
+
+    def __add__(self, other):
+        return self.__class__(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return self.__class__(self.x - other.x, self.y - other.y)
+
+    def __mul__(self, other):
+        return self.__class__(self.x * other.x, self.y * other.y)
+
+    def __truediv__(self, other):
+        return self.__class__(self.x / other.x, self.y / other.y)
+
+    def __neg__(self):
+        """Negate operator"""
+
+        return self.__class__(-self.x, -self.y)
 
 def cc_int(p1, r1, p2, r2):
     """Intersect circle (p1, r1) with circle (p2, r2)
