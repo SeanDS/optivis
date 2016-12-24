@@ -86,20 +86,20 @@ class Vector(object):
 
         return not self.is_positive()
 
-    def is_close(self, other, rtol=1e-05, atol=1e-08):
-        return abs(self.x - other.x) <= (atol + rtol * abs(other.x)) \
-        and abs(self.y - other.y) <= (atol + rtol * abs(other.y))
+    def is_close(self, other, rel_tol=1e-05, abs_tol=1e-08):
+        return abs(self.x - other.x) <= (abs_tol + rel_tol * abs(other.x)) \
+        and abs(self.y - other.y) <= (abs_tol + rel_tol * abs(other.y))
 
-    def is_close_gt(self, other, *args, **kwargs):
+    def tol_gt(self, other, *args, **kwargs):
         return self > other and not self.is_close(other, *args, **kwargs)
 
-    def is_close_lt(self, other, *args, **kwargs):
+    def tol_lt(self, other, *args, **kwargs):
         return self < other and not self.is_close(other, *args, **kwargs)
 
-    def is_close_ge(self, other, *args, **kwargs):
+    def tol_ge(self, other, *args, **kwargs):
         return self > other or self.is_close(other, *args, **kwargs)
 
-    def is_close_le(self, other, *args, **kwargs):
+    def tol_le(self, other, *args, **kwargs):
         return self < other or self.is_close(other, *args, **kwargs)
 
     def __eq__(self, other):
@@ -153,7 +153,7 @@ def cc_int(p1, r1, p2, r2):
     r2)
 
     # distance between circle centres
-    d = linalg.norm(p2-p1)
+    d = (p2-p1).length
 
     # check if d < 0 within tolerance
     if np.allclose(d, 0.0) or np.less(d, 0.0):
