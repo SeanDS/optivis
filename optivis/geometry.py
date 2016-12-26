@@ -5,20 +5,236 @@ transformations on sets of vectors"""
 
 from __future__ import unicode_literals, division
 
+import numpy as np
+import numpy.linalg as la
 import math
 import logging
+import copy
 
-class Vector(object):
+class Scalar(object):
+    """Scalar value functions"""
+
+    """Relative tolerance"""
+    rel_tol = 1e-05
+
+    """Absolute tolerance"""
+    abs_tol = 1e-08
+
+    @staticmethod
+    def sign(x):
+        if x > 0:
+            return 1
+
+        return -1
+
+    @classmethod
+    def tol_eq(cls, a, b, rel_tol=None, abs_tol=None):
+        if rel_tol is None:
+            rel_tol = cls.rel_tol
+
+        if abs_tol is None:
+            abs_tol = cls.abs_tol
+
+        a = float(a)
+        b = float(b)
+
+        return abs(a - b) <= (abs_tol + rel_tol * abs(b))
+
+    @classmethod
+    def tol_zero(cls, a, *args, **kwargs):
+        return cls.tol_eq(a, 0, *args, **kwargs)
+
+    @classmethod
+    def tol_gt(cls, a, b, *args, **kwargs):
+        return a > b and not cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_lt(cls, a, b, *args, **kwargs):
+        return a < b and not cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_ge(cls, a, b, *args, **kwargs):
+        return a > b or cls.tol_eq(a, b, *args, **kwargs)
+
+    @classmethod
+    def tol_le(cls, a, b, *args, **kwargs):
+        return a < b or cls.tol_eq(a, b, *args, **kwargs)
+
+class Matrix(object):
+    """Matrix and associated methods"""
+
+    def __init__(self, elements):
+        self.elements = elements
+
+    def __repr__(self):
+        rep = ""
+
+        return "\n".join([" ".join([unicode(element) for element in row]) \
+        for row in self.elements])
+
+    @property
+    def elements(self):
+        return self._elements
+
+    @elements.setter
+    def elements(self, elements):
+        # TODO: check if dimensions > 2, but has to be quick
+        self._elements = elements
+
+    @classmethod
+    def identity(cls, size):
+        if size == 2:
+            return cls([[1.0, 0.0], [0.0, 1.0]])
+
+        raise NotImplementedError("Size != 2 not available")
+
+    @property
+    def num_rows(self):
+        return len(self.elements)
+
+    @property
+    def num_cols(self):
+        return len(self.elements[0])
+
+    @property
+    def num_elements(self):
+        return self.num_rows * self.num_cols
+
+    @property
+    def num_dim(self):
+        """Number of dimensions"""
+
+        dimensions = 1
+
+        if (self.num_rows > 1) and (self.num_cols > 1):
+            dimensions += 1
+
+        return dimensions
+
+    def inverse(self):
+        if self.num_rows is not self.num_cols:
+            raise Exception('Inverse only defined for square matrices')
+
+        return self.solve(self.identity(self.num_rows))
+
+    def transpose(self):
+        """Transpose of matrix"""
+
+        t_matrix = []
+
+        for row in xrange(self.num_cols):
+            t_row = []
+
+            for col in xrange(self.num_rows):
+                t_row.append(self.elements[col][row])
+
+            t_matrix.append(t_row)
+
+        return(self.__class__(t_matrix))
+
+    def round(self, precision=4):
+        for row in range(self.num_rows):
+            for col in range(self.num_cols):
+                self.elements[row][col] = round(self.elements[row][col], \
+                precision)
+
+    def __mul__(self, other):
+        """Matrix multiplication
+
+        :param other: other matrix
+        :type other: :class:`.Matrix`
+        """
+
+        if self.num_cols is not other.num_rows:
+            raise Exception('Matrix dimensions mismatch')
+
+        return Matrix([[sum(a * b for a, b in zip(row_a, col_b)) \
+        for col_b in zip(*other.elements)] for row_a in self.elements])
+
+    def solve(self, B, *args, **kwargs):
+        """Solve Ax = B for x, where A is this matrix and B is another matrix \
+        or vector
+
+        :param B: right hand side matrix or vector
+        :type B: :class:`Matrix`
+        :returns: solution x of Ax = B, where x has the same shape as B
+        :rtype: :class:`Matrix`
+        """
+
+        # use Numpy for now
+        A = np.array(self.elements)
+        B = np.array(B.elements)
+
+        # solve
+        x = la.solve(A, B)
+
+        return Matrix(x.tolist())
+
+    @classmethod
+    def identity(cls, n):
+        """Generate n-by-n identity matrix
+
+        :param n: number of rows/columns
+        :type n: int
+        """
+
+        n = int(n)
+
+        # function to generate 1 or 0 for diagonals
+        def ij_elem(i, j):
+            if i == j:
+                return 1.0
+
+            return 0.0
+
+        return cls([[ij_elem(i, j) for i in xrange(n)] for j in xrange(n)])
+
+class Vector(Matrix):
     """Two-dimensional column vector in Cartesian coordinates"""
 
     def __init__(self, x, y=None):
         if y is None:
-            # copy constructor
-            y = x.y
-            x = x.x
+            # check if x is a Matrix
+            if isinstance(x, Matrix):
+                # check if the matrix is a column matrix
+                if x.num_cols > 1:
+                    raise Exception('Matrix must be a single column')
 
-        self.x = float(x)
-        self.y = float(y)
+                # check that the matrix has 2 elements
+                if x.num_rows is not 2:
+                    raise Exception('Matrix must have two rows')
+
+                y = x.elements[1][0]
+                x = x.elements[0][0]
+            else:
+                # copy constructor
+                y = x.y
+                x = x.x
+
+        # create column matrix
+        super(Vector, self).__init__([[float(x)], [float(y)]])
+
+    @property
+    def x(self):
+        return self.elements[0][0]
+
+    @x.setter
+    def x(self, x):
+        self.elements[0][0] = float(x)
+
+    @property
+    def y(self):
+        return self.elements[1][0]
+
+    @y.setter
+    def y(self, y):
+        self.elements[1][0] = float(y)
+
+    def append_row(self, row):
+        raise NotImplementedError('Append operations not available in vectors')
+
+    def append_col(self, col):
+        raise NotImplementedError('Append operations not available in vectors')
 
     def __unicode__(self):
         """String representation of the vector's coordinates"""
@@ -170,55 +386,6 @@ class Vector(object):
         """Negate operator"""
 
         return self.__class__(-self.x, -self.y)
-
-class Scalar(object):
-    """Scalar value functions"""
-
-    """Relative tolerance"""
-    rel_tol = 1e-05
-
-    """Absolute tolerance"""
-    abs_tol = 1e-08
-
-    @staticmethod
-    def sign(x):
-        if x > 0:
-            return 1
-
-        return -1
-
-    @classmethod
-    def tol_eq(cls, a, b, rel_tol=None, abs_tol=None):
-        if rel_tol is None:
-            rel_tol = cls.rel_tol
-
-        if abs_tol is None:
-            abs_tol = cls.abs_tol
-
-        a = float(a)
-        b = float(b)
-
-        return abs(a - b) <= (abs_tol + rel_tol * abs(b))
-
-    @classmethod
-    def tol_zero(cls, a, *args, **kwargs):
-        return cls.tol_eq(a, 0, *args, **kwargs)
-
-    @classmethod
-    def tol_gt(cls, a, b, *args, **kwargs):
-        return a > b and not cls.tol_eq(a, b, *args, **kwargs)
-
-    @classmethod
-    def tol_lt(cls, a, b, *args, **kwargs):
-        return a < b and not cls.tol_eq(a, b, *args, **kwargs)
-
-    @classmethod
-    def tol_ge(cls, a, b, *args, **kwargs):
-        return a > b or cls.tol_eq(a, b, *args, **kwargs)
-
-    @classmethod
-    def tol_le(cls, a, b, *args, **kwargs):
-        return a < b or cls.tol_eq(a, b, *args, **kwargs)
 
 def cc_int(p1, r1, p2, r2):
     """Intersect circle (p1, r1) with circle (p2, r2)
@@ -432,10 +599,10 @@ def rr_int(p1, v1, p2, v2):
     v2)
 
     # assume rays are lines and get intersection
-    s = ll_int(p1,v1,p2,v2)
+    s = ll_int(p1, v1, p2, v2)
 
-    a1 = np.dot(s[0]-p1,v1)
-    a2 = np.dot(s[0]-p2,v2)
+    a1 = (s[0] - p1).dot(v1)
+    a2 = (s[0] - p2).dot(v2)
 
     # check len(s) > 0 and a1 >= 0 and a2 >= 0 within tolerance
     if len(s) > 0 and Scalar.tol_ge((s[0] - p1).dot(v1), 0) \
@@ -668,7 +835,7 @@ def cs_transform_matrix(from_cs, to_cs):
     :rtype: :class:`.np.ndarray`
     """
 
-    return to_cs.dot(from_cs.inverse())
+    return to_cs * from_cs.inverse()
 
 # -------------------------test code -----------------
 
