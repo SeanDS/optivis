@@ -9,9 +9,8 @@ problems and solutions are represented by a Configuration for each cluster.
 
 from __future__ import unicode_literals, division
 
+import math
 import abc
-import numpy as np
-import numpy.linalg as linalg
 import logging
 
 from optivis.layout.geosolver.graph import Graph
@@ -23,7 +22,8 @@ from optivis.layout.geosolver.cluster import *
 from optivis.layout.geosolver.configuration import Configuration
 from optivis.layout.geosolver.selconstr import NotCounterClockwiseConstraint, \
 NotClockwiseConstraint, NotAcuteConstraint, NotObtuseConstraint
-from optivis.geometry import distance_2p, angle_3p, rr_int, cr_int, cc_int
+from optivis.geometry import Scalar, Vector, distance_2p, angle_3p, rr_int, \
+cr_int, cc_int
 
 class ClusterSolver(Notifier):
     """A generic 2D geometric constraint solver
@@ -1756,8 +1756,8 @@ and r3", "clmethods")
         logging.getLogger("clustersolver").debug("Solving ddd: %s %s %s %f %f \
 %f", v1, v2, v3, d12, d23, d31)
 
-        p1 = np.array([0.0, 0.0])
-        p2 = np.array([d12, 0.0])
+        p1 = Vector(0.0, 0.0)
+        p2 = Vector(d12, 0.0)
         p3s = cc_int(p1, d31, p2, d23)
 
         solutions = []
@@ -1884,9 +1884,9 @@ hog")
         logging.getLogger("clustersolver").debug("Solving dad: %s %s %s %f %f \
 %f", v1, v2, v3, d12, a123, d23)
 
-        p2 = np.array([0.0, 0.0])
-        p1 = np.array([d12, 0.0])
-        p3s = [np.array([d23 * np.cos(a123), d23 * np.sin(a123)])]
+        p2 = Vector(0.0, 0.0)
+        p1 = Vector(d12, 0.0)
+        p3s = [Vector(d23 * math.cos(a123), d23 * math.sin(a123))]
 
         solutions = []
 
@@ -2037,20 +2037,19 @@ hedgehog")
         logging.getLogger("clustersolver").debug("Solving add: %s %s %s %f %f \
 %f", a, b, c, a_cab, d_ab, d_bc)
 
-        p_a = np.array([0.0, 0.0])
-        p_b = np.array([d_ab, 0.0])
+        p_a = Vector(0.0, 0.0)
+        p_b = Vector(d_ab, 0.0)
 
-        dir = np.array([np.cos(-a_cab), np.sin(-a_cab)])
+        direction = Vector(math.cos(-a_cab), math.sin(-a_cab))
 
-        solutions = cr_int(p_b, d_bc, p_a, dir)
+        solutions = cr_int(p_b, d_bc, p_a, direction)
 
         rval = []
 
         for s in solutions:
             p_c = s
-            map = {a: p_a, b: p_b, c: p_c}
 
-            rval.append(Configuration(map))
+            rval.append(Configuration({a: p_a, b: p_b, c: p_c}))
 
         return rval
 
@@ -2151,16 +2150,16 @@ class BalloonFromHogs(Merge):
         logging.getLogger("clustersolver").debug("Solve ada: %s %s %s %f %f \
 %f", a, b, c, a_cab, d_ab, a_abc)
 
-        p_a = np.array([0.0, 0.0])
-        p_b = np.array([d_ab, 0.0])
+        p_a = Vector(0.0, 0.0)
+        p_b = Vector(d_ab, 0.0)
 
-        dir_ac = np.array([np.cos(-a_cab), np.sin(-a_cab)])
-        dir_bc = np.array([-np.cos(-a_abc), np.sin(-a_abc)])
+        dir_ac = Vector(math.cos(-a_cab), math.sin(-a_cab))
+        dir_bc = Vector(-math.cos(-a_abc), math.sin(-a_abc))
 
-        if np.allclose(np.sin(a_cab), 0.0) and np.allclose(np.sin(a_abc), 0.0):
-            m = d_ab / 2 + np.cos(-a_cab) * d_ab - np.cos(-a_abc) * d_ab
+        if Scalar.tol_zero(math.sin(a_cab)) and Scalar.tol_zero(math.sin(a_abc)):
+            m = d_ab / 2 + math.cos(-a_cab) * d_ab - math.cos(-a_abc) * d_ab
 
-            p_c = np.array([m, 0.0])
+            p_c = Vector(m, 0.0)
 
             mapping = {a: p_a, b: p_b, c: p_c}
 

@@ -391,11 +391,11 @@ def cc_int(p1, r1, p2, r2):
     """Intersect circle (p1, r1) with circle (p2, r2)
 
     :param p1: vector representing centre of first circle
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param r1: scalar representing the radius of first circle
     :type r1: float
     :param p2: vector representing centre of second circle
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param r2: scalar representing the radius of first circle
     :type r2: float
     :returns: list of zero, one or two solution points
@@ -427,24 +427,24 @@ def cc_int(p1, r1, p2, r2):
     else:
         v = math.sqrt(a-b)
 
-    s = (p2-p1) * u / d
+    s = (p2 - p1) * u / d
 
     if Scalar.tol_zero(s.length):
-        p3a = p1 + Vector(p2[1]-p1[1], p1[0]-p2[0]) * r1/d
+        p3a = p1 + Vector(p2.y - p1.y, p1.x - p2.x) * r1/d
 
         if Scalar.tol_zero(r1 / d):
             return [p3a]
         else:
-            p3b = p1 + Vector(p1[1]-p2[1], p2[0]-p1[0]) * r1/d
+            p3b = p1 + Vector(p1.y - p2.y, p2.x - p1.x) * r1/d
 
             return [p3a, p3b]
     else:
-        p3a = p1 + s + Vector(s[1], -s[0]) * v / s.length
+        p3a = p1 + s + Vector(s.y, -s.x) * v / s.length
 
         if Scalar.tol_zero(v / s.length):
             return [p3a]
         else:
-            p3b = p1 + s + Vector(-s[1], s[0]) * v / s.length
+            p3b = p1 + s + Vector(-s.y, s.x) * v / s.length
 
             return [p3a, p3b]
 
@@ -452,13 +452,13 @@ def cl_int(p1, r, p2, v):
     """Intersect circle (p1, r) with line (p2, v)
 
     :param p1: vector representing centre of circle
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param r: scalar representing the radius of circle
     :type r1: float
     :param p2: vector representing a point on the line
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param v: vector representing the direction of the line
-    :type v: :class:`.np.ndarray`
+    :type v: :class:`Vector`
     :returns: list of zero, one or two solution points
     :rtype: list
     """
@@ -470,23 +470,23 @@ def cl_int(p1, r, p2, v):
     p = p2 - p1
 
     # squared length of line
-    d2 = v[0]*v[0] + v[1]*v[1]
+    d2 = v.x * v.x + v.y * v.y
 
-    D = p[0]*v[1] - v[0]*p[1]
-    E = r*r*d2 - D*D
+    D = p.x * v.y - v.x * p.y
+    E = r * r * d2 - D * D
 
     # check that d2 and E are both > 0 within tolerance
     if Scalar.tol_gt(d2, 0) and Scalar.tol_gt(E, 0):
         sE = math.sqrt(E)
-        x1 = p1[0] + (D * v[1] + Scalar.sign(v[1]) * v[0] * sE) / d2
-        x2 = p1[0] + (D * v[1] - Scalar.sign(v[1]) * v[0] * sE) / d2
-        y1 = p1[1] + (-D * v[0] + math.abs(v[1]) * sE) / d2
-        y2 = p1[1] + (-D * v[0] - math.abs(v[1]) * sE) / d2
+        x1 = p1.x + (D * v.y + Scalar.sign(v.y) * v.x * sE) / d2
+        x2 = p1.x + (D * v.y - Scalar.sign(v.y) * v.x * sE) / d2
+        y1 = p1.y + (-D * v.x + math.abs(v.y) * sE) / d2
+        y2 = p1.y + (-D * v.x - math.abs(v.y) * sE) / d2
 
         return [Vector(x1, y1), Vector(x2, y2)]
     elif Scalar.tol_zero(E):
-        x1 = p1[0] + D * v[1] / d2
-        y1 = p1[1] + -D * v[0] / d2
+        x1 = p1.x + D * v.y / d2
+        y1 = p1.y + -D * v.x / d2
 
         return [Vector(x1, y1)]
     else:
@@ -496,13 +496,13 @@ def cr_int(p1, r, p2, v):
     """Intersect a circle (p1, r) with ray (p2, v) (a half-line)
 
     :param p1: vector representing centre of circle
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param r: scalar representing the radius of circle
     :type r1: float
     :param p2: vector representing a point on the ray
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param v: vector representing the direction of the ray
-    :type v: :class:`.np.ndarray`
+    :type v: :class:`Vector`
     :returns: list of zero, one or two solution points
     :rtype: list
     """
@@ -524,13 +524,13 @@ def ll_int(p1, v1, p2, v2):
     """Intersect two lines
 
     :param p1: vector representing a point on the first line
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param v1: vector represting the direction of the first line
-    :type v1: :class:`.np.ndarray`
+    :type v1: :class:`Vector`
     :param p2: vector representing a point on the second line
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param v2: vector represting the direction of the second line
-    :type v2: :class:`.np.ndarray`
+    :type v2: :class:`Vector`
     :returns: list of zero or one solution points
     :rtype: list
     """
@@ -538,17 +538,17 @@ def ll_int(p1, v1, p2, v2):
     logging.getLogger("geometry").debug("ll_int %s %s %s %s", p1, v1, p2, \
     v2)
 
-    if Scalar.tol_zero(v1[0] * v2[1] - v1[1] * v2[0]):
+    if Scalar.tol_zero(v1.x * v2.y - v1.y * v2.x):
         # lines don't intersect
         return []
-    elif not Scalar.tol_zero(v2[1]):
+    elif not Scalar.tol_zero(v2.y):
         d = p2 - p1
-        r2 = -v2[0] / v2[1]
-        f = v1[0] + v1[1] * r2
-        t1 = (d[0] + d[1] * r2) / f
+        r2 = -v2.x / v2.y
+        f = v1.x + v1.y * r2
+        t1 = (d.x + d.y * r2) / f
     else:
         d = p2-p1
-        t1 = d[1] / v1[1]
+        t1 = d.y / v1.y
 
     return [p1 + v1 * t1]
 
@@ -556,13 +556,13 @@ def lr_int(p1, v1, p2, v2):
     """Intersect line with ray
 
     :param p1: vector representing a point on the line
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param v1: vector represting the direction of the line
-    :type v1: :class:`.np.ndarray`
+    :type v1: :class:`Vector`
     :param p2: vector representing a point on the ray
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param v2: vector represting the direction of the ray
-    :type v2: :class:`.np.ndarray`
+    :type v2: :class:`Vector`
     :returns: list of zero or one solution points
     :rtype: list
     """
@@ -584,13 +584,13 @@ def rr_int(p1, v1, p2, v2):
     """Intersect ray with ray
 
     :param p1: vector representing a point on the first ray
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param v1: vector represting the direction of the first ray
-    :type v1: :class:`.np.ndarray`
+    :type v1: :class:`Vector`
     :param p2: vector representing a point on the second ray
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param v2: vector represting the direction of the second ray
-    :type v2: :class:`.np.ndarray`
+    :type v2: :class:`Vector`
     :returns: list of zero or one solution points
     :rtype: list
     """
@@ -622,11 +622,11 @@ def angle_3p(p1, p2, p3):
     returned.
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: angle in radians, or None
     :rtype: float
     """
@@ -665,9 +665,9 @@ def distance_2p(p1, p2):
     """Calculates the Euclidean distance between two points
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :returns: distance between the points
     :rtype: float
     """
@@ -678,11 +678,11 @@ def is_clockwise(p1, p2, p3):
     """Calculates whether or not triangle p1, p2, p3 is orientated clockwise
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: True if clockwise, otherwise False
     :rtype: boolean
     """
@@ -699,11 +699,11 @@ def is_counterclockwise(p1, p2, p3):
     counter-clockwise
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: True if counter-clockwise, otherwise False
     :rtype: boolean
     """
@@ -720,11 +720,11 @@ def is_flat(p1, p2, p3):
     clockwise nor counter-clockwise)
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: True if flat, otherwise False
     :rtype: boolean
     """
@@ -740,11 +740,11 @@ def is_acute(p1, p2, p3):
     pi / 2
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: True if acute, otherwise False
     :rtype: boolean
     """
@@ -762,11 +762,11 @@ def is_obtuse(p1,p2,p3):
     pi / 2
 
     :param p1: first point
-    :type p1: :class:`.np.ndarray`
+    :type p1: :class:`Vector`
     :param p2: second point
-    :type p2: :class:`.np.ndarray`
+    :type p2: :class:`Vector`
     :param p3: third point
-    :type p3: :class:`.np.ndarray`
+    :type p3: :class:`Vector`
     :returns: True if obtuse, otherwise False
     :rtype: boolean
     """
@@ -783,11 +783,11 @@ def make_hcs(a, b, scale=False):
     """Build a homogeneous coordiate system from two vectors, normalised
 
     :param a: first vector
-    :type a: :class:`.np.ndarray`
+    :type a: :class:`Vector`
     :param b: second vector
-    :type b: :class:`.np.ndarray`
+    :type b: :class:`Vector`
     :returns: 3x3 homogeneous coordinate matrix
-    :rtype: :class:`.np.ndarray`
+    :rtype: :class:`Vector`
     """
 
     # resultant vector
@@ -806,8 +806,8 @@ def make_hcs(a, b, scale=False):
 
     # return new coordinate system
     return Matrix([
-        [u[0], v[0], a[0]],
-        [u[1], v[1], a[1]],
+        [u.x, v.x, a.x],
+        [u.y, v.y, a.y],
         [0.0, 0.0, 1.0]
     ])
 
@@ -815,11 +815,11 @@ def make_hcs_scaled(*args, **kwargs):
     """Build a homogeneous coordiate system from two vectors
 
     :param a: first vector
-    :type a: :class:`.np.ndarray`
+    :type a: :class:`Vector`
     :param b: second vector
-    :type b: :class:`.np.ndarray`
+    :type b: :class:`Vector`
     :returns: 3x3 homogeneous coordinate matrix
-    :rtype: :class:`.np.ndarray`
+    :rtype: :class:`Vector`
     """
 
     return make_hcs(scale=True, *args, **kwargs)
@@ -828,11 +828,11 @@ def cs_transform_matrix(from_cs, to_cs):
     """Calculate the transformation matrix from one coordinate system to another
 
     :param from_cs: initial coordinate system
-    :type from_cs: :class:`.np.ndarray`
+    :type from_cs: :class:`Vector`
     :param to_cs: target coordinate system
-    :type to_cs: :class:`.np.ndarray`
+    :type to_cs: :class:`Vector`
     :returns: transformation matrix to convert from_cs to to_cs
-    :rtype: :class:`.np.ndarray`
+    :rtype: :class:`Vector`
     """
 
     return to_cs * from_cs.inverse()

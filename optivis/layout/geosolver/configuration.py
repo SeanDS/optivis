@@ -5,12 +5,10 @@ coordinates"""
 
 from __future__ import unicode_literals, division
 
-import numpy as np
-import numpy.linalg as linalg
 import logging
 
-from optivis.geometry import distance_2p, make_hcs, make_hcs_scaled, \
-cs_transform_matrix
+from optivis.geometry import Scalar, Vector, Matrix, distance_2p, make_hcs, \
+make_hcs_scaled, cs_transform_matrix
 
 class Configuration(object):
     """A set of named points with coordinates of a specified dimension.
@@ -23,7 +21,7 @@ class Configuration(object):
 
         :param mapping: dictionary mapping between variables and points, e.g. \
         {v0: p0, v1: p1, v2: p2}, note that points are objects of class \
-        :class:`.np.ndarray`
+        :class:`Vector`
         """
 
         # dictionary mapping variable names to point values
@@ -32,13 +30,7 @@ class Configuration(object):
         # flag indicating an underconstrained merge (i.e. not a unique solution)
         self.underconstrained = False
 
-        self.dimension = self.checkdimension()
-
-        if self.dimension == 0:
-            raise Exception("could not determine dimension of configuration")
-        elif self.dimension != 2:
-            raise Exception("no support for "+str(self.dimension)+"-dimensional configurations")
-
+        self.dimension = 2
         self.makehash()
 
     def copy(self):
@@ -59,13 +51,11 @@ class Configuration(object):
         """returns a new configuration, which is this one transformed by matrix t"""
         newmap = {}
         for v in self.mapping:
-            p = self.mapping[v]
-            ph = np.array(p.tolist() + [1.0])
+            print type(t)
+            print t
+            ph = (t * Matrix([[self.mapping[v].x, self.mapping[v].y, 1.0]]).transpose()).elements
 
-            ph = np.dot(t, ph)
-
-            p = np.array(ph[0:-1]) / ph[-1]
-            newmap[v] = p
+            newmap[v] = Vector(ph[0][0] / ph[2][0], ph[1][0] / ph[2][0])
         return Configuration(newmap)
 
     def add(self, c):
@@ -104,31 +94,31 @@ class Configuration(object):
         underconstrained = self.underconstrained or other.underconstrained
         if len(shared) == 0:
             underconstrained = True
-            cs1 = make_hcs(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
-            cs2 = make_hcs(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+            cs1 = make_hcs(Vector.origin(), Vector(1.0, 0.0))
+            cs2 = make_hcs(Vector.origin(), Vector(1.0, 0.0))
         elif len(shared) == 1:
             if len(self.vars()) > 1 and len(other.vars()) > 1:
                 underconstrained = True
             v1 = list(shared)[0]
             p11 = self.mapping[v1]
             p21 = other.mapping[v1]
-            cs1 = make_hcs(p11, p11+np.array([1.0, 0.0]))
-            cs2 = make_hcs(p21, p21+np.array([1.0, 0.0]))
+            cs1 = make_hcs(p11, p11 + Vector(1.0, 0.0))
+            cs2 = make_hcs(p21, p21 + Vector(1.0, 0.0))
         else:   # len(shared) >= 2:
             v1 = list(shared)[0]
             v2 = list(shared)[1]
             p11 = self.mapping[v1]
             p12 = self.mapping[v2]
-            if np.allclose(linalg.norm(p12-p11), 0.0):
+            if Scalar.tol_zero((p12 - p11).length):
                 underconstrained = True
-                cs1 = make_hcs(p11, p11+np.array([1.0, 0.0]))
+                cs1 = make_hcs(p11, p11 + Vector(1.0, 0.0))
             else:
                 cs1 = make_hcs(p11, p12)
             p21 = other.mapping[v1]
             p22 = other.mapping[v2]
-            if np.allclose(linalg.norm(p22-p21), 0.0):
+            if Scalar.tol_zero((p22 - p21).length):
                 underconstrained = True
-                cs2 = make_hcs(p21, p21+np.array([1.0, 0.0]))
+                cs2 = make_hcs(p21, p21 + Vector(1.0, 0.0))
             else:
                 cs2 = make_hcs(p21, p22)
         # in any case
@@ -149,16 +139,16 @@ class Configuration(object):
         v2 = list(shared)[1]
         p11 = self.mapping[v1]
         p12 = self.mapping[v2]
-        if np.allclose(linalg.norm(p12-p11), 0.0):
+        if Scalar.tol_zero((p12 - p11).length):
             underconstrained = True
-            cs1 = make_hcs_scaled(p11, p11+np.array([1.0, 0.0]))
+            cs1 = make_hcs_scaled(p11, p11 + Vector(1.0, 0.0))
         else:
             cs1 = make_hcs_scaled(p11, p12)
         p21 = other.mapping[v1]
         p22 = other.mapping[v2]
-        if np.allclose(linalg.norm(p22-p21), 0.0):
+        if Scalar.tol_zero((p22 - p21).length):
             underconstrained = True
-            cs2 = make_hcs_scaled(p21, p21+np.array([1.0, 0.0]))
+            cs2 = make_hcs_scaled(p21, p21 + Vector(1.0, 0.0))
         else:
             cs2 = make_hcs_scaled(p21, p22)
         print cs1, cs2
@@ -197,16 +187,6 @@ class Configuration(object):
         for var in self.mapping:
             val = val + hash(var)
         self.hashvalue = hash(val)
-
-    def checkdimension(self):
-        """returns the dimension of the points, or zero if they are of different dimensions"""
-        var = iter(self.vars()).next()
-        dim = len(self.get(var))
-        for var in self.mapping:
-            if len(self.get(var)) != dim:
-                dim = 0
-                break
-        return dim
 
     def __hash__(self):
         return self.hashvalue
