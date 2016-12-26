@@ -142,7 +142,7 @@ class Layout(object):
 
         # get offset to apply to all components
         (lower_bounds, _) = self.scene.get_bounding_box()
-        offset = lower_bounds.flip()
+        offset = -lower_bounds
 
         for link in self.scene.links:
             link.start_pos += offset
@@ -336,7 +336,7 @@ reference can be rotated; setting link length and component azimuths")
                     - link.output_node.get_absolute_pos()
 
                     # set the length between the target and reference
-                    link.length = link_vector.length()
+                    link.length = link_vector.length
                 else:
                     raise Exception("uuuh")
             else:
