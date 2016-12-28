@@ -56,7 +56,7 @@ class FunctionConstraint(SelectionConstraint):
         # return whether the result of the function with the variables as
         # arguments is True or not
         return self.function(*[mapping[variable] for variable in \
-        self.variables]) == True
+        self.variables]) is True
 
     def __unicode__(self):
         return "{0}({1}, {2})".format(self.name, self.function.__name__, \

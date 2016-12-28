@@ -1298,9 +1298,9 @@ a consistent overconstraint %s", object1, object2, overconstraint)
         s1 = self._source_constraint_in_cluster(overconstraint, object1)
         s2 = self._source_constraint_in_cluster(overconstraint, object2)
 
-        if s1 == None:
+        if s1 is None:
             consistent = False
-        elif s2 == None:
+        elif s2 is None:
             consistent = False
         elif s1 == s2:
             consistent = True
@@ -1330,7 +1330,7 @@ a consistent overconstraint %s", object1, object2, overconstraint)
             if len(down) == 0:
                 return cluster
             elif len(down) > 1:
-                if method.consistent == True:
+                if method.consistent:
                     return self._source_constraint_in_cluster(constraint, \
                     down[0])
                 else:

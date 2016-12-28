@@ -177,7 +177,7 @@ class GeometricProblem(Notifier, Listener):
         """returns true iff all constraints satisfied by given solution.
            solution is a dictionary mapping variables (names) to values (points)"""
 
-        if solution == None:
+        if solution is None:
             sat = False
         else:
             sat = True
@@ -316,7 +316,7 @@ class GeometricSolver(Listener):
             if isinstance(cluster, Rigid):
                 configurations = self.solver.get(cluster)
 
-                if configurations == None:
+                if configurations is None:
                     return "unsolved"
                 elif len(configurations) > 0:
                     return "well-constrained"
@@ -669,7 +669,7 @@ class GeometricCluster(object):
             spaces = spaces + "|"
 
         # make done
-        if done == None:
+        if done is None:
             done = set()
 
         # recurse
@@ -802,12 +802,12 @@ class AngleConstraint(ParametricConstraint):
 
         cmp = self._value
 
-        if ang == None:
+        if ang is None:
             result = False
         else:
             result = Scalar.tol_eq(ang, cmp)
 
-        if result == False:
+        if not result:
             logging.getLogger("geometric").debug("measured angle = %s, parameter value = %s, geometric", ang, cmp)
 
         return result
