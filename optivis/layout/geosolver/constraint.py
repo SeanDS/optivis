@@ -23,7 +23,7 @@ from __future__ import unicode_literals, division
 import abc
 import logging
 
-from optivis.layout.geosolver.graph import Graph
+from optivis.graph import Graph
 from optivis.layout.geosolver.notify import Notifier
 
 class Constraint(object):

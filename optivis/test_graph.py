@@ -2,11 +2,11 @@ from __future__ import unicode_literals, division
 
 from unittest import TestCase
 
-from optivis.layout.geosolver.graph import FanGraph
+from optivis.graph import Graph
 
 class TestGraph(TestCase):
     def setUp(self):
-        self.g = FanGraph()
+        self.g = Graph()
 
         self.g.add_bi_edge('a', 'b')
         self.g.add_edge('a', 'c')

@@ -13,7 +13,7 @@ import math
 import abc
 import logging
 
-from optivis.layout.geosolver.graph import Graph
+from optivis.graph import Graph
 from optivis.layout.geosolver.method import Method, MethodGraph
 from optivis.layout.geosolver.notify import Notifier
 from optivis.layout.geosolver.multimethod import MultiVariable, \
