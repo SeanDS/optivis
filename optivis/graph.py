@@ -335,7 +335,8 @@ class Graph(Notifier):
         g = Graph()
 
         # add swapped edges
-        map(lambda v1, v2: g.add_edge(v2, v1), *self.edges())
+        for v1, v2 in self.edges():
+            g.add_edge(v2, v1)
 
         return g
 
