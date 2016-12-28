@@ -51,8 +51,6 @@ class Configuration(object):
         """returns a new configuration, which is this one transformed by matrix t"""
         newmap = {}
         for v in self.mapping:
-            print type(t)
-            print t
             ph = (t * Matrix([[self.mapping[v].x, self.mapping[v].y, 1.0]]).transpose()).elements
 
             newmap[v] = Vector(ph[0][0] / ph[2][0], ph[1][0] / ph[2][0])
