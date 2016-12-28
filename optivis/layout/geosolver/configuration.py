@@ -145,7 +145,6 @@ class Configuration(object):
             cs2 = make_hcs_scaled(p21, p21 + Vector(1.0, 0.0))
         else:
             cs2 = make_hcs_scaled(p21, p22)
-        print cs1, cs2
         t = cs_transform_matrix(cs2, cs1)
         othert = other.transform(t)
         result = self.add(othert)
