@@ -38,39 +38,42 @@ class Graph(Notifier):
             # set up edges between vertices
             map(self.set, [(v, w, graph.get(v, w)) for v, w in graph.edges()])
 
-    def add_vertex(self, v):
-        """Add vertex to graph"""
+    def add_vertex(self, vertex):
+        """Add vertex to graph
 
-        if v in self._forward:
+        :param vertex: vertex to add
+        """
+
+        if vertex in self._forward:
             # already in dict
             return
 
         # add vertex to each dict
-        self._forward[v] = {}
-        self._reverse[v] = {}
+        self._forward[vertex] = {}
+        self._reverse[vertex] = {}
 
         # notify listeners
-        self.send_notify(("add_vertex", v))
+        self.send_notify(("add_vertex", vertex))
 
-    def remove_vertex(self, v):
+    def remove_vertex(self, vertex):
         """Remove vertex and incident edges
 
-        :param v: vertex to remove
+        :param vertex: vertex to remove
         """
 
-        if v not in self._forward:
+        if vertex not in self._forward:
             raise Exception("Vertex not in graph")
 
         # remove edges going to and from vertex
-        map(lambda u: self.remove_edge(u, v), self.ingoing_vertices(v))
-        map(lambda w: self.remove_edge(v, w), self.outgoing_vertices(v))
+        map(lambda u: self.remove_edge(u, vertex), self.ingoing_vertices(vertex))
+        map(lambda w: self.remove_edge(vertex, w), self.outgoing_vertices(vertex))
 
         # remove vertex in dicts
-        del self._forward[v]
-        del self._reverse[v]
+        del self._forward[vertex]
+        del self._reverse[vertex]
 
         # notify listeners
-        self.send_notify(("remove_vertex", v))
+        self.send_notify(("remove_vertex", vertex))
 
     def add_edge(self, v1, v2, value=1):
         """Add edge with optional value
