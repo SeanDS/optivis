@@ -46,7 +46,6 @@ class GeometricProblem(Notifier, Listener):
         Notifier.__init__(self)
         Listener.__init__(self)
 
-        self.dimension = 2
         self.prototype = {}
         self.cg = ConstraintGraph()
 
@@ -265,7 +264,6 @@ class GeometricSolver(Listener):
 
         # init variables
         self.problem = problem
-        self.dimension = problem.dimension
 
         # constraint graph object
         self.cg = problem.cg
@@ -507,7 +505,8 @@ class GeometricSolver(Listener):
 
             self.fixvars.append(con.variables()[0])
 
-            if len(self.fixvars) >= self.problem.dimension:
+            # check if there are more fixed variables than dimensions
+            if len(self.fixvars) >= 2:
                 # TODO: check that a Rigid() is always correct to use here
                 self.fixcluster = Rigid(self.fixvars)
                 self.dr.add(self.fixcluster)
@@ -529,7 +528,8 @@ class GeometricSolver(Listener):
             if var in self.fixvars:
                 self.fixvars.remove(var)
 
-            if len(self.fixvars) < self.problem.dimension:
+            # check if there are less fixed variables than dimensions
+            if len(self.fixvars) < 2:
                 self.fixcluster = None
             else:
                 self.fixcluster = Rigid(self.fixvars)

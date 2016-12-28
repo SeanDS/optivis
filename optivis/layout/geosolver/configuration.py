@@ -11,7 +11,7 @@ from optivis.geometry import Scalar, Vector, Matrix, distance_2p, make_hcs, \
 make_hcs_scaled, cs_transform_matrix
 
 class Configuration(object):
-    """A set of named points with coordinates of a specified dimension.
+    """A set of named points with coordinates.
 
     Immutable. Defines equality and a hash function.
     """
@@ -30,7 +30,6 @@ class Configuration(object):
         # flag indicating an underconstrained merge (i.e. not a unique solution)
         self.underconstrained = False
 
-        self.dimension = 2
         self.makehash()
 
     def copy(self):
@@ -82,11 +81,8 @@ class Configuration(object):
         result = self.add(othertransformed)
         return result, underconstrained
 
-    def merge_transform(self,other):
+    def merge_transform(self, other):
         """returns a new configurations which is this one plus the given other configuration transformed, such that common points will overlap (if possible)."""
-
-        if other.dimension != self.dimension:
-            raise Exception("cannot merge configurations of different dimensions")
 
         shared = set(self.vars()).intersection(other.vars())
         underconstrained = self.underconstrained or other.underconstrained
