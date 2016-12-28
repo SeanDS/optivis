@@ -47,7 +47,7 @@ class GeometricProblem(Notifier, Listener):
         Listener.__init__(self)
 
         self.prototype = {}
-        self.cg = ConstraintGraph()
+        self.constraint_graph = ConstraintGraph()
 
     def add_point(self, variable, position):
         """add a point variable with a prototype position"""
@@ -57,7 +57,7 @@ class GeometricProblem(Notifier, Listener):
             self.prototype[variable] = position
 
             # add to constraint graph
-            self.cg.add_variable(variable)
+            self.constraint_graph.add_variable(variable)
         else:
             raise Exception("point already in problem")
 
@@ -94,7 +94,7 @@ class GeometricProblem(Notifier, Listener):
             else:
                 con.add_listener(self)
 
-                self.cg.add_constraint(con)
+                self.constraint_graph.add_constraint(con)
         elif isinstance(con, AngleConstraint):
             for var in con.variables():
                 if var not in self.prototype:
@@ -105,13 +105,13 @@ class GeometricProblem(Notifier, Listener):
             else:
                 con.add_listener(self)
 
-                self.cg.add_constraint(con)
+                self.constraint_graph.add_constraint(con)
         elif isinstance(con, SelectionConstraint):
             for var in con.variables():
                 if var not in self.prototype:
                     raise Exception("point variable not in problem")
 
-            self.cg.add_constraint(con)
+            self.constraint_graph.add_constraint(con)
             self.send_notify(("add_selection_constraint", con))
         elif isinstance(con, FixConstraint):
             for var in con.variables():
@@ -121,15 +121,15 @@ class GeometricProblem(Notifier, Listener):
             if self.get_fix(con.variables()[0]):
                 raise Exception("fix already in problem")
 
-            self.cg.add_constraint(con)
+            self.constraint_graph.add_constraint(con)
         else:
             raise Exception("unsupported constraint type")
 
     def get_distance(self, a, b):
         """return the distance constraint on given points, or None"""
 
-        on_a = self.cg.get_constraints_on(a)
-        on_b = self.cg.get_constraints_on(b)
+        on_a = self.constraint_graph.get_constraints_on(a)
+        on_b = self.constraint_graph.get_constraints_on(b)
 
         on_ab = filter(lambda c: c in on_a and c in on_b, on_a)
         distances = filter(lambda c: isinstance(c, DistanceConstraint), on_ab)
@@ -144,9 +144,9 @@ class GeometricProblem(Notifier, Listener):
     def get_angle(self, a, b, c):
         """return the angle constraint on given points, or None"""
 
-        on_a = self.cg.get_constraints_on(a)
-        on_b = self.cg.get_constraints_on(b)
-        on_c = self.cg.get_constraints_on(c)
+        on_a = self.constraint_graph.get_constraints_on(a)
+        on_b = self.constraint_graph.get_constraints_on(b)
+        on_c = self.constraint_graph.get_constraints_on(c)
 
         on_abc = filter(lambda x: x in on_a and x in on_b and x in on_c, on_a)
         angles = filter(lambda x: isinstance(x, AngleConstraint), on_abc)
@@ -162,7 +162,7 @@ class GeometricProblem(Notifier, Listener):
     def get_fix(self, p):
         """return the fix constraint on given point, or None"""
 
-        on_p = self.cg.get_constraints_on(p)
+        on_p = self.constraint_graph.get_constraints_on(p)
 
         fixes = filter(lambda x: isinstance(x, FixConstraint), on_p)
 
@@ -182,7 +182,7 @@ class GeometricProblem(Notifier, Listener):
         else:
             sat = True
 
-            for con in self.cg.constraints():
+            for con in self.constraint_graph.constraints():
                 solved = True
 
                 for v in con.variables():
@@ -207,7 +207,7 @@ class GeometricProblem(Notifier, Listener):
         """remove a point variable from the constraint system"""
 
         if var in self.prototype:
-            self.cg.rem_variable(var)
+            self.constraint_graph.rem_variable(var)
 
             del( self.prototype[var])
         else:
@@ -216,11 +216,11 @@ class GeometricProblem(Notifier, Listener):
     def rem_constraint(self, con):
         """remove a constraint from the constraint system"""
 
-        if con in self.cg.constraints():
+        if con in self.constraint_graph.constraints():
             if isinstance(con, SelectionConstraint):
                 self.send_notify(("rem_selection_constraint", con))
 
-            self.cg.rem_constraint(con)
+            self.constraint_graph.rem_constraint(con)
         else:
             raise Exception("no constraint {0} in problem.".format(con))
 
@@ -240,7 +240,7 @@ class GeometricProblem(Notifier, Listener):
 
         # constraints on separate lines
         constraints = "\n".join([unicode(constraint) for constraint \
-        in self.cg.constraints()])
+        in self.constraint_graph.constraints()])
 
         return "{0}\n{1}".format(variables, constraints)
 
@@ -266,28 +266,28 @@ class GeometricSolver(Listener):
         self.problem = problem
 
         # constraint graph object
-        self.cg = problem.cg
+        self.constraint_graph = problem.constraint_graph
 
         # solver
-        self.dr = ClusterSolver()
+        self.solver = ClusterSolver()
 
         # map
         self.mapping = {}
 
         # register listeners
-        self.cg.add_listener(self)
-        self.dr.add_listener(self)
+        self.constraint_graph.add_listener(self)
+        self.solver.add_listener(self)
 
         # create an initial fix cluster
         self.fixvars = []
         self.fixcluster = None
 
         # map current constraint graph variables
-        for var in self.cg.variables():
+        for var in self.constraint_graph.variables():
             self._add_variable(var)
 
         # list of constraints from graph
-        constraints = self.cg.constraints()
+        constraints = self.constraint_graph.constraints()
 
         # add fixed constraints first (avoids problems with invalid solutions)
         map(self._add_constraint, [x for x in constraints \
@@ -305,7 +305,7 @@ class GeometricSolver(Listener):
 
     def get_constrainedness(self):
         # get cluster solver's top level solution(s)
-        toplevel = self.dr.top_level()
+        toplevel = self.solver.top_level()
 
         if len(toplevel) > 1:
             return "under-constrained"
@@ -314,7 +314,7 @@ class GeometricSolver(Listener):
             cluster = toplevel[0]
 
             if isinstance(cluster, Rigid):
-                configurations = self.dr.get(cluster)
+                configurations = self.solver.get(cluster)
 
                 if configurations == None:
                     return "unsolved"
@@ -336,7 +336,7 @@ class GeometricSolver(Listener):
         # get cluster solver object's rigid clusters
         # at this point, the solver may already have a solution, if the solver
         # has been run before
-        for drcluster in self.dr.rigids():
+        for drcluster in self.solver.rigids():
             # create empty geometric cluster
             geocluster = GeometricCluster()
 
@@ -349,7 +349,7 @@ class GeometricSolver(Listener):
                 geocluster.variables.append(var)
 
             # determine solutions
-            solutions = self.dr.get(drcluster)
+            solutions = self.solver.get(drcluster)
 
             underconstrained = False
 
@@ -371,7 +371,7 @@ class GeometricSolver(Listener):
                 geocluster.flag = GeometricCluster.OK
 
         # determine subclusters
-        for method in self.dr.methods():
+        for method in self.solver.methods():
             for out in method.outputs:
                 if isinstance(out, Rigid):
                     parent = mapping[out]
@@ -381,7 +381,7 @@ class GeometricSolver(Listener):
                             parent.subs.append(mapping[inp])
 
         # combine clusters due to selection
-        for method in self.dr.methods():
+        for method in self.solver.methods():
             if isinstance(method, PrototypeMethod):
                 incluster = method.inputs[0]
                 outcluster = method.outputs[0]
@@ -390,7 +390,7 @@ class GeometricSolver(Listener):
                 geoout.subs = list(geoin.subs)
 
         # determine top-level result
-        rigids = filter(lambda c: isinstance(c, Rigid), self.dr.top_level())
+        rigids = filter(lambda c: isinstance(c, Rigid), self.solver.top_level())
 
         if len(rigids) == 0:
             # no variables in problem?
@@ -416,7 +416,7 @@ class GeometricSolver(Listener):
     def receive_notify(self, obj, message):
         """Take notice of changes in constraint graph"""
 
-        if obj == self.cg:
+        if obj == self.constraint_graph:
             (dtype, data) = message
             if dtype == "add_constraint":
                 self._add_constraint(data)
@@ -441,7 +441,7 @@ class GeometricSolver(Listener):
                 self._update_constraint(constraint)
             else:
                 raise Exception("unknown message type {0}".format(dtype))
-        elif obj == self.dr:
+        elif obj == self.solver:
             pass
         else:
             raise Exception("message from unknown source {0} {1}".format(obj, message))
@@ -455,7 +455,7 @@ class GeometricSolver(Listener):
             self.mapping[variable] = rigid
             self.mapping[rigid] = variable
 
-            self.dr.add(rigid)
+            self.solver.add(rigid)
 
             self._update_variable(variable)
 
@@ -463,7 +463,7 @@ class GeometricSolver(Listener):
         logging.getLogger("geometric").debug("GeometricSolver._rem_variable")
 
         if var in self.mapping:
-            self.dr.remove(self.mapping[var])
+            self.solver.remove(self.mapping[var])
 
             del(self.mapping[var])
 
@@ -481,7 +481,7 @@ class GeometricSolver(Listener):
             self.mapping[con] = hog
             self.mapping[hog] = con
 
-            self.dr.add(hog)
+            self.solver.add(hog)
 
             # set configuration
             self._update_constraint(con)
@@ -494,13 +494,13 @@ class GeometricSolver(Listener):
             self.mapping[con] = rig
             self.mapping[rig] = con
 
-            self.dr.add(rig)
+            self.solver.add(rig)
 
             # set configuration
             self._update_constraint(con)
         elif isinstance(con, FixConstraint):
             if self.fixcluster != None:
-                self.dr.remove(self.fixcluster)
+                self.solver.remove(self.fixcluster)
                 self.fixcluster = None
 
             self.fixvars.append(con.variables()[0])
@@ -509,8 +509,8 @@ class GeometricSolver(Listener):
             if len(self.fixvars) >= 2:
                 # TODO: check that a Rigid() is always correct to use here
                 self.fixcluster = Rigid(self.fixvars)
-                self.dr.add(self.fixcluster)
-                self.dr.set_root(self.fixcluster)
+                self.solver.add(self.fixcluster)
+                self.solver.set_root(self.fixcluster)
 
             self._update_fix()
         else:
@@ -521,7 +521,7 @@ class GeometricSolver(Listener):
 
         if isinstance(con,FixConstraint):
             if self.fixcluster != None:
-                self.dr.remove(self.fixcluster)
+                self.solver.remove(self.fixcluster)
 
             var = self.get(con.variables()[0])
 
@@ -533,10 +533,10 @@ class GeometricSolver(Listener):
                 self.fixcluster = None
             else:
                 self.fixcluster = Rigid(self.fixvars)
-                self.dr.add(self.fixcluster)
-                self.dr.set_root(self.fixcluster)
+                self.solver.add(self.fixcluster)
+                self.solver.set_root(self.fixcluster)
         elif con in self.mapping:
-            self.dr.remove(self.mapping[con])
+            self.solver.remove(self.mapping[con])
             del(self.mapping[con])
 
     def _update_constraint(self, con):
@@ -566,7 +566,7 @@ class GeometricSolver(Listener):
             conf = Configuration({v0: p0, v1: p1, v2: p2})
 
             # set the hedgehog's configuration in the solver
-            self.dr.set(hog, [conf])
+            self.solver.set(hog, [conf])
 
             assert con.satisfied(conf.mapping)
         elif isinstance(con, DistanceConstraint):
@@ -585,7 +585,7 @@ class GeometricSolver(Listener):
 
             conf = Configuration({v0: p0, v1: p1})
 
-            self.dr.set(rig, [conf])
+            self.solver.set(rig, [conf])
 
             assert con.satisfied(conf.mapping)
         elif isinstance(con, FixConstraint):
@@ -601,7 +601,7 @@ class GeometricSolver(Listener):
 
         conf = Configuration({variable: proto})
 
-        self.dr.set(cluster, [conf])
+        self.solver.set(cluster, [conf])
 
     def _update_fix(self):
         if not self.fixcluster:
@@ -618,7 +618,7 @@ class GeometricSolver(Listener):
 
         conf = Configuration(mapping)
 
-        self.dr.set(self.fixcluster, [conf])
+        self.solver.set(self.fixcluster, [conf])
 
 class GeometricCluster(object):
     """Represents the result of solving a GeometricProblem. A cluster is a list of
