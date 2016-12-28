@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 
-"""Scene classes"""
+"""Scene classes. The scene is a graph of components connected via links. Each
+vertex of the graph is a component, and edges connect components. Each edge
+is associated with a :class:`~Link` which contains information regarding the
+:class:`~Node`s that connect the components."""
 
 from __future__ import unicode_literals, division
 
 import datetime
 
+from optivis.graph import Graph
 from optivis.geometry import Vector
 from optivis.bench.links import Link
 
-class Scene(object):
+class Scene(Graph):
     def __init__(self, title=None, reference=None):
+        # instantiate parent
+        super(Scene, self).__init__()
+
         if title is None:
             # use default title
             title = Scene.get_default_title()
@@ -19,9 +26,13 @@ class Scene(object):
         self.title = title
         self.reference = reference
 
-        # create empty component and link lists
-        self.components = []
-        self.links = []
+    @property
+    def components(self):
+        return self.vertices()
+
+    @property
+    def links(self):
+        return [self.get(v1, v2) for v1, v2 in self.edges()]
 
     def __unicode__(self):
         """String representation of the scene"""
@@ -77,7 +88,8 @@ class Scene(object):
         elif component.name in self.get_component_names():
             raise Exception("Component name clashes with existing component")
 
-        self.components.append(component)
+        # add component to graph
+        self.add_vertex(component)
 
         return component
 
@@ -87,9 +99,11 @@ class Scene(object):
         :return: newly added link
         """
 
+        # create link
         link = Link(*args, **kwargs)
 
-        self.links.append(link)
+        # add link to graph
+        self.add_edge(link.output_node.component, link.input_node.component, link)
 
         return link
 
