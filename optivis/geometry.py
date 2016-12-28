@@ -214,6 +214,18 @@ class Vector(Matrix):
         # create column matrix
         super(Vector, self).__init__([[float(x)], [float(y)]])
 
+    def __getitem__(self, i):
+        """List-style access
+
+        :param i: ith element to retrieve, or slice
+        :type i: int or :class:`slice`
+        """
+
+        if isinstance(i, slice):
+            return [self.elements[j][0] for j in xrange(*i.indices(len(self.elements)))]
+
+        return self.elements[int(i)][0]
+
     @property
     def x(self):
         return self.elements[0][0]
