@@ -32,6 +32,7 @@ class Scene(Graph):
 
     @property
     def links(self):
+        # get the links attached to the edges in the graph
         return [self.get(v1, v2) for v1, v2 in self.edges()]
 
     def __unicode__(self):
