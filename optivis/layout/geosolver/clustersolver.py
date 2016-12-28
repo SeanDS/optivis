@@ -131,7 +131,7 @@ class ClusterSolver(Notifier):
               cluster: A Rigid
            """
         logging.getLogger("clustersolver").debug("Setting root to %s", rigid)
-        self._graph.rem_vertex("_root")
+        self._graph.remove_vertex("_root")
         self._graph.add_edge("_root", rigid)
 
     def find_dependent(self, obj):
@@ -174,7 +174,7 @@ class ClusterSolver(Notifier):
         self._new.append(obj)
 
     def _rem_top_level(self, obj):
-        self._graph.rem_edge("_toplevel", obj)
+        self._graph.remove_edge("_toplevel", obj)
 
         if obj in self._new:
             self._new.remove(obj)
@@ -194,7 +194,7 @@ class ClusterSolver(Notifier):
 
             # delete it from graph
             logging.getLogger("clustersolver").debug("Deleting %s", item)
-            self._graph.rem_vertex(item)
+            self._graph.remove_vertex(item)
 
             # remove from _new list
             if item in self._new:

@@ -145,7 +145,7 @@ that isn't in graph")
         del(self._variables[var_name])
 
         # remove graph vertex associated with the variable
-        self._graph.rem_vertex(var_name)
+        self._graph.remove_vertex(var_name)
 
         # notify listeners that a variable has been removed
         self.send_notify(("rem_variable", var_name))
@@ -191,7 +191,7 @@ constraint that isn't in graph")
         del(self._constraints[constraint])
 
         # remove graph vertex associated with the constraint
-        self._graph.rem_vertex(constraint)
+        self._graph.remove_vertex(constraint)
 
         # notify listeners that a constraint was removed
         self.send_notify(("rem_constraint", constraint))

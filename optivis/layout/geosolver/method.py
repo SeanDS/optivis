@@ -244,7 +244,7 @@ class MethodGraph(object):
         map(self.rem_method, self._graph.outgoing_vertices(varname))
 
         # remove it from graph
-        self._graph.rem_vertex(varname)
+        self._graph.remove_vertex(varname)
 
     def get(self, variable):
         """Gets the value of a variable"""
@@ -307,7 +307,7 @@ by multiple methods".format(var))
             raise Exception("Method not in graph")
 
         del(self._methods[met])
-        self._graph.rem_vertex(met)
+        self._graph.remove_vertex(met)
 
     def propagate(self):
         """Propagates any pending changes

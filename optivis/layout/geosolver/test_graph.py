@@ -8,12 +8,12 @@ class TestGraph(TestCase):
     def setUp(self):
         self.g = FanGraph()
 
-        self.g.add_bi('a', 'b')
+        self.g.add_bi_edge('a', 'b')
         self.g.add_edge('a', 'c')
         self.g.add_edge('a', 'd')
         self.g.add_edge('b', 'c')
-        self.g.add_bi('b', 'd')
-        self.g.add_bi('c', 'd')
+        self.g.add_bi_edge('b', 'd')
+        self.g.add_bi_edge('c', 'd')
 
     def test_reverse(self):
         reverse_edges = self.g.reverse().edges()
