@@ -3,7 +3,7 @@ from __future__ import unicode_literals, division
 from unittest import TestCase
 import math
 
-from optivis.geometry import Vector
+from optivis.geometry import Scalar, Vector
 
 class TestVector(TestCase):
     def setUp(self):
@@ -18,9 +18,6 @@ class TestVector(TestCase):
         Vector(1, -2)
         Vector(4.61, -9.01)
         Vector("-3.141", "5.91")
-
-        # not enough inputs
-        self.assertRaises(ValueError, Vector, "invalid")
 
         # invalid input types
         self.assertRaises(ValueError, Vector, "inv", "inv")
@@ -37,37 +34,37 @@ class TestVector(TestCase):
 
     def test_rotate(self):
         # rotation forward and back
-        self.assertEqual(self.b.rotate(50).rotate(-50), self.b)
+        self.assertTrue(self.b.rotate(50).rotate(-50).tol_eq(self.b))
 
         # rotation through full circle
-        self.assertEqual(self.b.rotate(360), self.b)
+        self.assertTrue(self.b.rotate(360).tol_eq(self.b))
 
     def test_division(self):
-        self.assertEqual(self.b / 2, Vector(self.b.x / 2, self.b.y / 2))
-        self.assertEqual(self.b / -3436.128115, \
-        Vector(self.b.x / -3436.128115, self.b.y / -3436.128115))
+        self.assertTrue((self.b / 2).tol_eq(Vector(self.b.x / 2, self.b.y / 2)))
+        self.assertTrue((self.b / -3436.128115).tol_eq( \
+        Vector(self.b.x / -3436.128115, self.b.y / -3436.128115)))
 
     def test_hypot(self):
-        self.assertEqual(self.a.length(), math.sqrt(self.a.x ** 2 + self.a.y ** 2))
-        self.assertEqual(self.b.length(), math.sqrt(self.b.x ** 2 + self.b.y ** 2))
-        self.assertEqual(self.unit_vector.length(), math.sqrt(2))
-        self.assertEqual(self.anti_unit_vector.length(), math.sqrt(2))
+        self.assertTrue(Scalar.tol_eq(self.a.length, math.sqrt(self.a.x ** 2 + self.a.y ** 2)))
+        self.assertTrue(Scalar.tol_eq(self.b.length, math.sqrt(self.b.x ** 2 + self.b.y ** 2)))
+        self.assertTrue(Scalar.tol_eq(self.unit_vector.length, math.sqrt(2)))
+        self.assertTrue(Scalar.tol_eq(self.anti_unit_vector.length, math.sqrt(2)))
 
     def test_azimuth(self):
         # angle
-        self.assertEqual(self.a.azimuth, \
-        math.degrees(math.atan2(self.a.y, self.a.x)))
-        self.assertEqual(self.b.azimuth, \
-        math.degrees(math.atan2(self.b.y, self.b.x)))
+        self.assertTrue(Scalar.tol_eq(self.a.azimuth, \
+        math.degrees(math.atan2(self.a.y, self.a.x))))
+        self.assertTrue(Scalar.tol_eq(self.b.azimuth, \
+        math.degrees(math.atan2(self.b.y, self.b.x))))
 
     def test_flip(self):
-        self.assertEqual(self.unit_vector.flip(), self.anti_unit_vector)
-        self.assertEqual(self.b.flip(), Vector(-self.b.x, -self.b.y))
+        self.assertEqual(-self.unit_vector, self.anti_unit_vector)
+        self.assertEqual(-self.b, Vector(-self.b.x, -self.b.y))
 
     def test_vector_calculus(self):
         # (1,1) - (1,1) - (1,1) = -(1,1)
         self.assertEqual(self.unit_vector - self.unit_vector \
-        - self.unit_vector, self.unit_vector.flip())
+        - self.unit_vector, -self.unit_vector)
 
     def test_n_sided_polygons(self):
         # test a whole bunch of polygons
@@ -90,7 +87,7 @@ class TestVector(TestCase):
             vec += side_vec.rotate(external_angle * i)
 
         # assert the vector is back at the origin
-        self.assertEqual(vec, self.a, \
+        self.assertTrue(vec.tol_eq(self.a), \
         "{0} != {1} ({2} sided polygon)".format(vec, self.a, n))
 
     def test_is_positive(self):

@@ -767,7 +767,7 @@ def is_acute(p1, p2, p3):
     if angle is None:
         return False
 
-    return Scalar.tol_lt(math.abs(angle), math.pi / 2)
+    return Scalar.tol_lt(abs(angle), math.pi / 2)
 
 def is_obtuse(p1,p2,p3):
     """Calculates whether or not angle p1, p2, p3 is obtuse, i.e. greater than \
@@ -789,7 +789,7 @@ def is_obtuse(p1,p2,p3):
     if angle is None:
         return False
 
-    return Scalar.tol_gt(math.abs(angle), math.pi / 2)
+    return Scalar.tol_gt(abs(angle), math.pi / 2)
 
 def make_hcs(a, b, scale=False):
     """Build a homogeneous coordiate system from two vectors, normalised
