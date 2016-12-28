@@ -141,15 +141,15 @@ class Graph(Notifier):
         self.remove_edge(v1, v2)
         self.remove_edge(v2, v1)
 
-    def has_vertex(self, v):
+    def has_vertex(self, vertex):
         """Check if this graph contains the specified vertex
 
-        :param v: vertex to check
+        :param vertex: vertex to check
         :returns: True if the graph contains the vertex, False otherwise
         :rtype: boolean
         """
 
-        return v in self._forward
+        return vertex in self._forward
 
     def has_edge(self, v1, v2):
         """Check if this graph contains the edge specified by the two vertices
